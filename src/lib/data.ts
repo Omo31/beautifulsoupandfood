@@ -55,6 +55,15 @@ export type PurchaseOrder = {
   total: number;
 };
 
+export type Transaction = {
+  id: string;
+  date: string;
+  description: string;
+  category: 'Sale' | 'Supplies' | 'Marketing' | 'Salaries' | 'Other';
+  type: 'Sale' | 'Expense';
+  amount: number;
+};
+
 
 export const products: Product[] = [
   { id: '1', name: 'Jollof Rice Mix', description: 'The perfect blend of spices for authentic Nigerian Jollof Rice.', price: 5.99, category: 'foodstuff', stock: 150, imageId: 'jollof-rice', rating: 4.8, reviewCount: 120 },
@@ -138,4 +147,13 @@ export const purchaseOrders: PurchaseOrder[] = [
         ],
         total: 300.00
     },
+];
+
+export const transactions: Transaction[] = [
+    { id: 'TRN-001', date: '2024-05-20', description: 'Sale from Order ORD-001', category: 'Sale', type: 'Sale', amount: 45.99 },
+    { id: 'TRN-002', date: '2024-05-20', description: 'Packaging Supplies', category: 'Supplies', type: 'Expense', amount: 25.00 },
+    { id: 'TRN-003', date: '2024-05-19', description: 'Sale from Order ORD-002', category: 'Sale', type: 'Sale', amount: 89.50 },
+    { id: 'TRN-004', date: '2024-05-19', description: 'Facebook Ad Campaign', category: 'Marketing', type: 'Expense', amount: 50.00 },
+    { id: 'TRN-005', date: '2024-05-18', description: 'Sale from Order ORD-004', category: 'Sale', type: 'Sale', amount: 112.75 },
+    { id: 'TRN-006', date: '2024-05-17', description: 'May Salaries', category: 'Salaries', type: 'Expense', amount: 1500.00 },
 ];
