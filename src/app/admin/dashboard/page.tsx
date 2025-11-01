@@ -4,6 +4,8 @@ import { DollarSign, FileText, ShoppingBag, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Bar, BarChart as RechartsBarChart, Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { useMemo } from 'react';
+import { orders, users } from '@/lib/data';
 
 const salesData = [
   { month: "Jan", sales: 186, revenue: 80 },
@@ -36,6 +38,24 @@ const chartConfig = {
 };
 
 export default function AdminDashboardPage() {
+    const dashboardData = useMemo(() => {
+        const deliveredOrders = orders.filter((o) => o.status === 'Delivered');
+        const totalRevenue = deliveredOrders.reduce((acc, o) => acc + o.total, 0);
+        const totalSales = deliveredOrders.reduce((acc, o) => acc + o.itemCount, 0);
+        const pendingOrders = orders.filter(o => o.status === 'Pending' || o.status === 'Awaiting Confirmation').length;
+
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        const newCustomers = users.filter(u => new Date(u.joinDate) > oneMonthAgo).length;
+
+        return {
+            totalRevenue,
+            newCustomers,
+            totalSales,
+            pendingOrders
+        };
+    }, []);
+
     return (
         <div className="flex flex-col gap-4">
             <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
@@ -46,8 +66,8 @@ export default function AdminDashboardPage() {
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">₦45,231.89</div>
-                        <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+                        <div className="text-2xl font-bold">₦{dashboardData.totalRevenue.toLocaleString()}</div>
+                        <p className="text-xs text-muted-foreground">From delivered orders</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -56,8 +76,8 @@ export default function AdminDashboardPage() {
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">+235</div>
-                        <p className="text-xs text-muted-foreground">+15% from last month</p>
+                        <div className="text-2xl font-bold">+{dashboardData.newCustomers}</div>
+                        <p className="text-xs text-muted-foreground">In the last month</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -66,8 +86,8 @@ export default function AdminDashboardPage() {
                         <ShoppingBag className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">+12,234</div>
-                        <p className="text-xs text-muted-foreground">+19% from last month</p>
+                        <div className="text-2xl font-bold">+{dashboardData.totalSales}</div>
+                        <p className="text-xs text-muted-foreground">Total items sold</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -76,8 +96,8 @@ export default function AdminDashboardPage() {
                         <FileText className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">57</div>
-                        <p className="text-xs text-muted-foreground">2 orders need attention</p>
+                        <div className="text-2xl font-bold">{dashboardData.pendingOrders}</div>
+                        <p className="text-xs text-muted-foreground">Orders needing fulfillment</p>
                     </CardContent>
                 </Card>
             </div>
