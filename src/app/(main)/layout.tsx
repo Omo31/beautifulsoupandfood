@@ -6,7 +6,7 @@ import { ChatWidget } from "@/components/ChatWidget";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen>
       <AppSidebar />
       <SidebarInset>
         <AppHeader />
