@@ -32,10 +32,10 @@ export default function ShopPage() {
                             </div>
                             <div>
                                 <h4 className="font-medium mb-2">Price Range</h4>
-                                <Slider defaultValue={[0, 50]} max={100} step={1} />
+                                <Slider defaultValue={[0, 50000]} max={100000} step={1000} />
                                 <div className="flex justify-between text-sm text-muted-foreground mt-2">
-                                    <span>$0</span>
-                                    <span>$100</span>
+                                    <span>₦0</span>
+                                    <span>₦100,000</span>
                                 </div>
                             </div>
                             <div>

@@ -32,7 +32,7 @@ export default function InventoryPage() {
                     {product.stock}
                   </Badge>
                 </TableCell>
-                <TableCell>${product.price.toFixed(2)}</TableCell>
+                <TableCell>₦{product.price.toFixed(2)}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="outline" size="sm">Edit</Button>
                 </TableCell>

@@ -40,14 +40,14 @@ export default function CartPage() {
                                                     </div>
                                                     <div className="flex-1">
                                                         <h3 className="font-semibold">{item.name}</h3>
-                                                        <p className="text-sm text-muted-foreground">${item.price.toFixed(2)}</p>
+                                                        <p className="text-sm text-muted-foreground">₦{item.price.toFixed(2)}</p>
                                                     </div>
                                                     <div className="flex items-center gap-2 border rounded-md p-1">
                                                         <Button variant="ghost" size="icon" className="h-6 w-6"><Minus className="h-3 w-3"/></Button>
                                                         <span>1</span>
                                                         <Button variant="ghost" size="icon" className="h-6 w-6"><Plus className="h-3 w-3"/></Button>
                                                     </div>
-                                                    <p className="font-semibold w-20 text-right">${item.price.toFixed(2)}</p>
+                                                    <p className="font-semibold w-20 text-right">₦{item.price.toFixed(2)}</p>
                                                     <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
                                                 </div>
                                                 {index < cartItems.length - 1 && <Separator />}
@@ -69,13 +69,13 @@ export default function CartPage() {
                                     <div className="flex items-center space-x-2 mt-2">
                                         <RadioGroupItem value="pickup" id="pickup"/>
                                         <Label htmlFor="pickup" className="flex items-center">
-                                            Pickup (Free)
+                                            In-Store Pickup
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
                                                     <Info className="h-4 w-4 ml-2 text-muted-foreground cursor-pointer"/>
                                                 </TooltipTrigger>
                                                 <TooltipContent>
-                                                    <p>Collect your order directly from our location. <br/> No shipping fees apply.</p>
+                                                    <p>Collect your order directly from our location after payment. <br/> No shipping fees apply.</p>
                                                 </TooltipContent>
                                             </Tooltip>
                                         </Label>
@@ -86,42 +86,51 @@ export default function CartPage() {
                                     </div>
                                 </RadioGroup>
                                 
-                                {shippingMethod === 'delivery' && (
-                                    <Card className="bg-muted/50">
-                                        <CardContent className="pt-6">
-                                            <form className="space-y-4">
-                                                <Label>Shipping Address</Label>
-                                                 <Input placeholder="Full Name" />
-                                                <Input placeholder="Street Address" />
-                                                <Input placeholder="City" />
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <Input placeholder="State/Province" />
-                                                    <Input placeholder="ZIP/Postal Code" />
-                                                </div>
-                                                <Button size="sm" className="w-full">Submit for Shipping Quote</Button>
-                                            </form>
-                                        </CardContent>
-                                    </Card>
-                                )}
+                                {shippingMethod === 'delivery' ? (
+                                    <>
+                                        <Card className="bg-muted/50">
+                                            <CardContent className="pt-6">
+                                                <form className="space-y-4">
+                                                    <Label>Shipping Address</Label>
+                                                     <Input placeholder="Full Name" />
+                                                    <Input placeholder="Street Address" />
+                                                    <Input placeholder="City" />
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <Input placeholder="State/Province" />
+                                                        <Input placeholder="ZIP/Postal Code" />
+                                                    </div>
+                                                    <Button size="sm" className="w-full">Submit for Shipping Quote</Button>
+                                                </form>
+                                            </CardContent>
+                                        </Card>
+                                        <Alert>
+                                          <Info className="h-4 w-4" />
+                                          <AlertTitle>Next Steps</AlertTitle>
+                                          <AlertDescription>
+                                            After submitting your address, we will calculate the shipping cost and notify you. You will need to accept the quote before payment is enabled.
+                                          </AlertDescription>
+                                        </Alert>
+                                    </>
+                                ) : null}
 
                                 <Separator/>
                                 <div className="flex justify-between">
                                     <span>Subtotal</span>
-                                    <span>${subtotal.toFixed(2)}</span>
+                                    <span>₦{subtotal.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span>Service Charge (6%)</span>
-                                    <span>${serviceCharge.toFixed(2)}</span>
+                                    <span>₦{serviceCharge.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span>Shipping Fee</span>
-                                    <span>{shippingMethod === 'pickup' ? '$0.00' : 'To be determined'}</span>
+                                    <span>{shippingMethod === 'pickup' ? '₦0.00' : 'To be determined'}</span>
                                 </div>
 
                                 <Separator />
                                 <div className="flex justify-between font-bold text-lg">
                                     <span>Total</span>
-                                    <span>${total.toFixed(2)}</span>
+                                    <span>₦{total.toFixed(2)}</span>
                                 </div>
                             </CardContent>
                             <CardFooter>

@@ -36,7 +36,7 @@ export default function OrderHistoryPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>{order.itemCount}</TableCell>
-                <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
+                <TableCell className="text-right">₦{order.total.toFixed(2)}</TableCell>
                 <TableCell className="text-right"><Button variant="outline" size="sm">View Details</Button></TableCell>
               </TableRow>
             ))}

@@ -44,7 +44,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 <span className="text-sm font-medium">{product.rating}</span>
                 <span className="text-sm text-muted-foreground">({product.reviewCount})</span>
             </div>
-            <p className="text-lg font-semibold">${product.price.toFixed(2)}</p>
+            <p className="text-lg font-semibold">₦{product.price.toFixed(2)}</p>
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
