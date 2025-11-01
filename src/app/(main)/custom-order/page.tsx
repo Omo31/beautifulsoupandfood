@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
-import { PlusCircle, Trash2, Info } from 'lucide-react';
+import { PlusCircle, Trash2, Info, Plus, Minus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -16,26 +16,36 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 type CustomItem = {
     id: number;
     name: string;
-    quantity: string;
+    quantity: number;
     measure: string;
     customMeasure: string;
 };
 
 export default function CustomOrderPage() {
     const router = useRouter();
-    const [items, setItems] = useState<CustomItem[]>([{ id: 1, name: '', quantity: '', measure: '', customMeasure: '' }]);
+    const [items, setItems] = useState<CustomItem[]>([{ id: Date.now(), name: '', quantity: 1, measure: '', customMeasure: '' }]);
     const [shippingMethod, setShippingMethod] = useState('pickup');
 
     const handleAddItem = () => {
-        setItems([...items, { id: Date.now(), name: '', quantity: '', measure: '', customMeasure: '' }]);
+        setItems([...items, { id: Date.now(), name: '', quantity: 1, measure: '', customMeasure: '' }]);
     };
 
     const handleRemoveItem = (id: number) => {
         setItems(items.filter(item => item.id !== id));
     };
 
-    const handleItemChange = (id: number, field: keyof Omit<CustomItem, 'id'>, value: string) => {
+    const handleItemChange = (id: number, field: keyof Omit<CustomItem, 'id' | 'quantity'>, value: string) => {
         setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
+    };
+    
+    const handleQuantityChange = (id: number, change: 'increase' | 'decrease') => {
+        setItems(items.map(item => {
+            if (item.id === id) {
+                const newQuantity = change === 'increase' ? item.quantity + 1 : item.quantity - 1;
+                return { ...item, quantity: Math.max(1, newQuantity) };
+            }
+            return item;
+        }));
     };
 
     return (
@@ -55,14 +65,18 @@ export default function CustomOrderPage() {
                                 <Label className="text-lg font-medium">Requested Items</Label>
                                 {items.map((item, index) => (
                                     <Card key={item.id} className="p-4 bg-muted/50">
-                                        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end">
+                                        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto] gap-4 items-end">
                                             <div className="grid gap-2">
                                                 <Label htmlFor={`item-name-${item.id}`}>Item Name</Label>
                                                 <Input id={`item-name-${item.id}`} placeholder="e.g., Fresh Ugba" required onChange={e => handleItemChange(item.id, 'name', e.target.value)} />
                                             </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor={`quantity-${item.id}`}>Quantity</Label>
-                                                <Input id={`quantity-${item.id}`} placeholder="e.g., 2" required onChange={e => handleItemChange(item.id, 'quantity', e.target.value)} />
+                                             <div className="grid gap-2">
+                                                <Label>Quantity</Label>
+                                                <div className="flex items-center gap-2 border rounded-md p-1 bg-background">
+                                                    <Button variant="ghost" size="icon" type="button" className="h-6 w-6" onClick={() => handleQuantityChange(item.id, 'decrease')} disabled={item.quantity <= 1}><Minus className="h-3 w-3"/></Button>
+                                                    <span>{item.quantity}</span>
+                                                    <Button variant="ghost" size="icon" type="button" className="h-6 w-6" onClick={() => handleQuantityChange(item.id, 'increase')}><Plus className="h-3 w-3"/></Button>
+                                                </div>
                                             </div>
                                             <div className="grid gap-2">
                                                 <Label htmlFor={`measure-${item.id}`}>Unit of Measure</Label>
