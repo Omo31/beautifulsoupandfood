@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -15,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { format } from 'date-fns';
 
 const RoleBadge = ({ role }: { role: User['role'] }) => {
     const variant = role === 'Admin' ? 'destructive' : role === 'Content Manager' ? 'secondary' : 'outline';
@@ -148,7 +150,7 @@ export default function UsersPage() {
                              <TableCell>
                                 <StatusBadge status={user.status} />
                             </TableCell>
-                            <TableCell>{new Date(user.joinDate).toLocaleDateString()}</TableCell>
+                            <TableCell>{format(new Date(user.joinDate), 'yyyy-MM-dd')}</TableCell>
                             <TableCell className="text-right">
                                <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
