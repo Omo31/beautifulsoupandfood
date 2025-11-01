@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import AppHeader from "@/components/AppHeader";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ChatWidget } from "@/components/ChatWidget";
+import { Footer } from "@/components/Footer";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           {children}
         </main>
+        <Footer />
       </SidebarInset>
       <ChatWidget />
     </SidebarProvider>
