@@ -1,3 +1,136 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero",
+      "description": "A vibrant spread of Nigerian dishes",
+      "imageUrl": "https://images.unsplash.com/photo-1664993090321-b2caff794431?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxuaWdlcmlhbiUyMGZvb2R8ZW58MHx8fHwxNzYxOTg3NjkyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "nigerian food"
+    },
+    {
+      "id": "jollof-rice",
+      "description": "A plate of classic Nigerian Jollof Rice",
+      "imageUrl": "https://images.unsplash.com/photo-1634324092526-91f5e878b72f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxqb2xsb2YlMjByaWNlfGVufDB8fHx8MTc2MjAzMTkxNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "jollof rice"
+    },
+    {
+      "id": "egusi-soup",
+      "description": "A bowl of rich Egusi Soup with fufu",
+      "imageUrl": "https://images.unsplash.com/photo-1652408414631-f09eae7cc1db?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxlZ3VzaSUyMHNvdXB8ZW58MHx8fHwxNzYxOTg2MzY5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "egusi soup"
+    },
+    {
+      "id": "suya",
+      "description": "Spicy grilled Suya skewers",
+      "imageUrl": "https://images.unsplash.com/photo-1708388464743-80126e9cdecf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxncmlsbGVkJTIwbWVhdHxlbnwwfHx8fDE3NjE5ODc2OTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "grilled meat"
+    },
+    {
+      "id": "pounded-yam",
+      "description": "Pounded yam ready to be served",
+      "imageUrl": "https://images.unsplash.com/photo-1614725363900-538db555d7b4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxwb3VuZGVkJTIweWFtfGVufDB8fHx8MTc2MjAzMTkxNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pounded yam"
+    },
+    {
+      "id": "ogbono-soup",
+      "description": "A delicious bowl of Ogbono Soup",
+      "imageUrl": "https://images.unsplash.com/photo-1761748615918-3da7148e41f0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxvZ2Jvbm8lMjBzb3VwfGVufDB8fHx8MTc2MjAzMTkxNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "ogbono soup"
+    },
+    {
+      "id": "afang-soup",
+      "description": "Hearty and vegetable-rich Afang Soup",
+      "imageUrl": "https://images.unsplash.com/photo-1608751819407-6ec94205fd7b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxhZmFuZyUyMHNvdXB8ZW58MHx8fHwxNzYyMDMxOTE1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "afang soup"
+    },
+    {
+      "id": "banga-soup",
+      "description": "A bowl of traditional Banga Soup",
+      "imageUrl": "https://images.unsplash.com/photo-1652408414631-f09eae7cc1db?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxiYW5nYSUyMHNvdXB8ZW58MHx8fHwxNzYyMDMxOTE0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "banga soup"
+    },
+    {
+      "id": "bitterleaf-soup",
+      "description": "A bowl of flavorful Bitterleaf Soup",
+      "imageUrl": "https://images.unsplash.com/photo-1584972922016-912db9f3df22?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxiaXR0ZXJsZWFmJTIwc291cHxlbnwwfHx8fDE3NjIwMzE5MTR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "bitterleaf soup"
+    },
+    {
+      "id": "oha-soup",
+      "description": "A tasty bowl of Oha Soup",
+      "imageUrl": "https://images.unsplash.com/photo-1699005575488-49ebcecdc794?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxvaGElMjBzb3VwfGVufDB8fHx8MTc2MjAzMTkxNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "oha soup"
+    },
+    {
+      "id": "edikang-ikong",
+      "description": "A colorful bowl of Edikang Ikong Soup",
+      "imageUrl": "https://picsum.photos/seed/edikang/400/300",
+      "imageHint": "edikang ikong"
+    },
+    {
+      "id": "plantain",
+      "description": "Fried plantain (Dodo)",
+      "imageUrl": "https://images.unsplash.com/photo-1688940737480-bee66f221b61?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxmcmllZCUyMHBsYW50YWlufGVufDB8fHx8MTc2MjAwNzcyMXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "fried plantain"
+    },
+    {
+      "id": "gari",
+      "description": "A bag of Gari (cassava flakes)",
+      "imageUrl": "https://images.unsplash.com/photo-1565607052745-35f8c6ba59b1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxjYXNzYXZhJTIwZmxvdXJ8ZW58MHx8fHwxNzYyMDMxOTE1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cassava flour"
+    },
+    {
+      "id": "palm-oil",
+      "description": "A bottle of red Palm Oil",
+      "imageUrl": "https://images.unsplash.com/photo-1616587042991-a2c781f3f1c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwYWxtJTIwb2lsfGVufDB8fHx8MTc2MjAzMTkxNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "palm oil"
+    },
+    {
+      "id": "yam-tuber",
+      "description": "Fresh yam tubers",
+      "imageUrl": "https://picsum.photos/seed/yamtuber/400/300",
+      "imageHint": "yam tuber"
+    },
+    {
+      "id": "crayfish",
+      "description": "A bowl of dried crayfish",
+      "imageUrl": "https://images.unsplash.com/photo-1682338401236-2482c7200a8b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxkcmllZCUyMGNyYXlmaXNofGVufDB8fHx8MTc2MjAzMTkxNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "dried crayfish"
+    },
+    {
+      "id": "dried-fish",
+      "description": "Smoked and dried fish",
+      "imageUrl": "https://images.unsplash.com/photo-1572420963886-7850f1af053e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxkcmllZCUyMGZpc2h8ZW58MHx8fHwxNzYyMDMxOTE0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "dried fish"
+    },
+    {
+      "id": "scotch-bonnet",
+      "description": "A pile of fresh Scotch Bonnet peppers",
+      "imageUrl": "https://images.unsplash.com/photo-1632657766516-815ad53096db?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjaGlsaSUyMHBlcHBlcnN8ZW58MHx8fHwxNzYyMDMxOTE0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "chili peppers"
+    },
+    {
+      "id": "testimonial-1",
+      "description": "A happy customer",
+      "imageUrl": "https://images.unsplash.com/photo-1508002366005-75a695ee2d17?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxoYXBweSUyMHBlcnNvbnxlbnwwfHx8fDE3NjE5Njc1MDN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "happy person"
+    },
+    {
+      "id": "testimonial-2",
+      "description": "Another happy customer",
+      "imageUrl": "https://images.unsplash.com/photo-1607529378676-a20456ee2f6b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxzbWlsaW5nJTIwcGVyc29ufGVufDB8fHx8MTc2MTkyODg5NHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "smiling person"
+    },
+    {
+      "id": "testimonial-3",
+      "description": "A third happy customer",
+      "imageUrl": "https://images.unsplash.com/photo-1575433287483-8ec588f72417?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzYXRpc2ZpZWQlMjBjdXN0b21lcnxlbnwwfHx8fDE3NjE5MDY2ODF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "satisfied customer"
+    },
+    {
+      "id": "avatar-1",
+      "description": "User avatar",
+      "imageUrl": "https://images.unsplash.com/photo-1640960543409-dbe56ccc30e2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8dXNlciUyMGF2YXRhcnxlbnwwfHx8fDE3NjE5OTQ2NDJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "user avatar"
+    }
+  ]
 }
