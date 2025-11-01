@@ -38,6 +38,24 @@ export type Order = {
     itemCount: number;
 };
 
+export type PurchaseOrderItem = {
+  id: string;
+  productName: string;
+  productId: string;
+  quantity: number;
+  cost: number;
+};
+
+export type PurchaseOrder = {
+  id: string;
+  supplier: string;
+  date: string;
+  status: 'Draft' | 'Pending' | 'Completed' | 'Cancelled';
+  items: PurchaseOrderItem[];
+  total: number;
+};
+
+
 export const products: Product[] = [
   { id: '1', name: 'Jollof Rice Mix', description: 'The perfect blend of spices for authentic Nigerian Jollof Rice.', price: 5.99, category: 'foodstuff', stock: 150, imageId: 'jollof-rice', rating: 4.8, reviewCount: 120 },
   { id: '2', name: 'Egusi Soup', description: 'Ready-to-eat classic Egusi soup, rich and flavorful.', price: 12.50, category: 'soup', stock: 50, imageId: 'egusi-soup', rating: 4.9, reviewCount: 98 },
@@ -75,4 +93,49 @@ export const orders: Order[] = [
     { id: 'ORD-003', customerName: 'Peter Jones', date: '2024-05-20', status: 'Pending', total: 25.00, itemCount: 2 },
     { id: 'ORD-004', customerName: 'John Doe', date: '2024-05-18', status: 'Delivered', total: 112.75, itemCount: 8 },
     { id: 'ORD-005', customerName: 'Chioma Okoro', date: '2024-05-21', status: 'Awaiting Confirmation', total: 0.00, itemCount: 4 },
+];
+
+export const purchaseOrders: PurchaseOrder[] = [
+    {
+        id: 'PO-2024-001',
+        supplier: 'Global Food Imports',
+        date: '2024-05-15',
+        status: 'Completed',
+        items: [
+            { id: '1', productName: 'Pounded Yam Flour', productId: 'PYF-001', quantity: 100, cost: 5.50 },
+            { id: '2', productName: 'Red Palm Oil', productId: 'RPO-001', quantity: 50, cost: 6.00 },
+        ],
+        total: 850.00
+    },
+    {
+        id: 'PO-2024-002',
+        supplier: 'Local Farms Ltd.',
+        date: '2024-05-18',
+        status: 'Pending',
+        items: [
+            { id: '1', productName: 'Yam Tuber', productId: 'YT-001', quantity: 200, cost: 4.00 },
+            { id: '2', productName: 'Fresh Crayfish', productId: 'FC-001', quantity: 20, cost: 10.00 },
+        ],
+        total: 1000.00
+    },
+    {
+        id: 'PO-2024-003',
+        supplier: 'Spices & More Co.',
+        date: '2024-05-20',
+        status: 'Draft',
+        items: [
+            { id: '1', productName: 'Jollof Rice Mix', productId: 'JRM-001', quantity: 50, cost: 3.50 },
+        ],
+        total: 175.00
+    },
+     {
+        id: 'PO-2024-004',
+        supplier: 'Global Food Imports',
+        date: '2024-05-21',
+        status: 'Cancelled',
+        items: [
+            { id: '1', productName: 'Gari', productId: 'GARI-001', quantity: 150, cost: 2.00 },
+        ],
+        total: 300.00
+    },
 ];
