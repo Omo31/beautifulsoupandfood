@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -13,6 +14,8 @@ import {
   DollarSign,
   MessageSquare,
   ArrowLeft,
+  Soup,
+  PlusCircle,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -27,7 +30,14 @@ import {
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/Logo';
 
-const menuItems = [
+const userMenuItems = [
+    { href: '/', label: 'Home', icon: Home },
+    { href: '/shop', label: 'Shop', icon: ShoppingBag },
+    { href: '/soup', label: 'Soups', icon: Soup },
+    { href: '/custom-order', label: 'Custom Order', icon: PlusCircle },
+]
+
+const adminMenuItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { href: '/admin/users', label: 'Users', icon: Users },
@@ -56,7 +66,8 @@ export function AdminSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {menuItems.map((item) => (
+            <p className="text-xs text-sidebar-foreground/70 px-4 pt-2 pb-1 font-semibold">Admin</p>
+          {adminMenuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
               <SidebarMenuButton
                 asChild
@@ -70,20 +81,24 @@ export function AdminSidebar() {
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
-      </SidebarContent>
-      <SidebarSeparator />
-      <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                    <Link href="/" onClick={handleLinkClick}>
-                        <ArrowLeft />
-                        <span>Back to Shop</span>
-                    </Link>
-                </SidebarMenuButton>
+        <SidebarSeparator />
+        <SidebarMenu>
+             <p className="text-xs text-sidebar-foreground/70 px-4 pt-2 pb-1 font-semibold">Storefront</p>
+             {userMenuItems.map((item) => (
+            <SidebarMenuItem key={item.label}>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.href}
+              >
+                <Link href={item.href} onClick={handleLinkClick}>
+                  <item.icon />
+                  <span>{item.label}</span>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
-          </SidebarMenu>
-      </SidebarFooter>
+          ))}
+        </SidebarMenu>
+      </SidebarContent>
     </Sidebar>
   );
 }
