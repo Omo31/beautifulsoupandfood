@@ -1,9 +1,14 @@
+'use client';
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
+    const router = useRouter();
+
     return (
         <Card>
             <CardHeader>
@@ -26,7 +31,10 @@ export default function ProfilePage() {
                         <Label htmlFor="email">Email</Label>
                         <Input id="email" type="email" defaultValue="johndoe@example.com" />
                     </div>
-                    <Button>Update Profile</Button>
+                    <div className="flex gap-2">
+                        <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
+                        <Button>Update Profile</Button>
+                    </div>
                 </form>
 
                 <div className="border-t pt-6">
@@ -44,7 +52,10 @@ export default function ProfilePage() {
                             <Label htmlFor="confirm-password">Confirm New Password</Label>
                             <Input id="confirm-password" type="password" />
                         </div>
-                        <Button>Change Password</Button>
+                        <div className="flex gap-2">
+                            <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
+                            <Button>Change Password</Button>
+                        </div>
                     </form>
                 </div>
             </CardContent>

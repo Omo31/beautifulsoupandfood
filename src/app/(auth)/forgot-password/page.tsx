@@ -5,8 +5,11 @@ import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function ForgotPasswordPage() {
+    const router = useRouter();
+
     return (
         <>
             <CardHeader>
@@ -20,9 +23,12 @@ export default function ForgotPasswordPage() {
                     <Label htmlFor="email">Email</Label>
                     <Input id="email" type="email" placeholder="m@example.com" required />
                 </div>
-                <Button type="submit" className="w-full">
-                    Send Reset Link
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" onClick={() => router.back()}>Cancel</Button>
+                    <Button type="submit">
+                        Send Reset Link
+                    </Button>
+                </div>
             </CardContent>
             <CardFooter className="flex justify-center text-sm">
                 Remember your password? <Link href="/auth/login" className="underline ml-1">Login</Link>

@@ -1,9 +1,14 @@
+'use client';
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useRouter } from "next/navigation";
 
 export default function NotificationsPage() {
+    const router = useRouter();
+
     return (
         <Card>
             <CardHeader>
@@ -39,7 +44,10 @@ export default function NotificationsPage() {
                     </div>
                     <Switch id="chat-messages" defaultChecked />
                 </div>
-                <Button>Save Preferences</Button>
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => router.back()}>Cancel</Button>
+                    <Button>Save Preferences</Button>
+                </div>
             </CardContent>
         </Card>
     );

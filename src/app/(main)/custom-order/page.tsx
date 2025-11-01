@@ -5,8 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useRouter } from "next/navigation";
 
 export default function CustomOrderPage() {
+    const router = useRouter();
     return (
         <div className="max-w-2xl mx-auto">
             <Card>
@@ -38,9 +40,14 @@ export default function CustomOrderPage() {
                             <Label htmlFor="email">Your Email</Label>
                             <Input id="email" type="email" placeholder="john.doe@example.com" required />
                         </div>
-                        <Button type="submit" className="w-full">
-                            Submit Request
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button type="button" variant="outline" onClick={() => router.back()} className="w-full">
+                                Cancel
+                            </Button>
+                            <Button type="submit" className="w-full">
+                                Submit Request
+                            </Button>
+                        </div>
                     </form>
                 </CardContent>
             </Card>
