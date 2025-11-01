@@ -22,16 +22,18 @@ export type User = {
     id: string;
     name: string;
     email: string;
-    role: 'Admin' | 'Customer';
+    role: 'Admin' | 'Customer' | 'Content Manager';
     lastLogin: string;
     avatarId: string;
+    status: 'Active' | 'Disabled';
+    joinDate: string;
 };
 
 export type Order = {
     id: string;
     customerName: string;
     date: string;
-    status: 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled';
+    status: 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Awaiting Confirmation';
     total: number;
     itemCount: number;
 };
@@ -61,10 +63,10 @@ export const testimonials: Testimonial[] = [
 ];
 
 export const users: User[] = [
-    { id: '1', name: 'Admin User', email: 'admin@example.com', role: 'Admin', lastLogin: '2024-05-20T10:00:00Z', avatarId: 'avatar-1' },
-    { id: '2', name: 'John Doe', email: 'johndoe@example.com', role: 'Customer', lastLogin: '2024-05-20T12:30:00Z', avatarId: 'avatar-1' },
-    { id: '3', name: 'Jane Smith', email: 'janesmith@example.com', role: 'Customer', lastLogin: '2024-05-19T18:45:00Z', avatarId: 'avatar-1' },
-    { id: '4', name: 'Peter Jones', email: 'peterjones@example.com', role: 'Customer', lastLogin: '2024-05-20T09:15:00Z', avatarId: 'avatar-1' },
+    { id: '1', name: 'Admin User', email: 'admin@example.com', role: 'Admin', lastLogin: '2024-05-20T10:00:00Z', avatarId: 'avatar-1', status: 'Active', joinDate: '2023-01-15T10:00:00Z' },
+    { id: '2', name: 'John Doe', email: 'johndoe@example.com', role: 'Customer', lastLogin: '2024-05-20T12:30:00Z', avatarId: 'avatar-1', status: 'Active', joinDate: '2023-03-22T11:00:00Z' },
+    { id: '3', name: 'Jane Smith', email: 'janesmith@example.com', role: 'Content Manager', lastLogin: '2024-05-19T18:45:00Z', avatarId: 'avatar-1', status: 'Active', joinDate: '2023-02-10T14:20:00Z' },
+    { id: '4', name: 'Peter Jones', email: 'peterjones@example.com', role: 'Customer', lastLogin: '2024-05-20T09:15:00Z', avatarId: 'avatar-1', status: 'Disabled', joinDate: '2023-04-01T09:15:00Z' },
 ];
 
 export const orders: Order[] = [
@@ -72,4 +74,5 @@ export const orders: Order[] = [
     { id: 'ORD-002', customerName: 'Jane Smith', date: '2024-05-19', status: 'Shipped', total: 89.50, itemCount: 5 },
     { id: 'ORD-003', customerName: 'Peter Jones', date: '2024-05-20', status: 'Pending', total: 25.00, itemCount: 2 },
     { id: 'ORD-004', customerName: 'John Doe', date: '2024-05-18', status: 'Delivered', total: 112.75, itemCount: 8 },
+    { id: 'ORD-005', customerName: 'Chioma Okoro', date: '2024-05-21', status: 'Awaiting Confirmation', total: 0.00, itemCount: 4 },
 ];
