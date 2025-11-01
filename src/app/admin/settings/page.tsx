@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -40,9 +41,10 @@ const initialRoles = [
   {
     name: 'Admin',
     permissions: {
-      orders: ['view', 'edit'],
+      orders: ['view', 'create', 'edit', 'delete'],
       users: ['view', 'create', 'edit', 'delete'],
       inventory: ['view', 'create', 'edit', 'delete'],
+      settings: ['view', 'create', 'edit', 'delete'],
     },
   },
   {
@@ -51,6 +53,7 @@ const initialRoles = [
       orders: ['view'],
       users: [],
       inventory: ['view', 'create', 'edit'],
+      settings: [],
     },
   },
   {
@@ -59,6 +62,7 @@ const initialRoles = [
       orders: [],
       users: [],
       inventory: [],
+      settings: [],
     },
   },
 ];
