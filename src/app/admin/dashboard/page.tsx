@@ -1,4 +1,6 @@
-import { BarChart, DollarSign, FileText, ShoppingBag, Users } from "lucide-react";
+'use client';
+
+import { DollarSign, FileText, ShoppingBag, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Bar, BarChart as RechartsBarChart, Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -86,7 +88,7 @@ export default function AdminDashboardPage() {
                         <CardDescription>January - June 2024</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ChartContainer config={chartConfig}>
+                        <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
                             <RechartsBarChart accessibilityLayer data={salesData}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis
@@ -111,7 +113,7 @@ export default function AdminDashboardPage() {
                         <CardDescription>Last 7 Days</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         <ChartContainer config={chartConfig}>
+                         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
                             <RechartsLineChart data={revenueData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="date" tickFormatter={(val) => new Date(val).toLocaleDateString('en-US', { day: 'numeric', month: 'short'})} />
