@@ -1,7 +1,7 @@
 'use client';
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,8 +17,26 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function CartPage() {
     const [shippingMethod, setShippingMethod] = useState("pickup");
-    const cartItems = products.slice(1, 3); // Mock cart items
-    const subtotal = cartItems.reduce((acc, item) => acc + item.price, 0);
+    const initialCartItems = useMemo(() => products.slice(1, 3).map(p => ({ ...p, quantity: 1 })), []);
+    const [cartItems, setCartItems] = useState(initialCartItems);
+
+    const handleQuantityChange = (productId: string, change: 'increase' | 'decrease') => {
+        setCartItems(currentItems =>
+            currentItems.map(item => {
+                if (item.id === productId) {
+                    const newQuantity = change === 'increase' ? item.quantity + 1 : item.quantity - 1;
+                    return { ...item, quantity: Math.max(1, newQuantity) };
+                }
+                return item;
+            })
+        );
+    };
+    
+    const handleRemoveItem = (productId: string) => {
+        setCartItems(currentItems => currentItems.filter(item => item.id !== productId));
+    };
+
+    const subtotal = useMemo(() => cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0), [cartItems]);
     const serviceCharge = subtotal * 0.06;
     const total = subtotal + serviceCharge;
 
@@ -30,32 +48,38 @@ export default function CartPage() {
                     <div className="md:col-span-2">
                         <Card>
                             <CardContent className="p-0">
-                                <div className="flex flex-col">
-                                    {cartItems.map((item, index) => {
-                                        const image = PlaceHolderImages.find(p => p.id === item.imageId);
-                                        return (
-                                            <div key={item.id}>
-                                                <div className="flex items-center gap-4 p-4">
-                                                    <div className="relative h-24 w-24 rounded-md overflow-hidden">
-                                                        {image && <Image src={image.imageUrl} alt={item.name} fill className="object-cover" data-ai-hint={image.imageHint} />}
+                                {cartItems.length > 0 ? (
+                                    <div className="flex flex-col">
+                                        {cartItems.map((item, index) => {
+                                            const image = PlaceHolderImages.find(p => p.id === item.imageId);
+                                            return (
+                                                <div key={item.id}>
+                                                    <div className="flex items-center gap-4 p-4">
+                                                        <div className="relative h-24 w-24 rounded-md overflow-hidden">
+                                                            {image && <Image src={image.imageUrl} alt={item.name} fill className="object-cover" data-ai-hint={image.imageHint} />}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <h3 className="font-semibold">{item.name}</h3>
+                                                            <p className="text-sm text-muted-foreground">₦{item.price.toFixed(2)}</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 border rounded-md p-1">
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleQuantityChange(item.id, 'decrease')} disabled={item.quantity <= 1}><Minus className="h-3 w-3"/></Button>
+                                                            <span>{item.quantity}</span>
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleQuantityChange(item.id, 'increase')}><Plus className="h-3 w-3"/></Button>
+                                                        </div>
+                                                        <p className="font-semibold w-20 text-right">₦{(item.price * item.quantity).toFixed(2)}</p>
+                                                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => handleRemoveItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <h3 className="font-semibold">{item.name}</h3>
-                                                        <p className="text-sm text-muted-foreground">₦{item.price.toFixed(2)}</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 border rounded-md p-1">
-                                                        <Button variant="ghost" size="icon" className="h-6 w-6"><Minus className="h-3 w-3"/></Button>
-                                                        <span>1</span>
-                                                        <Button variant="ghost" size="icon" className="h-6 w-6"><Plus className="h-3 w-3"/></Button>
-                                                    </div>
-                                                    <p className="font-semibold w-20 text-right">₦{item.price.toFixed(2)}</p>
-                                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                                    {index < cartItems.length - 1 && <Separator />}
                                                 </div>
-                                                {index < cartItems.length - 1 && <Separator />}
-                                            </div>
-                                        )
-                                    })}
-                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="p-10 text-center text-muted-foreground">
+                                        Your cart is empty.
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </div>
@@ -129,7 +153,7 @@ export default function CartPage() {
                                 </div>
                             </CardContent>
                             <CardFooter>
-                                <Button className="w-full" disabled={shippingMethod === 'delivery'}>
+                                <Button className="w-full" disabled={shippingMethod === 'delivery' || cartItems.length === 0}>
                                     Proceed to Payment
                                 </Button>
                             </CardFooter>
