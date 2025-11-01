@@ -36,6 +36,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 const initialRoles = [
   {
@@ -78,6 +87,7 @@ export default function SettingsPage() {
   const [services, setServices] = useState(initialServices);
   const [newMeasure, setNewMeasure] = useState('');
   const [newService, setNewService] = useState('');
+  const [isNewRoleOpen, setNewRoleOpen] = useState(false);
 
   const handleAddMeasure = () => {
     if (newMeasure.trim()) {
@@ -277,7 +287,54 @@ export default function SettingsPage() {
                         Define user roles and their access levels across the application.
                     </CardDescription>
                 </div>
-                <Button><PlusCircle className="mr-2 h-4 w-4"/> Create New Role</Button>
+                <Dialog open={isNewRoleOpen} onOpenChange={setNewRoleOpen}>
+                  <DialogTrigger asChild>
+                    <Button><PlusCircle className="mr-2 h-4 w-4"/> Create New Role</Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Create New Role</DialogTitle>
+                      <DialogDescription>
+                        Define the name and permissions for the new role.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="role-name">Role Name</Label>
+                            <Input id="role-name" placeholder="e.g., Shipper" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Permissions</Label>
+                            <div className="rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Module</TableHead>
+                                            {permissionActions.map(action => <TableHead key={action} className="text-center">{action}</TableHead>)}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {permissionModules.map(module => (
+                                            <TableRow key={module}>
+                                                <TableCell className="font-medium">{module}</TableCell>
+                                                {permissionActions.map(action => (
+                                                    <TableCell key={action} className="text-center">
+                                                        <Checkbox aria-label={`${action} on ${module}`} />
+                                                    </TableCell>
+                                                ))}
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setNewRoleOpen(false)}>Cancel</Button>
+                      <Button onClick={() => setNewRoleOpen(false)}>Save Role</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent>
