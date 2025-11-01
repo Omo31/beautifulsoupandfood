@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 
 const RoleBadge = ({ role }: { role: User['role'] }) => {
-    const variant = role === 'Admin' ? 'destructive' : role === 'Content Manager' ? 'secondary' : 'outline';
+    const variant = role === 'Owner' ? 'destructive' : role === 'Content Manager' ? 'secondary' : 'outline';
     return <Badge variant={variant}>{role}</Badge>;
 };
 
@@ -76,7 +76,7 @@ export default function UsersPage() {
                                         <SelectContent>
                                             <SelectItem value="Customer">Customer</SelectItem>
                                             <SelectItem value="Content Manager">Content Manager</SelectItem>
-                                            <SelectItem value="Admin">Admin</SelectItem>
+                                            <SelectItem value="Owner">Owner</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -100,7 +100,7 @@ export default function UsersPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Roles</SelectItem>
-                                    <SelectItem value="Admin">Admin</SelectItem>
+                                    <SelectItem value="Owner">Owner</SelectItem>
                                     <SelectItem value="Content Manager">Content Manager</SelectItem>
                                     <SelectItem value="Customer">Customer</SelectItem>
                                 </SelectContent>

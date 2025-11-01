@@ -39,7 +39,7 @@ import {
 
 const initialRoles = [
   {
-    name: 'Admin',
+    name: 'Owner',
     permissions: {
       orders: ['view', 'create', 'edit', 'delete'],
       users: ['view', 'create', 'edit', 'delete'],
@@ -308,7 +308,7 @@ export default function SettingsPage() {
                                                 id={`${role.name}-${module}-${action}`}
                                                 aria-label={`${action} permission for ${module} in ${role.name} role`}
                                                 defaultChecked={hasPermission}
-                                                disabled={role.name === 'Admin'}
+                                                disabled={role.name === 'Owner'}
                                             />
                                         )
                                     })}
@@ -317,7 +317,7 @@ export default function SettingsPage() {
                            </TableCell>
                         ))}
                         <TableCell className="text-right">
-                          {role.name !== 'Admin' && role.name !== 'Customer' ? (
+                          {role.name !== 'Owner' && role.name !== 'Customer' ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">

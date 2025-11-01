@@ -23,7 +23,7 @@ export type User = {
     id: string;
     name: string;
     email: string;
-    role: 'Admin' | 'Customer' | 'Content Manager';
+    role: 'Owner' | 'Customer' | 'Content Manager';
     lastLogin: string;
     avatarId: string;
     status: 'Active' | 'Disabled';
@@ -109,7 +109,7 @@ export const testimonials: Testimonial[] = [
 ];
 
 export const users: User[] = [
-    { id: '1', name: 'Admin User', email: 'admin@example.com', role: 'Admin', lastLogin: '2024-05-20T10:00:00Z', avatarId: 'avatar-1', status: 'Active', joinDate: '2023-01-15T10:00:00Z' },
+    { id: '1', name: 'Owner User', email: 'owner@example.com', role: 'Owner', lastLogin: '2024-05-20T10:00:00Z', avatarId: 'avatar-1', status: 'Active', joinDate: '2023-01-15T10:00:00Z' },
     { id: '2', name: 'John Doe', email: 'johndoe@example.com', role: 'Customer', lastLogin: '2024-05-20T12:30:00Z', avatarId: 'avatar-1', status: 'Active', joinDate: '2023-03-22T11:00:00Z' },
     { id: '3', name: 'Jane Smith', email: 'janesmith@example.com', role: 'Content Manager', lastLogin: '2024-05-19T18:45:00Z', avatarId: 'avatar-1', status: 'Active', joinDate: '2023-02-10T14:20:00Z' },
     { id: '4', name: 'Peter Jones', email: 'peterjones@example.com', role: 'Customer', lastLogin: '2024-05-20T09:15:00Z', avatarId: 'avatar-1', status: 'Disabled', joinDate: '2023-04-01T09:15:00Z' },
@@ -150,7 +150,7 @@ export const purchaseOrders: PurchaseOrder[] = [
     },
     {
         id: 'PO-2024-003',
-        supplier: 'Spices & More Co.',
+        supplier: 'Spices &amp; More Co.',
         date: '2024-05-20',
         status: 'Draft',
         items: [
