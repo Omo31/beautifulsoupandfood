@@ -13,6 +13,7 @@ import { products } from "@/lib/data";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function CartPage() {
     const [shippingMethod, setShippingMethod] = useState("pickup");
@@ -75,7 +76,7 @@ export default function CartPage() {
                                                     <Info className="h-4 w-4 ml-2 text-muted-foreground cursor-pointer"/>
                                                 </TooltipTrigger>
                                                 <TooltipContent>
-                                                    <p>Collect your order directly from our location after payment. <br/> No shipping fees apply.</p>
+                                                    <p>Collect your order directly from our location after payment.</p>
                                                 </TooltipContent>
                                             </Tooltip>
                                         </Label>
@@ -92,13 +93,7 @@ export default function CartPage() {
                                             <CardContent className="pt-6">
                                                 <form className="space-y-4">
                                                     <Label>Shipping Address</Label>
-                                                     <Input placeholder="Full Name" />
-                                                    <Input placeholder="Street Address" />
-                                                    <Input placeholder="City" />
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <Input placeholder="State/Province" />
-                                                        <Input placeholder="ZIP/Postal Code" />
-                                                    </div>
+                                                    <Textarea placeholder="Please enter your full shipping address here. Be as descriptive as possible." />
                                                     <Button size="sm" className="w-full">Submit for Shipping Quote</Button>
                                                 </form>
                                             </CardContent>
