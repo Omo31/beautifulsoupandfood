@@ -6,6 +6,7 @@ import {
   ListFilter,
   PlusCircle,
   MoreHorizontal,
+  Upload,
 } from 'lucide-react';
 import {
   Card,
@@ -56,6 +57,7 @@ import Image from 'next/image';
 import { products as initialProducts } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const StockBadge = ({ stock, threshold = 20 }: { stock: number, threshold?: number }) => {
   if (stock === 0) {
@@ -103,48 +105,68 @@ export default function InventoryPage() {
                   Fill in the details to add a new product to your inventory.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">Name</Label>
-                  <Input id="name" placeholder="Product Name" className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="description" className="text-right">Description</Label>
-                  <Textarea id="description" placeholder="A short description..." className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
-                        <Label htmlFor="price" className="text-right">Price (₦)</Label>
-                        <Input id="price" type="number" placeholder="0.00" />
+              <ScrollArea className="max-h-[70vh] pr-6">
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="name" className="text-right">Name</Label>
+                    <Input id="name" placeholder="Product Name" className="col-span-3" />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="description" className="text-right">Description</Label>
+                    <Textarea id="description" placeholder="A short description..." className="col-span-3" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
+                          <Label htmlFor="price" className="text-right">Price (₦)</Label>
+                          <Input id="price" type="number" placeholder="0.00" />
+                      </div>
+                      <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
+                          <Label htmlFor="stock" className="text-right">Stock</Label>
+                          <Input id="stock" type="number" placeholder="0" />
+                      </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
+                          <Label htmlFor="category" className="text-right">Category</Label>
+                          <Select>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="foodstuff">Foodstuff</SelectItem>
+                                  <SelectItem value="soup">Soup</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </div>
+                      <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
+                          <Label htmlFor="threshold" className="text-right">Low Stock Threshold</Label>
+                          <Input id="threshold" type="number" placeholder="e.g., 5" />
+                      </div>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Image</Label>
+                    <div className="col-span-3">
+                      <div className="flex items-center justify-center w-full">
+                          <Label
+                              htmlFor="dropzone-file"
+                              className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted hover:bg-muted/50"
+                          >
+                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                  <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+                                  <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                                  <p className="text-xs text-muted-foreground">SVG, PNG, JPG or GIF</p>
+                              </div>
+                              <Input id="dropzone-file" type="file" className="hidden" />
+                          </Label>
+                      </div>
                     </div>
-                     <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
-                        <Label htmlFor="stock" className="text-right">Stock</Label>
-                        <Input id="stock" type="number" placeholder="0" />
-                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="image-url" className="text-right">Or Image URL</Label>
+                      <Input id="image-url" placeholder="https://example.com/image.png" className="col-span-3" />
+                  </div>
                 </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
-                        <Label htmlFor="category" className="text-right">Category</Label>
-                         <Select>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="foodstuff">Foodstuff</SelectItem>
-                                <SelectItem value="soup">Soup</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
-                        <Label htmlFor="threshold" className="text-right">Low Stock Threshold</Label>
-                        <Input id="threshold" type="number" placeholder="e.g., 5" />
-                    </div>
-                </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="image-url" className="text-right">Image URL</Label>
-                  <Input id="image-url" placeholder="https://example.com/image.png" className="col-span-3" />
-                </div>
-              </div>
+              </ScrollArea>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setAddProductOpen(false)}>Cancel</Button>
                 <Button type="submit">Save Product</Button>
