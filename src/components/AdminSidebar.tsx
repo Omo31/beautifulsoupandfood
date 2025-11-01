@@ -23,6 +23,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   SidebarSeparator,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/Logo';
 
@@ -40,11 +41,16 @@ const menuItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { setOpenMobile } = useSidebar();
+
+  const handleLinkClick = () => {
+    setOpenMobile(false);
+  };
 
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/admin/dashboard">
+        <Link href="/admin/dashboard" onClick={handleLinkClick}>
           <Logo />
         </Link>
       </SidebarHeader>
@@ -56,7 +62,7 @@ export function AdminSidebar() {
                 asChild
                 isActive={pathname.startsWith(item.href)}
               >
-                <Link href={item.href}>
+                <Link href={item.href} onClick={handleLinkClick}>
                   <item.icon />
                   <span>{item.label}</span>
                 </Link>
@@ -70,7 +76,7 @@ export function AdminSidebar() {
           <SidebarMenu>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                    <Link href="/">
+                    <Link href="/" onClick={handleLinkClick}>
                         <ArrowLeft />
                         <span>Back to Shop</span>
                     </Link>
