@@ -21,9 +21,9 @@ import { Logo } from '@/components/Logo';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
-  { href: '/shop', label: 'Shop', icon: ShoppingBag },
-  { href: '/soup', label: 'Soups', icon: Soup },
-  { href: '/custom-order', label: 'Custom Order', icon: PlusCircle },
+  { href: '/shop', label: 'Shop', icon: ShoppingBag, className: "md:hidden" },
+  { href: '/soup', label: 'Soups', icon: Soup, className: "md:hidden" },
+  { href: '/custom-order', label: 'Custom Order', icon: PlusCircle, className: "md:hidden" },
   { href: '/admin/dashboard', label: 'Admin', icon: LayoutGrid, admin: true },
 ];
 
@@ -40,7 +40,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarMenu>
           {menuItems.map((item) => (
-            <SidebarMenuItem key={item.label}>
+            <SidebarMenuItem key={item.label} className={item.className}>
               <SidebarMenuButton
                 asChild
                 isActive={pathname === item.href}
