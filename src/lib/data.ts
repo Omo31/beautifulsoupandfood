@@ -1,3 +1,4 @@
+
 export type Product = {
   id: string;
   name: string;
@@ -64,6 +65,24 @@ export type Transaction = {
   amount: number;
 };
 
+export type Message = {
+    id: string;
+    sender: 'customer' | 'admin';
+    text: string;
+    timestamp: string;
+};
+
+export type Conversation = {
+    id: string;
+    customerId: string;
+    customerName: string;
+    customerAvatarId: string;
+    lastMessage: string;
+    lastMessageTimestamp: string;
+    unread: boolean;
+    messages: Message[];
+};
+
 
 export const products: Product[] = [
   { id: '1', name: 'Jollof Rice Mix', description: 'The perfect blend of spices for authentic Nigerian Jollof Rice.', price: 5.99, category: 'foodstuff', stock: 150, imageId: 'jollof-rice', rating: 4.8, reviewCount: 120 },
@@ -94,6 +113,8 @@ export const users: User[] = [
     { id: '2', name: 'John Doe', email: 'johndoe@example.com', role: 'Customer', lastLogin: '2024-05-20T12:30:00Z', avatarId: 'avatar-1', status: 'Active', joinDate: '2023-03-22T11:00:00Z' },
     { id: '3', name: 'Jane Smith', email: 'janesmith@example.com', role: 'Content Manager', lastLogin: '2024-05-19T18:45:00Z', avatarId: 'avatar-1', status: 'Active', joinDate: '2023-02-10T14:20:00Z' },
     { id: '4', name: 'Peter Jones', email: 'peterjones@example.com', role: 'Customer', lastLogin: '2024-05-20T09:15:00Z', avatarId: 'avatar-1', status: 'Disabled', joinDate: '2023-04-01T09:15:00Z' },
+    { id: '5', name: 'Chioma Okoro', email: 'chioma.okoro@example.com', role: 'Customer', lastLogin: '2024-05-21T14:00:00Z', avatarId: 'testimonial-2', status: 'Active', joinDate: '2023-05-12T18:00:00Z' },
+    { id: '6', name: 'Bayo Ojo', email: 'bayo.ojo@example.com', role: 'Customer', lastLogin: '2024-05-22T08:00:00Z', avatarId: 'testimonial-3', status: 'Active', joinDate: '2023-06-30T20:00:00Z' },
 ];
 
 export const orders: Order[] = [
@@ -156,4 +177,50 @@ export const transactions: Transaction[] = [
     { id: 'TRN-004', date: '2024-05-19', description: 'Facebook Ad Campaign', category: 'Marketing', type: 'Expense', amount: 50.00 },
     { id: 'TRN-005', date: '2024-05-18', description: 'Sale from Order ORD-004', category: 'Sale', type: 'Sale', amount: 112.75 },
     { id: 'TRN-006', date: '2024-05-17', description: 'May Salaries', category: 'Salaries', type: 'Expense', amount: 1500.00 },
+];
+
+export const conversations: Conversation[] = [
+    {
+        id: 'CONV-001',
+        customerId: '2',
+        customerName: 'John Doe',
+        customerAvatarId: 'avatar-1',
+        lastMessage: 'Great, thank you for the help!',
+        lastMessageTimestamp: '10:45 AM',
+        unread: false,
+        messages: [
+            { id: 'msg1', sender: 'customer', text: 'Hi, I have a question about my order.', timestamp: '10:30 AM' },
+            { id: 'msg2', sender: 'admin', text: 'Hello John, I\'d be happy to help. What is your order number?', timestamp: '10:31 AM' },
+            { id: 'msg3', sender: 'customer', text: 'It\'s ORD-001. I was wondering about the delivery status.', timestamp: '10:32 AM' },
+            { id: 'msg4', sender: 'admin', text: 'Let me check... It looks like your order was delivered this morning at 9:15 AM.', timestamp: '10:44 AM' },
+            { id: 'msg5', sender: 'customer', text: 'Oh, I see it now. Great, thank you for the help!', timestamp: '10:45 AM' },
+        ],
+    },
+    {
+        id: 'CONV-002',
+        customerId: '5',
+        customerName: 'Chioma Okoro',
+        customerAvatarId: 'testimonial-2',
+        lastMessage: 'Do you ship to the United States?',
+        lastMessageTimestamp: 'Yesterday',
+        unread: true,
+        messages: [
+            { id: 'msg1', sender: 'customer', text: 'Hello, I love your soups!', timestamp: 'Yesterday' },
+            { id: 'msg2', sender: 'customer', text: 'Do you ship to the United States?', timestamp: 'Yesterday' },
+        ],
+    },
+    {
+        id: 'CONV-003',
+        customerId: '6',
+        customerName: 'Bayo Ojo',
+        customerAvatarId: 'testimonial-3',
+        lastMessage: 'Perfect, I will place my order now.',
+        lastMessageTimestamp: '2 days ago',
+        unread: false,
+        messages: [
+            { id: 'msg1', sender: 'customer', text: 'Is the Banga soup spicy?', timestamp: '2 days ago' },
+            { id: 'msg2', sender: 'admin', text: 'Hi Bayo, our Banga soup has a mild to medium spice level. We can make it spicier on request for a custom order.', timestamp: '2 days ago' },
+            { id: 'msg3', sender: 'customer', text: 'Perfect, I will place my order now.', timestamp: '2 days ago' },
+        ],
+    },
 ];
