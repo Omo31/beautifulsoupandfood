@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function OrderHistoryPage() {
   return (
@@ -37,7 +38,11 @@ export default function OrderHistoryPage() {
                 </TableCell>
                 <TableCell>{order.itemCount}</TableCell>
                 <TableCell className="text-right">₦{order.total.toFixed(2)}</TableCell>
-                <TableCell className="text-right"><Button variant="outline" size="sm">View Details</Button></TableCell>
+                <TableCell className="text-right">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/account/orders/${order.id}`}>View Details</Link>
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
