@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,11 +23,12 @@ type CustomItem = {
 
 export default function CustomOrderPage() {
     const router = useRouter();
-    const [items, setItems] = useState<CustomItem[]>([{ id: Date.now(), name: '', quantity: 1, measure: '', customMeasure: '' }]);
+    const nextId = useRef(1);
+    const [items, setItems] = useState<CustomItem[]>([{ id: 0, name: '', quantity: 1, measure: '', customMeasure: '' }]);
     const [shippingMethod, setShippingMethod] = useState('pickup');
 
     const handleAddItem = () => {
-        setItems([...items, { id: Date.now(), name: '', quantity: 1, measure: '', customMeasure: '' }]);
+        setItems([...items, { id: nextId.current++, name: '', quantity: 1, measure: '', customMeasure: '' }]);
     };
 
     const handleRemoveItem = (id: number) => {
