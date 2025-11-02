@@ -13,9 +13,6 @@ import {
   FileText,
   DollarSign,
   MessageSquare,
-  ArrowLeft,
-  Soup,
-  PlusCircle,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -24,18 +21,9 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarFooter,
-  SidebarSeparator,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/Logo';
-
-const userMenuItems = [
-    { href: '/', label: 'Home', icon: Home },
-    { href: '/shop', label: 'Shop', icon: ShoppingBag },
-    { href: '/soup', label: 'Soups', icon: Soup },
-    { href: '/custom-order', label: 'Custom Order', icon: PlusCircle },
-]
 
 const adminMenuItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
@@ -72,23 +60,6 @@ export function AdminSidebar() {
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith(item.href)}
-              >
-                <Link href={item.href} onClick={handleLinkClick}>
-                  <item.icon />
-                  <span>{item.label}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-        <SidebarSeparator />
-        <SidebarMenu>
-             <p className="text-xs text-sidebar-foreground/70 px-4 pt-2 pb-1 font-semibold">Storefront</p>
-             {userMenuItems.map((item) => (
-            <SidebarMenuItem key={item.label}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href}
               >
                 <Link href={item.href} onClick={handleLinkClick}>
                   <item.icon />
