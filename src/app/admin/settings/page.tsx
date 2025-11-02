@@ -45,6 +45,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const initialRoles = [
   {
@@ -313,37 +314,39 @@ export default function SettingsPage() {
                         Define the name and permissions for the new role.
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="role-name">Role Name</Label>
-                            <Input id="role-name" placeholder="e.g., Shipper" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Permissions</Label>
-                            <div className="rounded-md border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Module</TableHead>
-                                            {permissionActions.map(action => <TableHead key={action} className="text-center">{action}</TableHead>)}
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {permissionModules.map(module => (
-                                            <TableRow key={module}>
-                                                <TableCell className="font-medium">{module}</TableCell>
-                                                {permissionActions.map(action => (
-                                                    <TableCell key={action} className="text-center">
-                                                        <Checkbox aria-label={`${action} on ${module}`} />
-                                                    </TableCell>
-                                                ))}
+                    <ScrollArea className="max-h-[70vh] -mx-6 px-6">
+                        <div className="space-y-4 py-4 pr-1">
+                            <div className="space-y-2">
+                                <Label htmlFor="role-name">Role Name</Label>
+                                <Input id="role-name" placeholder="e.g., Shipper" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Permissions</Label>
+                                <div className="rounded-md border">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Module</TableHead>
+                                                {permissionActions.map(action => <TableHead key={action} className="text-center">{action}</TableHead>)}
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {permissionModules.map(module => (
+                                                <TableRow key={module}>
+                                                    <TableCell className="font-medium">{module}</TableCell>
+                                                    {permissionActions.map(action => (
+                                                        <TableCell key={action} className="text-center">
+                                                            <Checkbox aria-label={`${action} on ${module}`} />
+                                                        </TableCell>
+                                                    ))}
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </ScrollArea>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setNewRoleOpen(false)}>Cancel</Button>
                       <Button onClick={() => setNewRoleOpen(false)}>Save Role</Button>
@@ -373,7 +376,8 @@ export default function SettingsPage() {
                                {role.name !== 'Customer' ? (
                                 <div className="flex justify-center gap-2">
                                     {permissionActions.map(action => {
-                                        const hasPermission = role.permissions[module.toLowerCase() as keyof typeof role.permissions]?.includes(action.toLowerCase());
+                                        const moduleKey = module.toLowerCase().replace(' & ', ' ').replace(' ', '-') as keyof typeof role.permissions;
+                                        const hasPermission = role.name === 'Owner' || role.permissions[moduleKey]?.includes(action.toLowerCase());
                                         const isActionDisabled = (module === 'Dashboard' || module === 'Analytics') && action !== 'View';
 
                                         return (
@@ -381,7 +385,7 @@ export default function SettingsPage() {
                                                 key={action}
                                                 id={`${role.name}-${module}-${action}`}
                                                 aria-label={`${action} permission for ${module} in ${role.name} role`}
-                                                defaultChecked={hasPermission}
+                                                checked={hasPermission}
                                                 disabled={role.name === 'Owner' || isActionDisabled}
                                             />
                                         )
