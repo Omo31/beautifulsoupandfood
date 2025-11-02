@@ -50,33 +50,48 @@ const initialRoles = [
   {
     name: 'Owner',
     permissions: {
+      dashboard: ['view'],
       orders: ['view', 'create', 'edit', 'delete'],
       users: ['view', 'create', 'edit', 'delete'],
       inventory: ['view', 'create', 'edit', 'delete'],
+      conversations: ['view', 'create', 'edit', 'delete'],
+      'purchase orders': ['view', 'create', 'edit', 'delete'],
+      accounting: ['view', 'create', 'edit', 'delete'],
+      analytics: ['view'],
       settings: ['view', 'create', 'edit', 'delete'],
     },
   },
   {
     name: 'Content Manager',
     permissions: {
-      orders: ['view'],
+      dashboard: ['view'],
+      orders: ['view', 'edit'],
       users: [],
       inventory: ['view', 'create', 'edit'],
+      conversations: ['view', 'create'],
+      'purchase orders': ['view'],
+      accounting: [],
+      analytics: [],
       settings: [],
     },
   },
   {
     name: 'Customer',
     permissions: {
+      dashboard: [],
       orders: [],
       users: [],
       inventory: [],
+      conversations: [],
+      'purchase orders': [],
+      accounting: [],
+      analytics: [],
       settings: [],
     },
   },
 ];
 
-const permissionModules = ['Orders', 'Users', 'Inventory', 'Settings'];
+const permissionModules = ['Dashboard', 'Orders', 'Users', 'Inventory', 'Conversations', 'Purchase Orders', 'Accounting', 'Analytics', 'Settings'];
 const permissionActions = ['View', 'Create', 'Edit', 'Delete'];
 
 const initialMeasures = ['Grams (g)', 'Kilograms (kg)', 'Pieces', 'Bunches', 'Wraps'];
@@ -359,13 +374,15 @@ export default function SettingsPage() {
                                 <div className="flex justify-center gap-2">
                                     {permissionActions.map(action => {
                                         const hasPermission = role.permissions[module.toLowerCase() as keyof typeof role.permissions]?.includes(action.toLowerCase());
+                                        const isActionDisabled = (module === 'Dashboard' || module === 'Analytics') && action !== 'View';
+
                                         return (
                                             <Checkbox
                                                 key={action}
                                                 id={`${role.name}-${module}-${action}`}
                                                 aria-label={`${action} permission for ${module} in ${role.name} role`}
                                                 defaultChecked={hasPermission}
-                                                disabled={role.name === 'Owner'}
+                                                disabled={role.name === 'Owner' || isActionDisabled}
                                             />
                                         )
                                     })}
