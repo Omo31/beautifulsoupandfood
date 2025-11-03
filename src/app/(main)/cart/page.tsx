@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Minus, Plus, Trash2, Info } from "lucide-react";
+import { Minus, Plus, Trash2, Info, ArrowLeft } from "lucide-react";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { products } from "@/lib/data";
 import { lagosLgas } from "@/lib/shipping";
@@ -67,7 +67,15 @@ export default function CartPage() {
     return (
         <TooltipProvider>
             <div>
-                <h1 className="text-4xl font-bold font-headline mb-8">Your Cart</h1>
+                 <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-4xl font-bold font-headline">Your Cart</h1>
+                     <Button variant="outline" asChild>
+                        <Link href="/shop">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Continue Shopping
+                        </Link>
+                    </Button>
+                </div>
                 <div className="grid md:grid-cols-3 gap-8">
                     <div className="md:col-span-2">
                         <Card>
