@@ -148,7 +148,7 @@ export default function CartPage() {
                                             <SelectContent>
                                                 {lagosLgas.map(lga => (
                                                     <SelectItem key={lga.id} value={lga.id}>
-                                                        {lga.name}
+                                                        {lga.name} - ₦{lga.price.toFixed(2)}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
