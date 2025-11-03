@@ -19,6 +19,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/Logo';
+import { useState } from 'react';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -28,13 +29,33 @@ const menuItems = [
   { href: '/admin/dashboard', label: 'Admin', icon: LayoutGrid, admin: true },
 ];
 
+// Mock authentication state. In a real app, this would come from a context or hook.
+const useMockAuth = () => {
+    // For now, we will simulate a logged-out state.
+    // To see the admin link, you could change this to true.
+    const [isAuthenticated, setIsAuthenticated] = useState(false); 
+    // In a real app, you would also have user role information here.
+    // const [user, setUser] = useState({ role: 'Owner' }); 
+    return { isAuthenticated };
+}
+
 export function AppSidebar() {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
+  const { isAuthenticated } = useMockAuth(); // Using the mock auth state
 
   const handleLinkClick = () => {
     setOpenMobile(false);
   };
+  
+  const visibleMenuItems = menuItems.filter(item => {
+    // The admin link should only be shown if the user is authenticated.
+    // In a real app, you'd also check if user.role === 'Owner'
+    if (item.admin) {
+        return isAuthenticated;
+    }
+    return true;
+  });
 
   return (
     <Sidebar>
@@ -45,7 +66,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {menuItems.map((item) => (
+          {visibleMenuItems.map((item) => (
             <SidebarMenuItem key={item.label} className={item.className}>
               <SidebarMenuButton
                 asChild
