@@ -41,7 +41,7 @@ export default function LoginPage() {
                 </Button>
             </CardContent>
             <CardFooter className="flex justify-center text-sm">
-                Don&apos;t have an account? <Link href="/signup" className="underline ml-1">Sign up</Link>
+                
             </CardFooter>
         </>
     )
