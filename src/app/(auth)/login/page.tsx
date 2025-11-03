@@ -6,9 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
     const router = useRouter();
+    const [showPassword, setShowPassword] = useState(false);
 
     return (
         <>
@@ -28,7 +31,18 @@ export default function LoginPage() {
                             Forgot your password?
                         </Link>
                     </div>
-                    <Input id="password" type="password" required />
+                    <div className="relative">
+                        <Input id="password" type={showPassword ? "text" : "password"} required />
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                            onClick={() => setShowPassword(!showPassword)}
+                        >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                     <Button variant="outline" onClick={() => router.back()}>Cancel</Button>
