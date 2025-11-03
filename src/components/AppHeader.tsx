@@ -119,6 +119,9 @@ export default function AppHeader() {
             <Button variant="ghost" asChild>
                 <Link href="/login">Login</Link>
             </Button>
+             <Button asChild>
+                <Link href="/signup">Sign Up</Link>
+            </Button>
         </div>
         )}
     </header>
