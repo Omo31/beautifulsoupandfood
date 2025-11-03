@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
                 </div>
             </CardContent>
             <CardFooter className="flex justify-center text-sm">
-                Remember your password? <Link href="/auth/login" className="underline ml-1">Login</Link>
+                Remember your password? <Link href="/login" className="underline ml-1">Login</Link>
             </CardFooter>
         </>
     )

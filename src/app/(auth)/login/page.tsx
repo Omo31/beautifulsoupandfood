@@ -21,7 +21,7 @@ export default function LoginPage() {
                 <div className="grid gap-2">
                     <div className="flex items-center">
                         <Label htmlFor="password">Password</Label>
-                        <Link href="/auth/forgot-password" className="ml-auto inline-block text-sm underline">
+                        <Link href="/forgot-password" className="ml-auto inline-block text-sm underline">
                             Forgot your password?
                         </Link>
                     </div>
@@ -35,7 +35,7 @@ export default function LoginPage() {
                 </Button>
             </CardContent>
             <CardFooter className="flex justify-center text-sm">
-                Don&apos;t have an account? <Link href="/auth/signup" className="underline ml-1">Sign up</Link>
+                Don&apos;t have an account? <Link href="/signup" className="underline ml-1">Sign up</Link>
             </CardFooter>
         </>
     )

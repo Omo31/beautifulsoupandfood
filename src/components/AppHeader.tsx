@@ -117,10 +117,10 @@ export default function AppHeader() {
         ) : (
         <div className="flex items-center gap-2">
             <Button variant="ghost" asChild>
-                <Link href="/auth/login">Login</Link>
+                <Link href="/login">Login</Link>
             </Button>
             <Button asChild>
-                <Link href="/auth/signup">Sign Up</Link>
+                <Link href="/signup">Sign Up</Link>
             </Button>
         </div>
         )}

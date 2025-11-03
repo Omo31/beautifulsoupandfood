@@ -45,7 +45,7 @@ export default function SignupPage() {
                 </Button>
             </CardContent>
             <CardFooter className="flex justify-center text-sm">
-                Already have an account? <Link href="/auth/login" className="underline ml-1">Login</Link>
+                Already have an account? <Link href="/login" className="underline ml-1">Login</Link>
             </CardFooter>
         </>
     )
