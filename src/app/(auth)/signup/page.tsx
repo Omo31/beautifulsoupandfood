@@ -66,7 +66,7 @@ export default function SignupPage() {
                     </Label>
                 </div>
                  <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" onClick={() => router.back()}>Cancel</Button>
+                    <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
                     <Button type="submit">
                         Create an account
                     </Button>
