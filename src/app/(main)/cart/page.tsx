@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Link from "next/link";
 
 export default function CartPage() {
     const [shippingMethod, setShippingMethod] = useState("pickup");
@@ -99,8 +100,11 @@ export default function CartPage() {
                                         })}
                                     </div>
                                 ) : (
-                                    <div className="p-10 text-center text-muted-foreground">
-                                        Your cart is empty.
+                                    <div className="p-10 text-center text-muted-foreground flex flex-col items-center gap-4">
+                                        <p>Your cart is empty.</p>
+                                        <Button asChild>
+                                            <Link href="/shop">Continue Shopping</Link>
+                                        </Button>
                                     </div>
                                 )}
                             </CardContent>
