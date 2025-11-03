@@ -46,49 +46,25 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { lagosLgas as initialLagosLgas, LgaShippingZone } from '@/lib/shipping';
 
 const initialRoles = [
   {
     name: 'Owner',
-    permissions: {
-      dashboard: ['view'],
-      orders: ['view', 'create', 'edit', 'delete'],
-      users: ['view', 'create', 'edit', 'delete'],
-      inventory: ['view', 'create', 'edit', 'delete'],
-      conversations: ['view', 'create', 'edit', 'delete'],
-      'purchase orders': ['view', 'create', 'edit', 'delete'],
-      accounting: ['view', 'create', 'edit', 'delete'],
-      analytics: ['view'],
-      settings: ['view', 'create', 'edit', 'delete'],
-    },
+    permissions: {},
   },
   {
     name: 'Content Manager',
     permissions: {
       dashboard: ['view'],
       orders: ['view', 'edit'],
-      users: [],
       inventory: ['view', 'create', 'edit'],
       conversations: ['view', 'create'],
-      'purchase orders': ['view'],
-      accounting: [],
-      analytics: [],
-      settings: [],
     },
   },
   {
     name: 'Customer',
-    permissions: {
-      dashboard: [],
-      orders: [],
-      users: [],
-      inventory: [],
-      conversations: [],
-      'purchase orders': [],
-      accounting: [],
-      analytics: [],
-      settings: [],
-    },
+    permissions: {},
   },
 ];
 
@@ -104,6 +80,7 @@ export default function SettingsPage() {
   const [newMeasure, setNewMeasure] = useState('');
   const [newService, setNewService] = useState('');
   const [isNewRoleOpen, setNewRoleOpen] = useState(false);
+  const [lagosLgas, setLagosLgas] = useState<LgaShippingZone[]>(initialLagosLgas);
 
   const handleAddMeasure = () => {
     if (newMeasure.trim()) {
@@ -126,15 +103,20 @@ export default function SettingsPage() {
   const handleRemoveService = (serviceToRemove: string) => {
     setServices(services.filter(s => s !== serviceToRemove));
   };
+  
+  const handleLgaPriceChange = (id: string, price: number) => {
+    setLagosLgas(lgas => lgas.map(lga => lga.id === id ? { ...lga, price: isNaN(price) ? 0 : price } : lga));
+  };
 
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold font-headline">Settings</h1>
       <Tabs defaultValue="homepage" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto">
             <TabsTrigger value="homepage">Homepage</TabsTrigger>
             <TabsTrigger value="footer">Footer</TabsTrigger>
             <TabsTrigger value="custom-order">Custom Order</TabsTrigger>
+            <TabsTrigger value="shipping">Shipping</TabsTrigger>
             <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
         </TabsList>
 
@@ -292,6 +274,52 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
+        {/* Shipping Settings */}
+        <TabsContent value="shipping">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Shipping Configuration</CardTitle>
+                    <CardDescription>
+                        Manage shipping zones and prices.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                        <h3 className="font-medium">Lagos Delivery Zones (LGAs)</h3>
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Local Government Area</TableHead>
+                                        <TableHead className="w-[200px] text-right">Price (₦)</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {lagosLgas.map(lga => (
+                                        <TableRow key={lga.id}>
+                                            <TableCell className="font-medium">{lga.name}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Input 
+                                                    type="number" 
+                                                    className="w-full text-right"
+                                                    value={lga.price}
+                                                    onChange={(e) => handleLgaPriceChange(lga.id, parseInt(e.target.value, 10))}
+                                                    placeholder="0.00"
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button>Save Shipping Prices</Button>
+                </CardFooter>
+            </Card>
+        </TabsContent>
+
         {/* Roles & Permissions */}
         <TabsContent value="roles">
           <Card>
@@ -371,29 +399,31 @@ export default function SettingsPage() {
                     {initialRoles.map((role) => (
                       <TableRow key={role.name}>
                         <TableCell className="font-medium">{role.name}</TableCell>
-                        {permissionModules.map(module => (
-                           <TableCell key={module} className="text-center">
-                               {role.name !== 'Customer' ? (
-                                <div className="flex justify-center gap-2">
-                                    {permissionActions.map(action => {
-                                        const moduleKey = module.toLowerCase().replace(' & ', ' ').replace(' ', '-') as keyof typeof role.permissions;
-                                        const hasPermission = role.name === 'Owner' || role.permissions[moduleKey]?.includes(action.toLowerCase());
-                                        const isActionDisabled = (module === 'Dashboard' || module === 'Analytics') && action !== 'View';
+                        {permissionModules.map(module => {
+                           const moduleKey = module.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
+                           return (
+                               <TableCell key={module} className="text-center">
+                                   {role.name !== 'Customer' ? (
+                                    <div className="flex justify-center gap-2">
+                                        {permissionActions.map(action => {
+                                            const hasPermission = role.name === 'Owner' || (role.permissions[moduleKey as keyof typeof role.permissions] as string[])?.includes(action.toLowerCase());
+                                            const isActionDisabled = (module === 'Dashboard' || module === 'Analytics') && action !== 'View';
 
-                                        return (
-                                            <Checkbox
-                                                key={action}
-                                                id={`${role.name}-${module}-${action}`}
-                                                aria-label={`${action} permission for ${module} in ${role.name} role`}
-                                                checked={hasPermission}
-                                                disabled={role.name === 'Owner' || isActionDisabled}
-                                            />
-                                        )
-                                    })}
-                                </div>
-                               ) : '-'}
-                           </TableCell>
-                        ))}
+                                            return (
+                                                <Checkbox
+                                                    key={action}
+                                                    id={`${role.name}-${module}-${action}`}
+                                                    aria-label={`${action} permission for ${module} in ${role.name} role`}
+                                                    checked={hasPermission}
+                                                    disabled={role.name === 'Owner' || isActionDisabled}
+                                                />
+                                            )
+                                        })}
+                                    </div>
+                                   ) : '-'}
+                               </TableCell>
+                           )
+                        })}
                         <TableCell className="text-right">
                           {role.name !== 'Owner' && role.name !== 'Customer' ? (
                             <DropdownMenu>
@@ -424,5 +454,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    

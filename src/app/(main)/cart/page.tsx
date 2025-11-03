@@ -10,13 +10,16 @@ import { Separator } from "@/components/ui/separator";
 import { Minus, Plus, Trash2, Info } from "lucide-react";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { products } from "@/lib/data";
+import { lagosLgas } from "@/lib/shipping";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function CartPage() {
     const [shippingMethod, setShippingMethod] = useState("pickup");
+    const [selectedLga, setSelectedLga] = useState<string | null>(null);
     const initialCartItems = useMemo(() => products.slice(1, 3).map(p => ({ ...p, quantity: 1 })), []);
     const [cartItems, setCartItems] = useState(initialCartItems);
 
@@ -38,7 +41,27 @@ export default function CartPage() {
 
     const subtotal = useMemo(() => cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0), [cartItems]);
     const serviceCharge = subtotal * 0.06;
-    const total = subtotal + serviceCharge;
+
+    const shippingFee = useMemo(() => {
+        if (shippingMethod === 'pickup' || shippingMethod === 'quote') {
+            return 0;
+        }
+        if (shippingMethod === 'lagos' && selectedLga) {
+            const lga = lagosLgas.find(l => l.id === selectedLga);
+            return lga ? lga.price : 0;
+        }
+        return 0;
+    }, [shippingMethod, selectedLga]);
+
+    const total = subtotal + serviceCharge + shippingFee;
+    
+    const isPaymentDisabled = () => {
+        if (cartItems.length === 0) return true;
+        if (shippingMethod === 'quote') return true;
+        if (shippingMethod === 'lagos' && !selectedLga) return true;
+        return false;
+    }
+
 
     return (
         <TooltipProvider>
@@ -106,12 +129,35 @@ export default function CartPage() {
                                         </Label>
                                     </div>
                                     <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="delivery" id="delivery"/>
-                                        <Label htmlFor="delivery">Set Shipping Fee</Label>
+                                        <RadioGroupItem value="lagos" id="lagos-delivery"/>
+                                        <Label htmlFor="lagos-delivery">Delivery within Lagos</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="quote" id="quote"/>
+                                        <Label htmlFor="quote">Other (Request Quote)</Label>
                                     </div>
                                 </RadioGroup>
+
+                                {shippingMethod === 'lagos' && (
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="lga-select">Select Location (LGA)</Label>
+                                        <Select onValueChange={setSelectedLga}>
+                                            <SelectTrigger id="lga-select">
+                                                <SelectValue placeholder="Choose your Local Government Area" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {lagosLgas.map(lga => (
+                                                    <SelectItem key={lga.id} value={lga.id}>
+                                                        {lga.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <Textarea placeholder="Full shipping address..." className="mt-2" />
+                                    </div>
+                                )}
                                 
-                                {shippingMethod === 'delivery' ? (
+                                {shippingMethod === 'quote' ? (
                                     <>
                                         <Card className="bg-muted/50">
                                             <CardContent className="pt-6">
@@ -143,7 +189,11 @@ export default function CartPage() {
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span>Shipping Fee</span>
-                                    <span>{shippingMethod === 'pickup' ? '₦0.00' : 'To be determined'}</span>
+                                    <span>
+                                        {shippingMethod === 'pickup' && '₦0.00'}
+                                        {shippingMethod === 'quote' && 'To be determined'}
+                                        {shippingMethod === 'lagos' && `₦${shippingFee.toFixed(2)}`}
+                                    </span>
                                 </div>
 
                                 <Separator />
@@ -153,7 +203,7 @@ export default function CartPage() {
                                 </div>
                             </CardContent>
                             <CardFooter>
-                                <Button className="w-full" disabled={shippingMethod === 'delivery' || cartItems.length === 0}>
+                                <Button className="w-full" disabled={isPaymentDisabled()}>
                                     Proceed to Payment
                                 </Button>
                             </CardFooter>
