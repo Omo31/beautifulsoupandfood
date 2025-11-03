@@ -31,9 +31,8 @@ const menuItems = [
 
 // Mock authentication state. In a real app, this would come from a context or hook.
 const useMockAuth = () => {
-    // For now, we will simulate a logged-out state.
-    // To see the admin link, you could change this to true.
-    const [isAuthenticated, setIsAuthenticated] = useState(false); 
+    // For now, we will simulate a logged-in state.
+    const [isAuthenticated, setIsAuthenticated] = useState(true); 
     // In a real app, you would also have user role information here.
     // const [user, setUser] = useState({ role: 'Owner' }); 
     return { isAuthenticated };

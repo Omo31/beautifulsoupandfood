@@ -27,7 +27,7 @@ import { useState } from 'react';
 
 // Mock authentication state. In a real app, this would come from a context or hook.
 const useMockAuth = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(true);
     // You could expand this to include user info
     // const [user, setUser] = useState(null); 
     return { isAuthenticated, setIsAuthenticated };
