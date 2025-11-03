@@ -1,3 +1,5 @@
+'use client';
+
 import type { ReactNode } from "react";
 import { Logo } from "@/components/Logo";
 import { Card } from "@/components/ui/card";
