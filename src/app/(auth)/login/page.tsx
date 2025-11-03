@@ -5,8 +5,11 @@ import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+    const router = useRouter();
+
     return (
         <>
             <CardHeader>
@@ -27,9 +30,12 @@ export default function LoginPage() {
                     </div>
                     <Input id="password" type="password" required />
                 </div>
-                <Button type="submit" className="w-full">
-                    Login
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" onClick={() => router.back()}>Cancel</Button>
+                    <Button type="submit">
+                        Login
+                    </Button>
+                </div>
                 <Button variant="outline" className="w-full">
                     Login with Google
                 </Button>
