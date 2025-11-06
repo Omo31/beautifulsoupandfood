@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import {
-  Bell,
   Search,
   ShoppingCart,
   User,
@@ -24,10 +23,11 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useState } from 'react';
+import { NotificationBell } from './NotificationBell';
 
 // Mock authentication state. In a real app, this would come from a context or hook.
 const useMockAuth = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(true); // Changed to true to demonstrate notifications
     // You could expand this to include user info
     // const [user, setUser] = useState(null); 
     return { isAuthenticated, setIsAuthenticated };
@@ -69,22 +69,7 @@ export default function AppHeader() {
         </Link>
       </Button>
 
-      {isAuthenticated && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Bell className="h-5 w-5" />
-              <span className="sr-only">Notifications</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>New order has been placed.</DropdownMenuItem>
-            <DropdownMenuItem>Your soup is on the way!</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+      {isAuthenticated && <NotificationBell recipient="user" />}
 
       {isAuthenticated ? (
         <DropdownMenu>
@@ -109,7 +94,7 @@ export default function AppHeader() {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild><Link href="/account/profile">Profile</Link></DropdownMenuItem>
             <DropdownMenuItem asChild><Link href="/account/orders">Orders</Link></DropdownMenuItem>
-            <DropdownMenuItem asChild><Link href="/account/notifications">Settings</Link></DropdownMenuItem>
+            <DropdownMenuItem asChild><Link href="/account/notifications">Notifications</Link></DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Logout</DropdownMenuItem>
             </DropdownMenuContent>

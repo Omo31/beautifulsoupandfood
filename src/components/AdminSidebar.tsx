@@ -14,6 +14,7 @@ import {
   DollarSign,
   MessageSquare,
   ClipboardList,
+  Bell,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -36,6 +37,7 @@ const adminMenuItems = [
   { href: '/admin/purchase-orders', label: 'Purchase Orders', icon: FileText },
   { href: '/admin/accounting', label: 'Accounting', icon: DollarSign },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart },
+  { href: '/admin/notifications', label: 'Notifications', icon: Bell },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 

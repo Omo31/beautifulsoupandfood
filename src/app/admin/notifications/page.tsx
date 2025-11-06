@@ -8,15 +8,15 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Bell } from 'lucide-react';
 
-export default function NotificationsPage() {
-    const { notifications, markAllAsRead } = useNotifications('user');
+export default function AdminNotificationsPage() {
+    const { notifications, markAllAsRead } = useNotifications('admin');
 
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                    <CardTitle>All Notifications</CardTitle>
-                    <CardDescription>A list of all your notifications.</CardDescription>
+                    <CardTitle>All Admin Notifications</CardTitle>
+                    <CardDescription>A list of all notifications requiring your attention.</CardDescription>
                 </div>
                 <Button variant="link" onClick={() => markAllAsRead()}>Mark all as read</Button>
             </CardHeader>
@@ -39,10 +39,10 @@ export default function NotificationsPage() {
                         ))}
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-12 space-y-4">
+                     <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-12 space-y-4">
                         <Bell className="h-12 w-12" />
-                        <h3 className="text-lg font-semibold">No Notifications</h3>
-                        <p className="max-w-xs">You don't have any notifications right now. We'll let you know when something new comes up.</p>
+                        <h3 className="text-lg font-semibold">All Caught Up!</h3>
+                        <p className="max-w-xs">You don't have any notifications right now.</p>
                     </div>
                 )}
             </CardContent>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
@@ -8,13 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
-import { PlusCircle, Trash2, Info, Plus, Minus } from 'lucide-react';
+import { PlusCircle, Trash2, Info, Plus, Minus, FileText } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { lagosLgas } from '@/lib/shipping';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
+import notificationStore from '@/lib/notifications';
 
 type CustomItem = {
     id: number;
@@ -26,6 +27,7 @@ type CustomItem = {
 
 export default function CustomOrderPage() {
     const router = useRouter();
+    const { toast } = useToast();
     const nextId = useRef(1);
     const [items, setItems] = useState<CustomItem[]>([{ id: 0, name: '', quantity: 1, measure: '', customMeasure: '' }]);
     const [shippingMethod, setShippingMethod] = useState('pickup');
@@ -71,7 +73,27 @@ export default function CustomOrderPage() {
             return selectedLga ? `₦${shippingFee.toFixed(2)}` : 'Select a location';
         }
         return 'To be quoted';
-    }
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        // In a real app, you would submit this data to your backend.
+        
+        notificationStore.addNotification({
+            recipient: 'admin',
+            title: 'New Quote Request',
+            description: 'A new custom order has been submitted for review.',
+            href: '/admin/quotes/QT-002', // This would be the new quote ID
+            icon: FileText
+        });
+
+        toast({
+            title: 'Request Sent!',
+            description: 'Your custom order request has been submitted. We will notify you once a quote is ready.'
+        });
+
+        router.push('/account/quotes');
+    };
 
 
     return (
@@ -85,7 +107,7 @@ export default function CustomOrderPage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form className="space-y-8">
+                        <form className="space-y-8" onSubmit={handleSubmit}>
                             {/* Items Section */}
                             <div className="space-y-4">
                                 <Label className="text-lg font-medium">Requested Items</Label>
@@ -269,5 +291,3 @@ export default function CustomOrderPage() {
         </TooltipProvider>
     )
 }
-
-  

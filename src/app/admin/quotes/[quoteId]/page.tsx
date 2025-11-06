@@ -14,12 +14,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, FileText, Send } from 'lucide-react';
+import { ArrowLeft, FileText, Send, MessageSquare } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { QuoteStatus } from '@/lib/data';
+import { useToast } from '@/hooks/use-toast';
+import notificationStore from '@/lib/notifications';
 
 type QuoteItem = {
     name: string;
@@ -54,6 +56,7 @@ export default function AdminQuoteDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const { quoteId } = params;
+  const { toast } = useToast();
 
   const [quote, setQuote] = useState(mockPendingQuote);
   
@@ -69,6 +72,26 @@ export default function AdminQuoteDetailsPage() {
         shipping: {...quote.shipping, cost: parseFloat(value) || 0}
     });
   };
+
+  const handleSendQuote = () => {
+    // In a real app, this would update the quote in the database.
+    setQuote(q => ({...q, status: 'Quote Ready'}));
+
+    notificationStore.addNotification({
+        recipient: 'user',
+        title: 'Quote Ready!',
+        description: `Your quote ${quote.id} is now ready for your review.`,
+        href: `/account/quotes/${quote.id}`,
+        icon: FileText,
+    });
+
+    toast({
+        title: "Quote Sent!",
+        description: `The quote has been sent to ${quote.customer.name}.`,
+    });
+
+    router.push('/admin/quotes');
+  }
 
   const itemsTotal = quote.items.reduce((acc, item) => acc + (item.unitCost * item.quantity), 0);
   const serviceCharge = itemsTotal * 0.06;
@@ -195,10 +218,16 @@ export default function AdminQuoteDetailsPage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Quotes List
         </Button>
-        <Button>
-          <Send className="mr-2 h-4 w-4" />
-          Send Quote to Customer
-        </Button>
+        <div className="flex items-center gap-2">
+            <Button variant="secondary">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Chat with Customer
+            </Button>
+            <Button onClick={handleSendQuote}>
+                <Send className="mr-2 h-4 w-4" />
+                Send Quote to Customer
+            </Button>
+        </div>
       </CardFooter>
     </Card>
   );
