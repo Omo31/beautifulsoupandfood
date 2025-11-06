@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { lagosLgas } from '@/lib/shipping';
+import { Separator } from '@/components/ui/separator';
 
 type CustomItem = {
     id: number;
@@ -26,6 +28,7 @@ export default function CustomOrderPage() {
     const nextId = useRef(1);
     const [items, setItems] = useState<CustomItem[]>([{ id: 0, name: '', quantity: 1, measure: '', customMeasure: '' }]);
     const [shippingMethod, setShippingMethod] = useState('pickup');
+    const [selectedLga, setSelectedLga] = useState<string | null>(null);
 
     const handleAddItem = () => {
         setItems([...items, { id: nextId.current++, name: '', quantity: 1, measure: '', customMeasure: '' }]);
@@ -48,6 +51,17 @@ export default function CustomOrderPage() {
             return item;
         }));
     };
+
+    const shippingFee = useMemo(() => {
+        if (shippingMethod === 'pickup' || shippingMethod === 'quote') {
+            return 0;
+        }
+        if (shippingMethod === 'lagos' && selectedLga) {
+            const lga = lagosLgas.find(l => l.id === selectedLga);
+            return lga ? lga.price : 0;
+        }
+        return 0;
+    }, [shippingMethod, selectedLga]);
 
     return (
         <TooltipProvider>
@@ -134,32 +148,72 @@ export default function CustomOrderPage() {
                             </div>
 
                             {/* Shipping */}
-                             <div className="space-y-4">
+                            <div className="space-y-4">
                                 <Label className="text-lg font-medium">Delivery Options</Label>
                                 <RadioGroup value={shippingMethod} onValueChange={setShippingMethod} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <Label htmlFor="pickup" className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer hover:bg-accent/10">
+                                     <Label htmlFor="pickup" className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer hover:bg-accent/10">
                                         <RadioGroupItem value="pickup" id="pickup" />
                                         <span>
                                             In-Store Pickup
-                                            <p className="text-sm text-muted-foreground">Collect your order directly from our location after payment.</p>
+                                            <p className="text-sm text-muted-foreground">Collect your order directly from our location.</p>
                                         </span>
                                     </Label>
-                                    <Label htmlFor="delivery" className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer hover:bg-accent/10">
-                                        <RadioGroupItem value="delivery" id="delivery" />
+                                    <Label htmlFor="lagos" className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer hover:bg-accent/10">
+                                        <RadioGroupItem value="lagos" id="lagos" />
                                         <span>
-                                            Set Shipping Fee
-                                             <p className="text-sm text-muted-foreground">Request a quote for delivery to your address.</p>
+                                            Delivery within Lagos
+                                             <p className="text-sm text-muted-foreground">Select your location for a pre-set delivery fee.</p>
                                         </span>
                                     </Label>
                                 </RadioGroup>
                                 
-                                {shippingMethod === 'delivery' && (
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="shipping-address">Shipping Address</Label>
-                                        <Textarea id="shipping-address" placeholder="Please enter your full shipping address here. Be as descriptive as possible." required />
+                                {shippingMethod === 'lagos' && (
+                                    <div className="grid gap-4">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="lga-select">Select Location (LGA)</Label>
+                                            <Select onValueChange={setSelectedLga}>
+                                                <SelectTrigger id="lga-select">
+                                                    <SelectValue placeholder="Choose your Local Government Area" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {lagosLgas.map(lga => (
+                                                        <SelectItem key={lga.id} value={lga.id}>
+                                                            {lga.name} - ₦{lga.price.toFixed(2)}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="shipping-address">Full Shipping Address</Label>
+                                            <Textarea id="shipping-address" placeholder="Please enter your full street address, landmark, etc." required />
+                                        </div>
                                     </div>
                                 )}
                             </div>
+
+                            {/* Quote Summary */}
+                            <div className="space-y-2 rounded-lg border p-4">
+                                <h3 className="font-medium text-lg">Quote Summary</h3>
+                                <div className="flex justify-between text-muted-foreground">
+                                    <span>Cost of Items</span>
+                                    <span className="font-medium">To be quoted</span>
+                                </div>
+                                <div className="flex justify-between text-muted-foreground">
+                                    <span>Service Charge (6%)</span>
+                                    <span className="font-medium">To be quoted</span>
+                                </div>
+                                <div className="flex justify-between text-muted-foreground">
+                                    <span>Shipping Fee</span>
+                                    <span>{shippingMethod === 'pickup' ? '₦0.00' : `₦${shippingFee.toFixed(2)}`}</span>
+                                </div>
+                                <Separator className="my-2"/>
+                                 <div className="flex justify-between font-bold text-lg">
+                                    <span>Total</span>
+                                    <span>To be quoted</span>
+                                </div>
+                            </div>
+
 
                             {/* User Info */}
                             <div className="grid md:grid-cols-2 gap-4">
