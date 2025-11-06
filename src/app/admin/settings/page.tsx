@@ -47,6 +47,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { lagosLgas as initialLagosLgas, LgaShippingZone } from '@/lib/shipping';
+import { useToast } from '@/hooks/use-toast';
 
 const initialRoles = [
   {
@@ -75,12 +76,37 @@ const initialMeasures = ['Grams (g)', 'Kilograms (kg)', 'Pieces', 'Bunches', 'Wr
 const initialServices = ['Gift Wrapping', 'Special Packaging'];
 
 export default function SettingsPage() {
+  const { toast } = useToast();
+  
+  // States for Homepage settings
+  const [heroTitle, setHeroTitle] = useState("Authentic Nigerian Flavors, Delivered.");
+  const [heroSubtitle, setHeroSubtitle] = useState("From our kitchen to yours, experience the rich taste of Nigeria with our fresh ingredients and ready-to-eat soups.");
+  const [videoId, setVideoId] = useState("dQw4w9WgXcQ");
+  const [videoTitle, setVideoTitle] = useState("Our Story");
+  const [videoDescription, setVideoDescription] = useState("A short description of the video.");
+
+  // States for Footer settings
+  const [socialLinks, setSocialLinks] = useState({ facebook: '', instagram: '', twitter: '' });
+  const [legalLinks, setLegalLinks] = useState({ terms: '/terms-of-service', privacy: '/privacy-policy' });
+  const [openingHours, setOpeningHours] = useState('Mon - Fri: 9am - 6pm');
+  
+  // States for Custom Order settings
   const [measures, setMeasures] = useState(initialMeasures);
   const [services, setServices] = useState(initialServices);
   const [newMeasure, setNewMeasure] = useState('');
   const [newService, setNewService] = useState('');
-  const [isNewRoleOpen, setNewRoleOpen] = useState(false);
+
+  // State for Shipping settings
   const [lagosLgas, setLagosLgas] = useState<LgaShippingZone[]>(initialLagosLgas);
+
+  // States for Roles & Permissions settings
+  const [roles, setRoles] = useState(initialRoles);
+  const [isNewRoleOpen, setNewRoleOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
+  
+  const showToast = (title: string, description: string) => {
+    toast({ title, description });
+  };
 
   const handleAddMeasure = () => {
     if (newMeasure.trim()) {
@@ -106,6 +132,15 @@ export default function SettingsPage() {
   
   const handleLgaPriceChange = (id: string, price: number) => {
     setLagosLgas(lgas => lgas.map(lga => lga.id === id ? { ...lga, price: isNaN(price) ? 0 : price } : lga));
+  };
+  
+  const handleCreateRole = () => {
+      if (newRoleName.trim()) {
+          setRoles([...roles, { name: newRoleName.trim(), permissions: {} }]);
+          setNewRoleName('');
+          setNewRoleOpen(false);
+          showToast('Role Created', `The role "${newRoleName.trim()}" has been successfully created.`);
+      }
   };
 
   return (
@@ -136,14 +171,16 @@ export default function SettingsPage() {
                   <Label htmlFor="hero-title">Hero Section Title</Label>
                   <Input
                     id="hero-title"
-                    defaultValue="Authentic Nigerian Flavors, Delivered."
+                    value={heroTitle}
+                    onChange={e => setHeroTitle(e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="hero-subtitle">Hero Section Subtitle</Label>
                   <Textarea
                     id="hero-subtitle"
-                    defaultValue="From our kitchen to yours, experience the rich taste of Nigeria with our fresh ingredients and ready-to-eat soups."
+                    value={heroSubtitle}
+                    onChange={e => setHeroSubtitle(e.target.value)}
                   />
                 </div>
               </div>
@@ -151,20 +188,20 @@ export default function SettingsPage() {
                 <h3 className="font-medium">Featured Video</h3>
                  <div className="grid gap-2">
                   <Label htmlFor="video-id">YouTube Video ID</Label>
-                  <Input id="video-id" placeholder="e.g., dQw4w9WgXcQ" />
+                  <Input id="video-id" placeholder="e.g., dQw4w9WgXcQ" value={videoId} onChange={e => setVideoId(e.target.value)} />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="video-title">Video Title</Label>
-                  <Input id="video-title" placeholder="Our Story" />
+                  <Input id="video-title" placeholder="Our Story" value={videoTitle} onChange={e => setVideoTitle(e.target.value)} />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="video-description">Video Description</Label>
-                  <Textarea id="video-description" placeholder="A short description of the video."/>
+                  <Textarea id="video-description" placeholder="A short description of the video." value={videoDescription} onChange={e => setVideoDescription(e.target.value)} />
                 </div>
               </div>
             </CardContent>
             <CardFooter>
-              <Button>Save Changes</Button>
+              <Button onClick={() => showToast('Changes Saved', 'Your homepage settings have been updated.')}>Save Changes</Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -184,15 +221,15 @@ export default function SettingsPage() {
                 <div className="grid md:grid-cols-3 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="facebook-url">Facebook URL</Label>
-                    <Input id="facebook-url" placeholder="https://facebook.com/yourpage" />
+                    <Input id="facebook-url" placeholder="https://facebook.com/yourpage" value={socialLinks.facebook} onChange={e => setSocialLinks({...socialLinks, facebook: e.target.value})} />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="instagram-url">Instagram URL</Label>
-                    <Input id="instagram-url" placeholder="https://instagram.com/yourprofile" />
+                    <Input id="instagram-url" placeholder="https://instagram.com/yourprofile" value={socialLinks.instagram} onChange={e => setSocialLinks({...socialLinks, instagram: e.target.value})} />
                   </div>
                    <div className="grid gap-2">
                     <Label htmlFor="twitter-url">Twitter/X URL</Label>
-                    <Input id="twitter-url" placeholder="https://twitter.com/yourhandle" />
+                    <Input id="twitter-url" placeholder="https://twitter.com/yourhandle" value={socialLinks.twitter} onChange={e => setSocialLinks({...socialLinks, twitter: e.target.value})} />
                   </div>
                 </div>
               </div>
@@ -201,11 +238,11 @@ export default function SettingsPage() {
                  <div className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-2">
                         <Label htmlFor="terms-url">Terms of Service URL</Label>
-                        <Input id="terms-url" placeholder="/terms-of-service" />
+                        <Input id="terms-url" placeholder="/terms-of-service" value={legalLinks.terms} onChange={e => setLegalLinks({...legalLinks, terms: e.target.value})} />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="privacy-url">Privacy Policy URL</Label>
-                        <Input id="privacy-url" placeholder="/privacy-policy" />
+                        <Input id="privacy-url" placeholder="/privacy-policy" value={legalLinks.privacy} onChange={e => setLegalLinks({...legalLinks, privacy: e.target.value})} />
                     </div>
                  </div>
               </div>
@@ -213,12 +250,12 @@ export default function SettingsPage() {
                 <h3 className="font-medium">Business Information</h3>
                 <div className="grid gap-2">
                   <Label htmlFor="opening-hours">Opening Hours</Label>
-                  <Input id="opening-hours" placeholder="e.g., Mon - Fri: 9am - 6pm" />
+                  <Input id="opening-hours" placeholder="e.g., Mon - Fri: 9am - 6pm" value={openingHours} onChange={e => setOpeningHours(e.target.value)} />
                 </div>
               </div>
             </CardContent>
             <CardFooter>
-              <Button>Save Changes</Button>
+              <Button onClick={() => showToast('Changes Saved', 'Your footer settings have been updated.')}>Save Changes</Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -269,7 +306,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
              <CardFooter>
-                <Button>Save Configurations</Button>
+                <Button onClick={() => showToast('Configurations Saved', 'Your custom order settings have been updated.')}>Save Configurations</Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -315,7 +352,7 @@ export default function SettingsPage() {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button>Save Shipping Prices</Button>
+                    <Button onClick={() => showToast('Prices Saved', 'Your shipping prices have been updated.')}>Save Shipping Prices</Button>
                 </CardFooter>
             </Card>
         </TabsContent>
@@ -346,7 +383,7 @@ export default function SettingsPage() {
                         <div className="space-y-4 py-4 pr-1">
                             <div className="space-y-2">
                                 <Label htmlFor="role-name">Role Name</Label>
-                                <Input id="role-name" placeholder="e.g., Shipper" />
+                                <Input id="role-name" placeholder="e.g., Shipper" value={newRoleName} onChange={e => setNewRoleName(e.target.value)} />
                             </div>
                             <div className="space-y-2">
                                 <Label>Permissions</Label>
@@ -377,7 +414,7 @@ export default function SettingsPage() {
                     </ScrollArea>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setNewRoleOpen(false)}>Cancel</Button>
-                      <Button onClick={() => setNewRoleOpen(false)}>Save Role</Button>
+                      <Button onClick={handleCreateRole}>Save Role</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -396,7 +433,7 @@ export default function SettingsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {initialRoles.map((role) => (
+                    {roles.map((role) => (
                       <TableRow key={role.name}>
                         <TableCell className="font-medium">{role.name}</TableCell>
                         {permissionModules.map(module => {
@@ -446,7 +483,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
              <CardFooter>
-                <Button>Save Permissions</Button>
+                <Button onClick={() => showToast('Permissions Saved', 'The roles and permissions have been updated.')}>Save Permissions</Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -454,3 +491,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
