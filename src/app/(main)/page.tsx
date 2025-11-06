@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Star, PackageSearch, Gift, Boxes } from 'lucide-react';
@@ -16,6 +17,9 @@ const iconMap: Record<HomepageService['iconName'], React.ElementType> = {
 export default function HomePage() {
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero');
   const featuredProducts = products.slice(0, 4);
+  const videoId = "dQw4w9WgXcQ";
+  const videoTitle = "Our Story";
+  const videoDescription = "Watch how we source the freshest ingredients and prepare them with love, bringing the taste of Nigeria to your kitchen. From the local market to your dinner table, our commitment to quality and tradition is in every meal.";
 
   return (
     <div className="space-y-16 sm:space-y-24">
@@ -115,6 +119,29 @@ export default function HomePage() {
             </div>
         </div>
       </section>
+
+      {/* Featured Video */}
+      <section>
+          <div className="text-center">
+            <h2 className="text-3xl font-bold font-headline">{videoTitle}</h2>
+            <p className="mt-2 text-muted-foreground max-w-2xl mx-auto">
+              {videoDescription}
+            </p>
+          </div>
+          <div className="mt-8">
+            <div className="aspect-video w-full max-w-4xl mx-auto rounded-lg overflow-hidden border shadow-lg">
+                <iframe
+                    className="w-full h-full"
+                    src={`https://www.youtube.com/embed/${videoId}`}
+                    title="YouTube video player"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                ></iframe>
+            </div>
+          </div>
+      </section>
+
 
       {/* Testimonials */}
       <section>
