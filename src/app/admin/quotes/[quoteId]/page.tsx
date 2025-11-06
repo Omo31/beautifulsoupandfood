@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Card,
@@ -14,7 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, FileText, Send, MessageSquare } from 'lucide-react';
+import { ArrowLeft, FileText, Send, MessageSquare, Gift, Package } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,11 @@ type QuoteItem = {
     quantity: number;
     measure: string;
     unitCost: number;
+};
+
+type QuoteService = {
+    name: string;
+    cost: number;
 };
 
 // Mock data for a quote - in a real app this would be fetched from your database
@@ -44,7 +49,10 @@ const mockPendingQuote = {
         { name: 'Live Goat', quantity: 1, measure: 'Pieces', unitCost: 0 },
         { name: 'Basket of Tomatoes', quantity: 1, measure: 'Custom', unitCost: 0 },
     ],
-    notes: "I need the goat for a party on Saturday, please ensure it's healthy. For the tomatoes, a medium-sized basket is fine.",
+    services: [
+        { name: 'Special Packaging', cost: 0 }
+    ],
+    notes: "I need the goat for a party on Saturday, please ensure it's healthy. For the tomatoes, a medium-sized basket is fine. Please package the tomatoes carefully so they don't bruise.",
     shipping: {
         method: 'Request Shipping Quote',
         address: '55 Adebayo Street, Surulere, Lagos',
@@ -64,6 +72,12 @@ export default function AdminQuoteDetailsPage() {
     const newItems = [...quote.items];
     newItems[index].unitCost = parseFloat(value) || 0;
     setQuote({...quote, items: newItems});
+  };
+
+  const handleServiceCostChange = (index: number, value: string) => {
+      const newServices = [...quote.services];
+      newServices[index].cost = parseFloat(value) || 0;
+      setQuote({...quote, services: newServices});
   };
   
   const handleShippingCostChange = (value: string) => {
@@ -93,9 +107,14 @@ export default function AdminQuoteDetailsPage() {
     router.push('/admin/quotes');
   }
 
-  const itemsTotal = quote.items.reduce((acc, item) => acc + (item.unitCost * item.quantity), 0);
-  const serviceCharge = itemsTotal * 0.06;
-  const grandTotal = itemsTotal + serviceCharge + quote.shipping.cost;
+  const { itemsTotal, servicesTotal, subTotal, serviceCharge, grandTotal } = useMemo(() => {
+    const itemsTotal = quote.items.reduce((acc, item) => acc + (item.unitCost * item.quantity), 0);
+    const servicesTotal = quote.services.reduce((acc, service) => acc + service.cost, 0);
+    const subTotal = itemsTotal + servicesTotal;
+    const serviceCharge = subTotal * 0.06;
+    const grandTotal = subTotal + serviceCharge + quote.shipping.cost;
+    return { itemsTotal, servicesTotal, subTotal, serviceCharge, grandTotal };
+  }, [quote.items, quote.services, quote.shipping.cost]);
 
   return (
     <Card>
@@ -113,7 +132,7 @@ export default function AdminQuoteDetailsPage() {
             <div className="md:col-span-2 space-y-6">
                 {/* Items to Price */}
                 <div>
-                    <h3 className="font-semibold mb-4 text-lg">Items to Price</h3>
+                    <h3 className="font-semibold mb-4 text-lg">Requested Items</h3>
                     <div className="space-y-4">
                         {quote.items.map((item, index) => (
                             <Card key={index} className="p-4 bg-muted/50">
@@ -142,6 +161,36 @@ export default function AdminQuoteDetailsPage() {
                         ))}
                     </div>
                 </div>
+
+                {/* Services to Price */}
+                {quote.services.length > 0 && (
+                    <div>
+                        <h3 className="font-semibold mb-4 text-lg">Add-on Services</h3>
+                        <div className="space-y-4">
+                            {quote.services.map((service, index) => (
+                                <Card key={index} className="p-4 bg-muted/50">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex items-center gap-2">
+                                            {service.name.includes('Wrapping') ? <Gift className="h-4 w-4 text-muted-foreground" /> : <Package className="h-4 w-4 text-muted-foreground" />}
+                                            <p className="font-medium">{service.name}</p>
+                                        </div>
+                                        <div className="grid gap-1.5">
+                                            <Label htmlFor={`service-cost-${index}`} className="text-xs">Service Cost (₦)</Label>
+                                            <Input
+                                                id={`service-cost-${index}`}
+                                                type="number"
+                                                placeholder="0.00"
+                                                className="w-28 h-9"
+                                                value={service.cost || ''}
+                                                onChange={e => handleServiceCostChange(index, e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Shipping */}
                 <div>
@@ -184,6 +233,15 @@ export default function AdminQuoteDetailsPage() {
                         <div className="flex justify-between">
                             <span>Items Total:</span>
                             <span>₦{itemsTotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>Services Total:</span>
+                            <span>₦{servicesTotal.toFixed(2)}</span>
+                        </div>
+                        <Separator className="my-1"/>
+                         <div className="flex justify-between font-medium">
+                            <span>Subtotal:</span>
+                            <span>₦{subTotal.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
                             <span>Service Charge (6%):</span>

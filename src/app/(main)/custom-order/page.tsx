@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
@@ -25,6 +26,8 @@ type CustomItem = {
     customMeasure: string;
 };
 
+const addonServices = ['Gift Wrapping', 'Special Packaging'];
+
 export default function CustomOrderPage() {
     const router = useRouter();
     const { toast } = useToast();
@@ -32,6 +35,8 @@ export default function CustomOrderPage() {
     const [items, setItems] = useState<CustomItem[]>([{ id: 0, name: '', quantity: 1, measure: '', customMeasure: '' }]);
     const [shippingMethod, setShippingMethod] = useState('pickup');
     const [selectedLga, setSelectedLga] = useState<string | null>(null);
+    const [selectedServices, setSelectedServices] = useState<string[]>([]);
+    const [notes, setNotes] = useState('');
 
     const handleAddItem = () => {
         setItems([...items, { id: nextId.current++, name: '', quantity: 1, measure: '', customMeasure: '' }]);
@@ -53,6 +58,14 @@ export default function CustomOrderPage() {
             }
             return item;
         }));
+    };
+
+    const handleServiceChange = (serviceName: string, checked: boolean | 'indeterminate') => {
+        if (checked === true) {
+            setSelectedServices(prev => [...prev, serviceName]);
+        } else {
+            setSelectedServices(prev => prev.filter(s => s !== serviceName));
+        }
     };
 
     const shippingFee = useMemo(() => {
@@ -77,13 +90,12 @@ export default function CustomOrderPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // In a real app, you would submit this data to your backend.
         
         notificationStore.addNotification({
             recipient: 'admin',
             title: 'New Quote Request',
             description: 'A new custom order has been submitted for review.',
-            href: '/admin/quotes/QT-002', // This would be the new quote ID
+            href: '/admin/quotes/QT-002', 
             icon: FileText
         });
 
@@ -163,21 +175,22 @@ export default function CustomOrderPage() {
                             <div className="space-y-2">
                                 <Label className="text-lg font-medium">Add-on Services</Label>
                                 <div className="grid gap-2 rounded-lg border p-4">
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="gift-wrapping" />
-                                        <Label htmlFor="gift-wrapping">Gift Wrapping</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="special-packaging" />
-                                        <Label htmlFor="special-packaging">Special Packaging</Label>
-                                    </div>
+                                    {addonServices.map(service => (
+                                        <div key={service} className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id={service.toLowerCase().replace(' ', '-')}
+                                                onCheckedChange={(checked) => handleServiceChange(service, checked)}
+                                            />
+                                            <Label htmlFor={service.toLowerCase().replace(' ', '-')}>{service}</Label>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                             
                             {/* Notes */}
                             <div className="grid gap-2">
                                 <Label htmlFor="description" className="text-lg font-medium">Notes & Instructions</Label>
-                                <Textarea id="description" placeholder="Provide any specific details, like brand, size, or preparation style for any of your items." />
+                                <Textarea id="description" placeholder="Provide any specific details, like brand, size, or preparation style for any of your items." value={notes} onChange={(e) => setNotes(e.target.value)} />
                             </div>
 
                             {/* Shipping */}
@@ -238,7 +251,7 @@ export default function CustomOrderPage() {
                             <div className="space-y-2 rounded-lg border p-4">
                                 <h3 className="font-medium text-lg">Quote Summary</h3>
                                 <div className="flex justify-between text-muted-foreground">
-                                    <span>Cost of Items</span>
+                                    <span>Cost of Items & Services</span>
                                     <span className="font-medium">To be quoted</span>
                                 </div>
                                 <div className="flex justify-between text-muted-foreground">
