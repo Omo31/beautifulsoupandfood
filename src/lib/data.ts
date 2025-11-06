@@ -1,4 +1,5 @@
 
+
 export type Product = {
   id: string;
   name: string;
@@ -82,6 +83,19 @@ export type Conversation = {
     unread: boolean;
     messages: Message[];
 };
+
+export type HomepageService = {
+  id: string;
+  name: string;
+  description: string;
+  iconName: 'PackageSearch' | 'Gift' | 'Boxes';
+};
+
+export const homepageServices: HomepageService[] = [
+    { id: '1', name: 'Custom Sourcing', description: 'Looking for a rare ingredient? We can find it for you.', iconName: 'PackageSearch'},
+    { id: '2', name: 'Gift Wrapping', description: 'Send a taste of home as a beautifully wrapped gift.', iconName: 'Gift'},
+    { id: '3', name: 'Bulk Orders', description: 'Catering for an event? We handle bulk orders with ease.', iconName: 'Boxes'},
+];
 
 
 export const products: Product[] = [

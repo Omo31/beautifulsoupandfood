@@ -1,11 +1,17 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Star } from 'lucide-react';
+import { ArrowRight, Star, PackageSearch, Gift, Boxes } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { products, testimonials } from '@/lib/data';
+import { products, testimonials, homepageServices, HomepageService } from '@/lib/data';
 import { ProductCard } from '@/components/ProductCard';
+
+const iconMap: Record<HomepageService['iconName'], React.ElementType> = {
+  PackageSearch,
+  Gift,
+  Boxes,
+};
 
 export default function HomePage() {
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero');
@@ -57,6 +63,40 @@ export default function HomePage() {
             </Button>
         </div>
       </section>
+
+      {/* Our Services Section */}
+      <section>
+        <div className="text-center">
+          <h2 className="text-3xl font-bold font-headline">Our Services</h2>
+          <p className="mt-2 text-muted-foreground max-w-2xl mx-auto">
+            We offer more than just products. Let us know how we can serve you better.
+          </p>
+        </div>
+        <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
+          {homepageServices.map(service => {
+            const Icon = iconMap[service.iconName];
+            return (
+              <Card key={service.id} className="text-center">
+                <CardHeader className="items-center">
+                  <div className="p-3 rounded-full bg-primary/10 text-primary">
+                    <Icon className="h-8 w-8" />
+                  </div>
+                  <CardTitle className="mt-4">{service.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">{service.description}</p>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+        <div className="text-center mt-8">
+            <Button asChild>
+                <Link href="/custom-order">Request a Custom Order</Link>
+            </Button>
+        </div>
+      </section>
+
 
       {/* About Us */}
       <section className="bg-card p-8 rounded-lg">

@@ -47,6 +47,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { lagosLgas as initialLagosLgas, LgaShippingZone } from '@/lib/shipping';
+import { homepageServices as initialHomepageServices, HomepageService } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 
 const initialRoles = [
@@ -84,6 +85,9 @@ export default function SettingsPage() {
   const [videoId, setVideoId] = useState("dQw4w9WgXcQ");
   const [videoTitle, setVideoTitle] = useState("Our Story");
   const [videoDescription, setVideoDescription] = useState("A short description of the video.");
+  const [homepageServices, setHomepageServices] = useState<HomepageService[]>(initialHomepageServices);
+  const [newHomepageService, setNewHomepageService] = useState({ name: '', description: '', iconName: 'PackageSearch' as HomepageService['iconName'] });
+
 
   // States for Footer settings
   const [socialLinks, setSocialLinks] = useState({ facebook: '', instagram: '', twitter: '' });
@@ -107,6 +111,22 @@ export default function SettingsPage() {
   const showToast = (title: string, description: string) => {
     toast({ title, description });
   };
+
+  const handleAddHomepageService = () => {
+    if (newHomepageService.name.trim() && newHomepageService.description.trim()) {
+        const newService: HomepageService = {
+            id: `service-${Date.now()}`,
+            ...newHomepageService
+        };
+        setHomepageServices([...homepageServices, newService]);
+        setNewHomepageService({ name: '', description: '', iconName: 'PackageSearch' });
+    }
+  };
+
+  const handleRemoveHomepageService = (id: string) => {
+    setHomepageServices(homepageServices.filter(s => s.id !== id));
+  };
+
 
   const handleAddMeasure = () => {
     if (newMeasure.trim()) {
@@ -164,8 +184,8 @@ export default function SettingsPage() {
                 Control the content displayed on your homepage.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
+            <CardContent className="space-y-8">
+              <div className="space-y-4">
                 <h3 className="font-medium">Hero Section</h3>
                 <div className="grid gap-2">
                   <Label htmlFor="hero-title">Hero Section Title</Label>
@@ -184,7 +204,51 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
+              
+              <div className="space-y-4">
+                <h3 className="font-medium">Featured Services Section</h3>
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Icon</TableHead>
+                                <TableHead>Service Name</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {homepageServices.map(service => (
+                                <TableRow key={service.id}>
+                                    <TableCell>{service.iconName}</TableCell>
+                                    <TableCell className="font-medium">{service.name}</TableCell>
+                                    <TableCell>{service.description}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveHomepageService(service.id)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+                <Card className="p-4 bg-muted/50">
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                        <div className="grid gap-2">
+                            <Label>New Service Name</Label>
+                            <Input value={newHomepageService.name} onChange={e => setNewHomepageService({...newHomepageService, name: e.target.value})} placeholder="e.g., Bulk Orders"/>
+                        </div>
+                         <div className="grid gap-2">
+                            <Label>New Service Description</Label>
+                            <Input value={newHomepageService.description} onChange={e => setNewHomepageService({...newHomepageService, description: e.target.value})} placeholder="Short description..."/>
+                        </div>
+                         <Button onClick={handleAddHomepageService} className="self-end"><PlusCircle className="mr-2 h-4 w-4" /> Add Service</Button>
+                    </div>
+                </Card>
+              </div>
+
+              <div className="space-y-4">
                 <h3 className="font-medium">Featured Video</h3>
                  <div className="grid gap-2">
                   <Label htmlFor="video-id">YouTube Video ID</Label>
