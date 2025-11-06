@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { ReactNode } from "react";
-import { User, ShoppingCart, Heart, Bell, ArrowLeft } from "lucide-react";
+import { User, ShoppingCart, Heart, Bell, ArrowLeft, FileText } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const accountNavItems = [
     { href: "/account/profile", label: "Profile", icon: User },
     { href: "/account/orders", label: "Order History", icon: ShoppingCart },
+    { href: "/account/quotes", label: "My Quotes", icon: FileText },
     { href: "/account/wishlist", label: "Wishlist", icon: Heart },
     { href: "/account/notifications", label: "Notifications", icon: Bell },
 ];
