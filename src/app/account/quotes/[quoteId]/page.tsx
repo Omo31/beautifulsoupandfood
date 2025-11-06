@@ -1,18 +1,24 @@
+
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, FileText, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, FileText, ShoppingCart, ThumbsUp, ThumbsDown, Edit } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import type { QuoteStatus } from '@/lib/data';
 
 // Mock data for a quote - in a real app this would be fetched from your database
 const mockQuote = {
     id: 'QT-001',
     date: '2024-05-22',
-    status: 'Quote Ready',
+    status: 'Quote Ready' as QuoteStatus,
     items: [
         { name: 'Fresh Ugba', quantity: 2, measure: 'Wraps', price: 3000 },
         { name: 'Stockfish Head', quantity: 1, measure: 'Pieces', price: 15000 },
@@ -34,7 +40,7 @@ const mockQuote = {
 const mockPendingQuote = {
     ...mockQuote,
     id: 'QT-002',
-    status: 'Pending Review',
+    status: 'Pending Review' as QuoteStatus,
     costs: null,
     items: [{ name: 'Live Goat', quantity: 1, measure: 'Pieces', price: null }]
 };
@@ -43,9 +49,26 @@ export default function QuoteDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const { quoteId } = params;
+  const { toast } = useToast();
 
-  // Select mock data based on the route
-  const quote = quoteId === 'QT-001' ? mockQuote : mockPendingQuote;
+  const [quote, setQuote] = useState(quoteId === 'QT-001' ? mockQuote : mockPendingQuote);
+  
+  const handleAccept = () => {
+    setQuote(q => ({...q, status: 'Accepted'}));
+    toast({
+        title: "Quote Accepted!",
+        description: "You can now proceed to payment.",
+    })
+  }
+  
+  const handleReject = () => {
+      setQuote(q => ({...q, status: 'Rejected'}));
+      toast({
+        variant: "destructive",
+        title: "Quote Rejected",
+        description: "This quote has been marked as rejected.",
+    })
+  }
 
   if (!quote) {
     return (
@@ -60,9 +83,10 @@ export default function QuoteDetailsPage() {
   let badgeVariant: "default" | "secondary" | "outline" | "destructive" = "secondary";
   if (quote.status === 'Quote Ready') badgeVariant = 'default';
   if (quote.status === 'Accepted') badgeVariant = 'outline';
-  if (quote.status === 'Expired') badgeVariant = 'destructive';
+  if (quote.status === 'Expired' || quote.status === 'Rejected') badgeVariant = 'destructive';
 
-  const isQuoteReady = quote.status === 'Quote Ready';
+  const showActionButtons = quote.status === 'Quote Ready';
+  const showPaymentButton = quote.status === 'Accepted';
 
   return (
     <Card>
@@ -89,7 +113,16 @@ export default function QuoteDetailsPage() {
                 <FileText className="h-4 w-4" />
                 <AlertTitle>This quote is under review.</AlertTitle>
                 <AlertDescription>
-                    We have received your request and are working on a price for you. You will be notified via email and in your account once your quote is ready.
+                    We have received your request and are working on a price for you. You will be notified once your quote is ready.
+                </AlertDescription>
+            </Alert>
+        )}
+        {quote.status === 'Rejected' && (
+             <Alert variant="destructive" className="my-6">
+                <ThumbsDown className="h-4 w-4" />
+                <AlertTitle>Quote Rejected</AlertTitle>
+                <AlertDescription>
+                    You have rejected this quote. If you changed your mind, please submit a new custom order request.
                 </AlertDescription>
             </Alert>
         )}
@@ -103,7 +136,7 @@ export default function QuoteDetailsPage() {
                             <h4 className="font-medium">{item.name}</h4>
                             <p className="text-muted-foreground">Quantity: {item.quantity} {item.measure}</p>
                         </div>
-                        {item.price && <p className="font-semibold">₦{item.price.toFixed(2)}</p>}
+                        {item.price ? <p className="font-semibold">₦{(item.price * item.quantity).toFixed(2)}</p> : <p className="text-muted-foreground">To be quoted</p>}
                     </div>
                 ))}
             </div>
@@ -148,17 +181,54 @@ export default function QuoteDetailsPage() {
             )}
         </div>
       </CardContent>
-      <CardFooter className="flex-col sm:flex-row gap-2">
-         <Button variant="outline" onClick={() => router.back()}>
+      <CardFooter className="flex-col items-stretch sm:flex-row sm:justify-between gap-2">
+         <Button variant="outline" onClick={() => router.push('/account/quotes')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Quotes
          </Button>
-         {isQuoteReady && (
-            <Button className="w-full sm:w-auto">
+
+         <div className="flex flex-col sm:flex-row gap-2">
+             {showActionButtons && (
+                <>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                             <Button variant="destructive" className="w-full sm:w-auto">
+                                <ThumbsDown className="mr-2 h-4 w-4" />
+                                Reject
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure you want to reject this quote?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                This action cannot be undone. You will have to submit a new request if you change your mind.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleReject} className="bg-destructive hover:bg-destructive/90">Reject Quote</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                    
+                    <Button variant="outline" className="w-full sm:w-auto" asChild>
+                        <Link href="/custom-order">
+                             <Edit className="mr-2 h-4 w-4" />
+                            Edit Request
+                        </Link>
+                    </Button>
+
+                    <Button className="w-full sm:w-auto" onClick={handleAccept}>
+                        <ThumbsUp className="mr-2 h-4 w-4" />
+                        Accept Quote
+                    </Button>
+                </>
+             )}
+             <Button className="w-full sm:w-auto" disabled={!showPaymentButton}>
                 <ShoppingCart className="mr-2 h-4 w-4" />
-                Accept & Proceed to Payment
+                Proceed to Payment
             </Button>
-         )}
+         </div>
       </CardFooter>
     </Card>
   );

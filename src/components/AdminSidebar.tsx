@@ -13,6 +13,7 @@ import {
   FileText,
   DollarSign,
   MessageSquare,
+  ClipboardList,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -28,6 +29,7 @@ import { Logo } from '@/components/Logo';
 const adminMenuItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
+  { href: '/admin/quotes', label: 'Quotes', icon: ClipboardList },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/inventory', label: 'Inventory', icon: Package },
   { href: '/admin/conversations', label: 'Conversations', icon: MessageSquare },

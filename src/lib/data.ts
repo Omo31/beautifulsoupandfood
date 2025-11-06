@@ -193,7 +193,7 @@ export const conversations: Conversation[] = [
             { id: 'msg2', sender: 'admin', text: 'Hello John, I\'d be happy to help. What is your order number?', timestamp: '10:31 AM' },
             { id: 'msg3', sender: 'customer', text: 'It\'s ORD-001. I was wondering about the delivery status.', timestamp: '10:32 AM' },
             { id: 'msg4', sender: 'admin', text: 'Let me check... It looks like your order was delivered this morning at 9:15 AM.', timestamp: '10:44 AM' },
-            { id: 'msg5', sender: 'customer', text: 'Oh, I see it now. Great, thank you for the help!', timestamp: '10:45 AM' },
+            { id: 'msg5', sender: 'customer', text: 'Great, thank you for the help!', timestamp: '10:45 AM' },
         ],
     },
     {
@@ -223,4 +223,21 @@ export const conversations: Conversation[] = [
             { id: 'msg3', sender: 'customer', text: 'Perfect, I will place my order now.', timestamp: '2 days ago' },
         ],
     },
+];
+
+export type QuoteStatus = 'Quote Ready' | 'Pending Review' | 'Accepted' | 'Expired' | 'Rejected' | 'Awaiting Revision';
+export type Quote = {
+  id: string;
+  date: string;
+  status: QuoteStatus;
+  total: number | null;
+  customerName: string;
+  itemCount: number;
+};
+export const quotes: Quote[] = [
+    { id: 'QT-001', date: '2024-05-22', status: 'Quote Ready', total: 28500.00, customerName: 'John Doe', itemCount: 2 },
+    { id: 'QT-002', date: '2024-05-21', status: 'Pending Review', total: null, customerName: 'Chioma Okoro', itemCount: 1 },
+    { id: 'QT-003', date: '2024-05-18', status: 'Accepted', total: 15750.00, customerName: 'Bayo Ojo', itemCount: 3 },
+    { id: 'QT-004', date: '2024-05-17', status: 'Expired', total: 5500.00, customerName: 'Jane Smith', itemCount: 1 },
+    { id: 'QT-005', date: '2024-05-23', status: 'Awaiting Revision', total: null, customerName: 'Peter Jones', itemCount: 2 },
 ];
