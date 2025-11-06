@@ -68,25 +68,6 @@ export default function SoupPage() {
                         </CardContent>
                     </Card>
                 </div>
-
-                <Card className="mt-8">
-                    <CardHeader>
-                        <CardTitle>Leave a Review</CardTitle>
-                        <CardDescription>Share your thoughts about our soups with other customers.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form className="space-y-4">
-                            <div className="flex items-center gap-2">
-                                <span className="font-medium">Your Rating:</span>
-                                <div className="flex items-center gap-0.5">
-                                    {[...Array(5)].map((_, i) => <Star key={i} className="h-5 w-5 text-gray-300 cursor-pointer" />)}
-                                </div>
-                            </div>
-                            <Textarea placeholder="Write your review here..."/>
-                            <Button>Submit Review</Button>
-                        </form>
-                    </CardContent>
-                </Card>
             </section>
         </div>
     )

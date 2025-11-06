@@ -12,11 +12,17 @@ import { Star, Plus, Minus, ShieldCheck, Truck, MessageSquare } from 'lucide-rea
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProductCard } from '@/components/ProductCard';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
 
 export default function ProductDetailPage() {
   const params = useParams();
+  const { toast } = useToast();
   const { productId } = params;
   const [quantity, setQuantity] = useState(1);
+  const [newReviewRating, setNewReviewRating] = useState(0);
+  const [newReviewText, setNewReviewText] = useState('');
 
   const product = products.find(p => p.id === productId);
   const image = product ? PlaceHolderImages.find(p => p.id === product.imageId) : null;
@@ -34,6 +40,24 @@ export default function ProductDetailPage() {
       setQuantity(q => Math.max(1, q - 1));
     }
   };
+
+  const handleReviewSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newReviewRating === 0 || !newReviewText.trim()) {
+        toast({
+            variant: 'destructive',
+            title: 'Incomplete Review',
+            description: 'Please provide a rating and a comment.',
+        });
+        return;
+    }
+    toast({
+        title: 'Review Submitted!',
+        description: 'Thank you for your feedback.',
+    });
+    setNewReviewRating(0);
+    setNewReviewText('');
+  }
 
   return (
     <div className="space-y-12">
@@ -138,6 +162,34 @@ export default function ProductDetailPage() {
                 </CardContent>
             </Card>
         </div>
+
+        <Card className="mt-8">
+            <CardHeader>
+                <CardTitle>Write a Review</CardTitle>
+                <CardDescription>Share your thoughts about this product with other customers.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form className="space-y-4" onSubmit={handleReviewSubmit}>
+                    <div>
+                        <Label className="font-medium mb-2 flex">Your Rating</Label>
+                        <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                                <Star
+                                    key={i}
+                                    className={`h-6 w-6 cursor-pointer ${i < newReviewRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+                                    onClick={() => setNewReviewRating(i + 1)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="review-text">Your Review</Label>
+                        <Textarea id="review-text" placeholder="What did you like or dislike?" value={newReviewText} onChange={(e) => setNewReviewText(e.target.value)} required/>
+                    </div>
+                    <Button type="submit">Submit Review</Button>
+                </form>
+            </CardContent>
+        </Card>
       </section>
 
       {/* Related Products */}
