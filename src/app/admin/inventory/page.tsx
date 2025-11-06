@@ -1,12 +1,14 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, type ChangeEvent, type FormEvent } from 'react';
 import {
   File,
   ListFilter,
   PlusCircle,
   MoreHorizontal,
   Upload,
+  Search,
 } from 'lucide-react';
 import {
   Card,
@@ -33,6 +35,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -54,10 +57,11 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
-import { products as initialProducts } from '@/lib/data';
+import { products as initialProducts, type Product } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 
 const StockBadge = ({ stock, threshold = 20 }: { stock: number, threshold?: number }) => {
   if (stock === 0) {
@@ -69,9 +73,83 @@ const StockBadge = ({ stock, threshold = 20 }: { stock: number, threshold?: numb
   return <Badge variant="default">In Stock</Badge>;
 };
 
+const ITEMS_PER_PAGE = 10;
+
 export default function InventoryPage() {
+  const { toast } = useToast();
   const [products, setProducts] = useState(initialProducts);
-  const [isAddProductOpen, setAddProductOpen] = useState(false);
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const filteredProducts = useMemo(() => {
+    return products
+      .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      .filter(p => {
+        if (statusFilter === 'all') return true;
+        if (statusFilter === 'in-stock') return p.stock > 20;
+        if (statusFilter === 'low-stock') return p.stock > 0 && p.stock <= 20;
+        if (statusFilter === 'out-of-stock') return p.stock === 0;
+        return true;
+      })
+      .filter(p => categoryFilter === 'all' || p.category === categoryFilter);
+  }, [products, searchTerm, statusFilter, categoryFilter]);
+
+  const paginatedProducts = useMemo(() => {
+      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+      return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredProducts, currentPage]);
+
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+
+  const handleOpenModal = (product: Product | null = null) => {
+    setEditingProduct(product);
+    setModalOpen(true);
+  };
+  
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setEditingProduct(null);
+  }
+
+  const handleSaveProduct = (formData: FormData) => {
+      const newProductData: Omit<Product, 'id'> = {
+          name: formData.get('name') as string,
+          description: formData.get('description') as string,
+          price: parseFloat(formData.get('price') as string),
+          stock: parseInt(formData.get('stock') as string, 10),
+          category: formData.get('category') as 'foodstuff' | 'soup',
+          imageId: formData.get('image-id') as string || 'jollof-rice',
+          rating: parseFloat(formData.get('rating') as string) || 0,
+          reviewCount: parseInt(formData.get('reviewCount') as string, 10) || 0,
+      };
+
+      if (editingProduct) {
+          setProducts(products.map(p => p.id === editingProduct.id ? { ...p, ...newProductData, id: p.id } : p));
+          toast({ title: "Product Updated", description: `${newProductData.name} has been successfully updated.`});
+      } else {
+          const newProduct: Product = {
+              ...newProductData,
+              id: `prod-${Date.now()}`
+          };
+          setProducts([newProduct, ...products]);
+          toast({ title: "Product Added", description: `${newProductData.name} has been successfully added.`});
+      }
+      handleCloseModal();
+  };
+
+  const handleDeleteProduct = (productId: string) => {
+    setProducts(products.filter(p => p.id !== productId));
+    toast({ variant: 'destructive', title: "Product Deleted", description: "The product has been removed from inventory."});
+  };
+  
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   return (
     <>
@@ -89,113 +167,44 @@ export default function InventoryPage() {
               Export
             </span>
           </Button>
-          <Dialog open={isAddProductOpen} onOpenChange={setAddProductOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1">
-                <PlusCircle className="h-3.5 w-3.5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                  Add Product
-                </span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[525px]">
-              <DialogHeader>
-                <DialogTitle>Add New Product</DialogTitle>
-                <DialogDescription>
-                  Fill in the details to add a new product to your inventory.
-                </DialogDescription>
-              </DialogHeader>
-              <ScrollArea className="max-h-[70vh] pr-6">
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">Name</Label>
-                    <Input id="name" placeholder="Product Name" className="col-span-3" />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="description" className="text-right">Description</Label>
-                    <Textarea id="description" placeholder="A short description..." className="col-span-3" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                      <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
-                          <Label htmlFor="price" className="text-right">Price (₦)</Label>
-                          <Input id="price" type="number" placeholder="0.00" />
-                      </div>
-                      <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
-                          <Label htmlFor="stock" className="text-right">Stock</Label>
-                          <Input id="stock" type="number" placeholder="0" />
-                      </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                      <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
-                          <Label htmlFor="category" className="text-right">Category</Label>
-                          <Select>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Select a category" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="foodstuff">Foodstuff</SelectItem>
-                                  <SelectItem value="soup">Soup</SelectItem>
-                              </SelectContent>
-                          </Select>
-                      </div>
-                      <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
-                          <Label htmlFor="threshold" className="text-right">Low Stock Threshold</Label>
-                          <Input id="threshold" type="number" placeholder="e.g., 5" />
-                      </div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Image</Label>
-                    <div className="col-span-3">
-                      <div className="flex items-center justify-center w-full">
-                          <Label
-                              htmlFor="dropzone-file"
-                              className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted hover:bg-muted/50"
-                          >
-                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                  <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
-                                  <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                  <p className="text-xs text-muted-foreground">SVG, PNG, JPG or GIF</p>
-                              </div>
-                              <Input id="dropzone-file" type="file" className="hidden" />
-                          </Label>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="image-url" className="text-right">Or Image URL</Label>
-                      <Input id="image-url" placeholder="https://example.com/image.png" className="col-span-3" />
-                  </div>
-                </div>
-              </ScrollArea>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setAddProductOpen(false)}>Cancel</Button>
-                <Button type="submit">Save Product</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button size="sm" className="gap-1" onClick={() => handleOpenModal()}>
+            <PlusCircle className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+              Add Product
+            </span>
+          </Button>
         </div>
       </div>
       <Card className="mt-4">
         <CardHeader>
           <div className="flex items-center gap-4">
-            <Input placeholder="Filter by product name..." className="max-w-sm" />
+             <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Filter by product name..." 
+                    className="pl-8" 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
             <div className="ml-auto flex items-center gap-2">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="h-8 gap-1">
                             <ListFilter className="h-3.5 w-3.5"/>
-                            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Filter by Status</span>
+                            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Filter</span>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>In Stock</DropdownMenuItem>
-                        <DropdownMenuItem>Low Stock</DropdownMenuItem>
-                        <DropdownMenuItem>Out of Stock</DropdownMenuItem>
+                        <DropdownMenuCheckboxItem checked={statusFilter === 'all'} onCheckedChange={() => setStatusFilter('all')}>All</DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem checked={statusFilter === 'in-stock'} onCheckedChange={() => setStatusFilter('in-stock')}>In Stock</DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem checked={statusFilter === 'low-stock'} onCheckedChange={() => setStatusFilter('low-stock')}>Low Stock</DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem checked={statusFilter === 'out-of-stock'} onCheckedChange={() => setStatusFilter('out-of-stock')}>Out of Stock</DropdownMenuCheckboxItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                <Select>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                     <SelectTrigger className="h-8 w-[150px]">
                         <SelectValue placeholder="Filter by Category" />
                     </SelectTrigger>
@@ -218,6 +227,7 @@ export default function InventoryPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Price</TableHead>
+                <TableHead>Stock</TableHead>
                 <TableHead className="hidden md:table-cell">Category</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
@@ -225,7 +235,7 @@ export default function InventoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((product) => {
+              {paginatedProducts.map((product) => {
                 const image = PlaceHolderImages.find((p) => p.id === product.imageId);
                 return (
                   <TableRow key={product.id}>
@@ -248,6 +258,7 @@ export default function InventoryPage() {
                       <StockBadge stock={product.stock} />
                     </TableCell>
                     <TableCell>₦{product.price.toFixed(2)}</TableCell>
+                    <TableCell>{product.stock}</TableCell>
                     <TableCell className="hidden md:table-cell">
                         <Badge variant="outline">{product.category}</Badge>
                     </TableCell>
@@ -261,8 +272,9 @@ export default function InventoryPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>Edit</DropdownMenuItem>
-                          <DropdownMenuItem>Delete</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenModal(product)}>Edit</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteProduct(product.id)}>Delete</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -273,30 +285,105 @@ export default function InventoryPage() {
           </Table>
         </CardContent>
         <CardFooter>
-          <div className="text-xs text-muted-foreground">
-            Showing <strong>1-10</strong> of <strong>{products.length}</strong> products
+           <div className="text-xs text-muted-foreground">
+            Showing <strong>{paginatedProducts.length}</strong> of <strong>{filteredProducts.length}</strong> products
           </div>
           <Pagination className="ml-auto">
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious href="#" />
+                <PaginationPrevious href="#" onClick={(e) => {e.preventDefault(); handlePageChange(Math.max(1, currentPage - 1))}} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''} />
               </PaginationItem>
+              {[...Array(totalPages)].map((_, i) => (
+                <PaginationItem key={i}>
+                    <PaginationLink href="#" isActive={currentPage === i + 1} onClick={(e) => {e.preventDefault(); handlePageChange(i + 1)}}>{i + 1}</PaginationLink>
+                </PaginationItem>
+              ))}
               <PaginationItem>
-                <PaginationLink href="#">1</PaginationLink>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationLink href="#" isActive>2</PaginationLink>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationEllipsis />
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationNext href="#" />
+                <PaginationNext href="#" onClick={(e) => {e.preventDefault(); handlePageChange(Math.min(totalPages, currentPage + 1))}} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/>
               </PaginationItem>
             </PaginationContent>
           </Pagination>
         </CardFooter>
       </Card>
+      
+      {isModalOpen && (
+        <Dialog open={isModalOpen} onOpenChange={setModalOpen}>
+            <DialogContent className="sm:max-w-2xl">
+              <form onSubmit={(e: FormEvent<HTMLFormElement>) => { e.preventDefault(); handleSaveProduct(new FormData(e.currentTarget)); }}>
+                  <DialogHeader>
+                    <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+                    <DialogDescription>
+                      {editingProduct ? 'Update the details for this product.' : 'Fill in the details to add a new product to your inventory.'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ScrollArea className="max-h-[70vh] -mx-6 px-6 py-4">
+                    <div className="grid gap-4 pr-1">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="name" className="text-right">Name</Label>
+                        <Input id="name" name="name" placeholder="Product Name" className="col-span-3" defaultValue={editingProduct?.name} required/>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="description" className="text-right">Description</Label>
+                        <Textarea id="description" name="description" placeholder="A short description..." className="col-span-3" defaultValue={editingProduct?.description} required/>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
+                              <Label htmlFor="price" className="text-right">Price (₦)</Label>
+                              <Input id="price" name="price" type="number" step="0.01" placeholder="0.00" defaultValue={editingProduct?.price} required/>
+                          </div>
+                          <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
+                              <Label htmlFor="stock" className="text-right">Stock</Label>
+                              <Input id="stock" name="stock" type="number" placeholder="0" defaultValue={editingProduct?.stock} required/>
+                          </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
+                              <Label htmlFor="category" className="text-right">Category</Label>
+                              <Select name="category" defaultValue={editingProduct?.category} required>
+                                  <SelectTrigger>
+                                      <SelectValue placeholder="Select a category" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                      <SelectItem value="foodstuff">Foodstuff</SelectItem>
+                                      <SelectItem value="soup">Soup</SelectItem>
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                          <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
+                            <Label htmlFor="image-id" className="text-right">Image ID</Label>
+                            <Input id="image-id" name="image-id" placeholder="e.g. jollof-rice" defaultValue={editingProduct?.imageId} required />
+                          </div>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right">Image</Label>
+                        <div className="col-span-3">
+                          <div className="flex items-center justify-center w-full">
+                              <Label
+                                  htmlFor="dropzone-file"
+                                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted hover:bg-muted/50"
+                              >
+                                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                      <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+                                      <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                                      <p className="text-xs text-muted-foreground">This is for show, use Image ID field.</p>
+                                  </div>
+                                  <Input id="dropzone-file" type="file" className="hidden" />
+                              </Label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={handleCloseModal}>Cancel</Button>
+                    <Button type="submit">Save Product</Button>
+                  </DialogFooter>
+              </form>
+            </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
+
+    
