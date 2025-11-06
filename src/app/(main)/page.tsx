@@ -121,24 +121,22 @@ export default function HomePage() {
       </section>
 
       {/* Featured Video */}
-      <section>
-          <div className="text-center">
+      <section className="grid md:grid-cols-2 gap-8 items-center">
+          <div>
             <h2 className="text-3xl font-bold font-headline">{videoTitle}</h2>
-            <p className="mt-2 text-muted-foreground max-w-2xl mx-auto">
+            <p className="mt-2 text-muted-foreground">
               {videoDescription}
             </p>
           </div>
-          <div className="mt-8">
-            <div className="aspect-video w-full max-w-4xl mx-auto rounded-lg overflow-hidden border shadow-lg">
-                <iframe
-                    className="w-full h-full"
-                    src={`https://www.youtube.com/embed/${videoId}`}
-                    title="YouTube video player"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                ></iframe>
-            </div>
+          <div className="aspect-video w-full rounded-lg overflow-hidden border shadow-lg">
+              <iframe
+                  className="w-full h-full"
+                  src={`https://www.youtube.com/embed/${videoId}`}
+                  title="YouTube video player"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+              ></iframe>
           </div>
       </section>
 
