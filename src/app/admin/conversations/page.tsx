@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, type FormEvent } from 'react';
 import { conversations as initialConversations } from '@/lib/data';
 import type { Conversation, Message } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -12,10 +12,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 export default function ConversationsPage() {
   const [conversations, setConversations] = useState(initialConversations);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(conversations[0] || null);
+  const [newMessage, setNewMessage] = useState('');
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const handleSelectConversation = (conversationId: string) => {
     const conversation = conversations.find(c => c.id === conversationId);
@@ -25,6 +28,34 @@ export default function ConversationsPage() {
       setConversations(convs => convs.map(c => c.id === conversationId ? { ...c, unread: false } : c));
     }
   };
+
+  const handleSendMessage = (e: FormEvent) => {
+      e.preventDefault();
+      if (!newMessage.trim() || !selectedConversation) return;
+
+      const message: Message = {
+          id: `msg-${Date.now()}`,
+          sender: 'admin',
+          text: newMessage,
+          timestamp: format(new Date(), 'p')
+      };
+      
+      const updatedConversation: Conversation = {
+          ...selectedConversation,
+          messages: [...selectedConversation.messages, message],
+          lastMessage: message.text,
+          lastMessageTimestamp: 'Just now'
+      };
+
+      setSelectedConversation(updatedConversation);
+      setConversations(convs => convs.map(c => c.id === selectedConversation.id ? updatedConversation : c));
+      setNewMessage('');
+      
+      // Scroll to bottom
+      setTimeout(() => {
+        chatContainerRef.current?.lastElementChild?.scrollIntoView({ behavior: 'smooth' });
+      }, 0);
+  }
 
   return (
     <Card className="h-[calc(100vh-8rem)]">
@@ -82,7 +113,7 @@ export default function ConversationsPage() {
                         </div>
 
                         <ScrollArea className="flex-1 p-4">
-                            <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-4" ref={chatContainerRef}>
                                 {selectedConversation.messages.map(message => (
                                     <div
                                         key={message.id}
@@ -110,8 +141,13 @@ export default function ConversationsPage() {
                         </ScrollArea>
 
                         <div className="p-4 border-t">
-                            <form className="flex gap-2">
-                                <Input placeholder="Type your message..." className="flex-1" />
+                            <form className="flex gap-2" onSubmit={handleSendMessage}>
+                                <Input 
+                                    placeholder="Type your message..." 
+                                    className="flex-1"
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                />
                                 <Button type="submit" size="icon">
                                     <Send className="h-4 w-4" />
                                     <span className="sr-only">Send</span>
@@ -129,3 +165,5 @@ export default function ConversationsPage() {
     </Card>
   );
 }
+
+    

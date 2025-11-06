@@ -1,7 +1,8 @@
+
 'use client';
 
-import { useState, useMemo } from 'react';
-import { transactions as initialTransactions } from '@/lib/data';
+import { useState, useMemo, type FormEvent } from 'react';
+import { transactions as initialTransactions, type Transaction } from '@/lib/data';
 import {
   Card,
   CardContent,
@@ -45,11 +46,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AccountingPage() {
+  const { toast } = useToast();
   const [transactions, setTransactions] = useState(initialTransactions);
   const [isAddTransactionOpen, setAddTransactionOpen] = useState(false);
-  const [date, setDate] = useState<Date>();
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [category, setCategory] = useState<string>('');
 
   const { totalRevenue, totalExpenses, netIncome } = useMemo(() => {
     const revenue = transactions
@@ -64,6 +68,31 @@ export default function AccountingPage() {
       netIncome: revenue - expenses,
     };
   }, [transactions]);
+
+  const handleAddExpense = (e: FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    const newTransaction: Transaction = {
+        id: `TRN-${Date.now().toString().slice(-4)}`,
+        date: format(date || new Date(), 'yyyy-MM-dd'),
+        description: formData.get('description') as string,
+        category: category as Transaction['category'],
+        type: 'Expense',
+        amount: parseFloat(formData.get('amount') as string)
+    };
+    
+    setTransactions([newTransaction, ...transactions]);
+    toast({
+        title: "Expense Added",
+        description: `${newTransaction.description} has been successfully recorded.`
+    });
+    setAddTransactionOpen(false);
+    form.reset();
+    setDate(new Date());
+    setCategory('');
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -124,57 +153,59 @@ export default function AccountingPage() {
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Add New Expense</DialogTitle>
-                            <DialogDescription>
-                                Manually record a new business expense.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="date">Date</Label>
-                                 <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                        variant={"outline"}
-                                        className={cn("justify-start text-left font-normal", !date && "text-muted-foreground")}
-                                        >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {date ? format(date, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
+                        <form onSubmit={handleAddExpense}>
+                            <DialogHeader>
+                                <DialogTitle>Add New Expense</DialogTitle>
+                                <DialogDescription>
+                                    Manually record a new business expense.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="date">Date</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                            variant={"outline"}
+                                            className={cn("justify-start text-left font-normal", !date && "text-muted-foreground")}
+                                            >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {date ? format(date, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                            <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="description">Description</Label>
+                                    <Input id="description" name="description" placeholder="e.g., Packaging supplies" required/>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="amount">Amount (₦)</Label>
+                                    <Input id="amount" name="amount" type="number" placeholder="0.00" required/>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="category">Category</Label>
+                                    <Select name="category" onValueChange={setCategory} required>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a category" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Supplies">Supplies</SelectItem>
+                                            <SelectItem value="Marketing">Marketing</SelectItem>
+                                            <SelectItem value="Salaries">Salaries</SelectItem>
+                                            <SelectItem value="Other">Other</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="description">Description</Label>
-                                <Input id="description" placeholder="e.g., Packaging supplies" />
-                            </div>
-                             <div className="grid gap-2">
-                                <Label htmlFor="amount">Amount (₦)</Label>
-                                <Input id="amount" type="number" placeholder="0.00" />
-                            </div>
-                             <div className="grid gap-2">
-                                <Label htmlFor="category">Category</Label>
-                                <Select>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a category" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="supplies">Supplies</SelectItem>
-                                        <SelectItem value="marketing">Marketing</SelectItem>
-                                        <SelectItem value="salaries">Salaries</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setAddTransactionOpen(false)}>Cancel</Button>
-                            <Button type="submit">Save Expense</Button>
-                        </DialogFooter>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setAddTransactionOpen(false)}>Cancel</Button>
+                                <Button type="submit">Save Expense</Button>
+                            </DialogFooter>
+                        </form>
                     </DialogContent>
                 </Dialog>
             </div>
@@ -192,7 +223,7 @@ export default function AccountingPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.map((t) => (
+              {transactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((t) => (
                 <TableRow key={t.id}>
                   <TableCell>{t.date}</TableCell>
                   <TableCell className="font-medium">{t.description}</TableCell>
@@ -215,3 +246,5 @@ export default function AccountingPage() {
     </div>
   );
 }
+
+    

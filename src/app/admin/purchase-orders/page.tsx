@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type FormEvent } from 'react';
 import { purchaseOrders as initialPOs } from '@/lib/data';
 import type { PurchaseOrderItem, PurchaseOrder } from '@/lib/data';
 import {
@@ -58,6 +59,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { useToast } from '@/hooks/use-toast';
 
 
 const StatusBadge = ({ status }: { status: PurchaseOrder['status'] }) => {
@@ -70,11 +72,19 @@ const StatusBadge = ({ status }: { status: PurchaseOrder['status'] }) => {
   return <Badge variant={variants[status]}>{status}</Badge>;
 };
 
+type NewPOItem = {
+    productName: string;
+    productId: string;
+    quantity: number;
+    cost: number;
+};
+
 export default function PurchaseOrdersPage() {
+  const { toast } = useToast();
   const [purchaseOrders, setPurchaseOrders] = useState(initialPOs);
   const [isNewPOOpen, setNewPOOpen] = useState(false);
-  const [newPOItems, setNewPOItems] = useState<Partial<PurchaseOrderItem>[]>([{}]);
-  const [date, setDate] = useState<Date>();
+  const [newPOItems, setNewPOItems] = useState<Partial<NewPOItem>[]>([{}]);
+  const [date, setDate] = useState<Date | undefined>(new Date());
 
   const handleAddItem = () => {
     setNewPOItems([...newPOItems, {}]);
@@ -84,9 +94,54 @@ export default function PurchaseOrdersPage() {
     setNewPOItems(newPOItems.filter((_, i) => i !== index));
   };
   
+  const handleItemChange = (index: number, field: keyof NewPOItem, value: string | number) => {
+      const updatedItems = [...newPOItems];
+      const item = updatedItems[index] as NewPOItem;
+      (item[field] as any) = value;
+      setNewPOItems(updatedItems);
+  };
+  
   const totalCost = useMemo(() => {
     return newPOItems.reduce((acc, item) => acc + (item.quantity || 0) * (item.cost || 0), 0);
   }, [newPOItems]);
+  
+  const handleSavePO = (e: FormEvent, status: PurchaseOrder['status']) => {
+      e.preventDefault();
+      const form = e.target as HTMLFormElement;
+      const formData = new FormData(form);
+      
+      const newPO: PurchaseOrder = {
+          id: `PO-${Date.now().toString().slice(-4)}`,
+          supplier: formData.get('supplier') as string,
+          date: format(date || new Date(), 'yyyy-MM-dd'),
+          status: status,
+          items: newPOItems.map((item, index) => ({
+              id: `${index + 1}`,
+              productName: formData.get(`item-name-${index}`) as string,
+              productId: formData.get(`item-id-${index}`) as string,
+              quantity: parseInt(formData.get(`item-qty-${index}`) as string, 10),
+              cost: parseFloat(formData.get(`item-cost-${index}`) as string),
+          })),
+          total: totalCost,
+      };
+
+      setPurchaseOrders([newPO, ...purchaseOrders]);
+      toast({
+          title: `Purchase Order ${status}`,
+          description: `PO ${newPO.id} has been saved as ${status}.`
+      });
+      
+      setNewPOOpen(false);
+      setNewPOItems([{}]);
+  };
+  
+  const handleStatusChange = (poId: string, newStatus: PurchaseOrder['status']) => {
+      setPurchaseOrders(pos => pos.map(po => po.id === poId ? {...po, status: newStatus} : po));
+      toast({
+          title: 'Status Updated',
+          description: `PO ${poId} has been marked as ${newStatus}.`
+      })
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -108,77 +163,79 @@ export default function PurchaseOrdersPage() {
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-3xl">
-                    <DialogHeader>
-                        <DialogTitle>Create New Purchase Order</DialogTitle>
-                        <DialogDescription>
-                           Fill out the details to create a new order for your suppliers.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="supplier">Supplier Name</Label>
-                                <Input id="supplier" placeholder="e.g., Global Food Imports" />
+                    <form>
+                        <DialogHeader>
+                            <DialogTitle>Create New Purchase Order</DialogTitle>
+                            <DialogDescription>
+                            Fill out the details to create a new order for your suppliers.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-6">
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="supplier">Supplier Name</Label>
+                                    <Input id="supplier" name="supplier" placeholder="e.g., Global Food Imports" required/>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="date">Order Date</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                            variant={"outline"}
+                                            className={cn("justify-start text-left font-normal", !date && "text-muted-foreground")}
+                                            >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {date ? format(date, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                            <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="date">Order Date</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                        variant={"outline"}
-                                        className={cn("justify-start text-left font-normal", !date && "text-muted-foreground")}
-                                        >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {date ? format(date, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                        </div>
 
-                        <div className="space-y-4">
-                            <Label className="font-medium">Line Items</Label>
-                            {newPOItems.map((item, index) => (
-                                <Card key={index} className="p-4 bg-muted/50">
-                                    <div className="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-2 items-end">
-                                        <div className="grid gap-1">
-                                            <Label htmlFor={`item-name-${index}`}>Product Name</Label>
-                                            <Input id={`item-name-${index}`} placeholder="e.g., Pounded Yam Flour" />
+                            <div className="space-y-4">
+                                <Label className="font-medium">Line Items</Label>
+                                {newPOItems.map((item, index) => (
+                                    <Card key={index} className="p-4 bg-muted/50">
+                                        <div className="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-2 items-end">
+                                            <div className="grid gap-1">
+                                                <Label htmlFor={`item-name-${index}`}>Product Name</Label>
+                                                <Input id={`item-name-${index}`} name={`item-name-${index}`} placeholder="e.g., Pounded Yam Flour" required onChange={e => handleItemChange(index, 'productName', e.target.value)}/>
+                                            </div>
+                                            <div className="grid gap-1">
+                                                <Label htmlFor={`item-id-${index}`}>Product ID</Label>
+                                                <Input id={`item-id-${index}`} name={`item-id-${index}`} placeholder="e.g., PYF-001" onChange={e => handleItemChange(index, 'productId', e.target.value)}/>
+                                            </div>
+                                            <div className="grid gap-1">
+                                                <Label htmlFor={`item-qty-${index}`}>Quantity</Label>
+                                                <Input id={`item-qty-${index}`} name={`item-qty-${index}`} type="number" placeholder="0" className="w-20" required onChange={e => handleItemChange(index, 'quantity', parseInt(e.target.value, 10))}/>
+                                            </div>
+                                            <div className="grid gap-1">
+                                                <Label htmlFor={`item-cost-${index}`}>Cost/Unit (₦)</Label>
+                                                <Input id={`item-cost-${index}`} name={`item-cost-${index}`} type="number" placeholder="0.00" className="w-24" required onChange={e => handleItemChange(index, 'cost', parseFloat(e.target.value))}/>
+                                            </div>
+                                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(index)} disabled={newPOItems.length === 1} className="text-muted-foreground hover:text-destructive">
+                                                <Trash2 className="h-5 w-5" />
+                                            </Button>
                                         </div>
-                                         <div className="grid gap-1">
-                                            <Label htmlFor={`item-id-${index}`}>Product ID</Label>
-                                            <Input id={`item-id-${index}`} placeholder="e.g., PYF-001" />
-                                        </div>
-                                         <div className="grid gap-1">
-                                            <Label htmlFor={`item-qty-${index}`}>Quantity</Label>
-                                            <Input id={`item-qty-${index}`} type="number" placeholder="0" className="w-20"/>
-                                        </div>
-                                        <div className="grid gap-1">
-                                            <Label htmlFor={`item-cost-${index}`}>Cost/Unit (₦)</Label>
-                                            <Input id={`item-cost-${index}`} type="number" placeholder="0.00" className="w-24"/>
-                                        </div>
-                                         <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(index)} disabled={newPOItems.length === 1} className="text-muted-foreground hover:text-destructive">
-                                            <Trash2 className="h-5 w-5" />
-                                        </Button>
-                                    </div>
-                                </Card>
-                            ))}
-                             <Button type="button" variant="outline" onClick={handleAddItem} className="w-full">
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Line Item
-                            </Button>
+                                    </Card>
+                                ))}
+                                <Button type="button" variant="outline" onClick={handleAddItem} className="w-full">
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Line Item
+                                </Button>
+                            </div>
+                            <div className="text-right font-bold text-lg">
+                            Total Cost: ₦{totalCost.toFixed(2)}
+                            </div>
                         </div>
-                        <div className="text-right font-bold text-lg">
-                           Total Cost: ₦{totalCost.toFixed(2)}
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setNewPOOpen(false)}>Cancel</Button>
-                        <Button type="submit">Save as Draft</Button>
-                        <Button type="submit">Create PO</Button>
-                    </DialogFooter>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setNewPOOpen(false)}>Cancel</Button>
+                            <Button type="button" onClick={(e) => handleSavePO(e, 'Draft')}>Save as Draft</Button>
+                            <Button type="submit" onClick={(e) => handleSavePO(e, 'Pending')}>Create PO</Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
         </div>
@@ -249,9 +306,9 @@ export default function PurchaseOrdersPage() {
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem>View Details</DropdownMenuItem>
                          {po.status === 'Draft' && <DropdownMenuItem>Edit</DropdownMenuItem>}
-                         {po.status === 'Pending' && <DropdownMenuItem>Mark as Completed</DropdownMenuItem>}
+                         {po.status === 'Pending' && <DropdownMenuItem onClick={() => handleStatusChange(po.id, 'Completed')}>Mark as Completed</DropdownMenuItem>}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleStatusChange(po.id, 'Cancelled')}>
                           Cancel PO
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -284,3 +341,5 @@ export default function PurchaseOrdersPage() {
     </div>
   );
 }
+
+    
