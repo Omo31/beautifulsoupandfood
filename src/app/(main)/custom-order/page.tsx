@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
@@ -62,6 +63,16 @@ export default function CustomOrderPage() {
         }
         return 0;
     }, [shippingMethod, selectedLga]);
+
+    const getShippingFeeDisplay = () => {
+        if (shippingMethod === 'pickup') return '₦0.00';
+        if (shippingMethod === 'quote') return 'To be quoted';
+        if (shippingMethod === 'lagos') {
+            return selectedLga ? `₦${shippingFee.toFixed(2)}` : 'Select a location';
+        }
+        return 'To be quoted';
+    }
+
 
     return (
         <TooltipProvider>
@@ -150,40 +161,49 @@ export default function CustomOrderPage() {
                             {/* Shipping */}
                             <div className="space-y-4">
                                 <Label className="text-lg font-medium">Delivery Options</Label>
-                                <RadioGroup value={shippingMethod} onValueChange={setShippingMethod} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <Label htmlFor="pickup" className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer hover:bg-accent/10">
+                                <RadioGroup value={shippingMethod} onValueChange={setShippingMethod} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                     <Label htmlFor="pickup" className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer hover:bg-accent/10 has-[[data-state=checked]]:bg-accent/10 has-[[data-state=checked]]:border-primary">
                                         <RadioGroupItem value="pickup" id="pickup" />
                                         <span>
                                             In-Store Pickup
                                             <p className="text-sm text-muted-foreground">Collect your order directly from our location.</p>
                                         </span>
                                     </Label>
-                                    <Label htmlFor="lagos" className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer hover:bg-accent/10">
+                                    <Label htmlFor="lagos" className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer hover:bg-accent/10 has-[[data-state=checked]]:bg-accent/10 has-[[data-state=checked]]:border-primary">
                                         <RadioGroupItem value="lagos" id="lagos" />
                                         <span>
                                             Delivery within Lagos
                                              <p className="text-sm text-muted-foreground">Select your location for a pre-set delivery fee.</p>
                                         </span>
                                     </Label>
+                                    <Label htmlFor="quote" className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer hover:bg-accent/10 has-[[data-state=checked]]:bg-accent/10 has-[[data-state=checked]]:border-primary">
+                                        <RadioGroupItem value="quote" id="quote" />
+                                        <span>
+                                            Request Shipping Quote
+                                            <p className="text-sm text-muted-foreground">We will calculate and send you a shipping quote.</p>
+                                        </span>
+                                    </Label>
                                 </RadioGroup>
                                 
-                                {shippingMethod === 'lagos' && (
-                                    <div className="grid gap-4">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="lga-select">Select Location (LGA)</Label>
-                                            <Select onValueChange={setSelectedLga}>
-                                                <SelectTrigger id="lga-select">
-                                                    <SelectValue placeholder="Choose your Local Government Area" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {lagosLgas.map(lga => (
-                                                        <SelectItem key={lga.id} value={lga.id}>
-                                                            {lga.name} - ₦{lga.price.toFixed(2)}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                                {(shippingMethod === 'lagos' || shippingMethod === 'quote') && (
+                                    <div className="grid gap-4 mt-4">
+                                        {shippingMethod === 'lagos' && (
+                                             <div className="grid gap-2">
+                                                <Label htmlFor="lga-select">Select Location (LGA)</Label>
+                                                <Select onValueChange={setSelectedLga}>
+                                                    <SelectTrigger id="lga-select">
+                                                        <SelectValue placeholder="Choose your Local Government Area" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {lagosLgas.map(lga => (
+                                                            <SelectItem key={lga.id} value={lga.id}>
+                                                                {lga.name} - ₦{lga.price.toFixed(2)}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
                                         <div className="grid gap-2">
                                             <Label htmlFor="shipping-address">Full Shipping Address</Label>
                                             <Textarea id="shipping-address" placeholder="Please enter your full street address, landmark, etc." required />
@@ -205,7 +225,7 @@ export default function CustomOrderPage() {
                                 </div>
                                 <div className="flex justify-between text-muted-foreground">
                                     <span>Shipping Fee</span>
-                                    <span>{shippingMethod === 'pickup' ? '₦0.00' : `₦${shippingFee.toFixed(2)}`}</span>
+                                    <span>{getShippingFeeDisplay()}</span>
                                 </div>
                                 <Separator className="my-2"/>
                                  <div className="flex justify-between font-bold text-lg">
@@ -216,14 +236,21 @@ export default function CustomOrderPage() {
 
 
                             {/* User Info */}
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="name">Your Name</Label>
-                                    <Input id="name" placeholder="John Doe" required />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="email">Your Email</Label>
-                                    <Input id="email" type="email" placeholder="john.doe@example.com" required />
+                            <div className="space-y-4">
+                                <Label className="text-lg font-medium">Your Info</Label>
+                                <div className="grid md:grid-cols-3 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="name">Your Name</Label>
+                                        <Input id="name" placeholder="John Doe" required />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="email">Your Email</Label>
+                                        <Input id="email" type="email" placeholder="john.doe@example.com" required />
+                                    </div>
+                                     <div className="grid gap-2">
+                                        <Label htmlFor="phone">Your Phone Number</Label>
+                                        <Input id="phone" type="tel" placeholder="+234 801 234 5678" required />
+                                    </div>
                                 </div>
                             </div>
                             
@@ -242,3 +269,5 @@ export default function CustomOrderPage() {
         </TooltipProvider>
     )
 }
+
+  
