@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
@@ -16,8 +16,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { QuoteRequest, QuoteStatus } from '@/lib/data';
+import type { QuoteRequest, QuoteStatus, QuoteItem } from '@/lib/data';
 import { format } from 'date-fns';
+
+type PricedQuoteItem = QuoteItem & { 
+    unitCost?: number,
+    price?: number, // Add price for compatibility with payment API
+    imageId?: string // Add imageId for compatibility
+};
 
 
 const getBadgeVariant = (status: QuoteStatus) => {
@@ -36,6 +42,7 @@ export default function QuoteDetailsPage() {
   const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const quoteRef = useMemoFirebase(() => {
     if (!firestore || !quoteId) return null;
@@ -61,6 +68,65 @@ export default function QuoteDetailsPage() {
   
   // Basic check to prevent users from viewing other people's quotes
   const canView = !loading && quote && quote.userId === user?.uid;
+
+    const { itemsTotal, subTotal, serviceCharge, grandTotal } = useMemo(() => {
+        if (!quote) return { itemsTotal: 0, subTotal: 0, serviceCharge: 0, grandTotal: 0 };
+        // @ts-ignore
+        const itemsTotal = quote.items.reduce((acc, item) => acc + ((item.unitCost || 0) * item.quantity), 0);
+        const subTotal = itemsTotal; // Services can be added later
+        const serviceCharge = subTotal * 0.06;
+        // @ts-ignore
+        const shipping = quote.shippingCost || 0;
+        const grandTotal = subTotal + serviceCharge + shipping;
+        return { itemsTotal, subTotal, serviceCharge, grandTotal, shipping };
+  }, [quote]);
+
+  const handleCustomOrderCheckout = async () => {
+    if (!user || !user.email || !quote) {
+        toast({ variant: 'destructive', title: 'You are not logged in' });
+        router.push('/login');
+        return;
+    }
+
+    setIsProcessingPayment(true);
+    try {
+        const itemsForPayload = quote.items.map(item => ({
+            // @ts-ignore
+            price: item.unitCost || 0,
+            quantity: item.quantity,
+            name: item.name,
+            // These are not on quote items, so we provide defaults
+            id: item.name.toLowerCase().replace(/\s+/g, '-'),
+            imageId: 'custom-order' 
+        }));
+        
+        const response = await fetch('/api/payment/initialize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: user.uid,
+                email: user.email,
+                amount: grandTotal,
+                quoteItems: itemsForPayload,
+                orderType: 'quote',
+                orderRef: quote.id
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to initialize payment');
+        }
+
+        const { authorization_url } = await response.json();
+        router.push(authorization_url);
+
+    } catch (error: any) {
+        console.error("Checkout failed: ", error);
+        toast({ variant: 'destructive', title: 'Checkout Failed', description: error.message || 'There was an issue initiating the payment.' });
+        setIsProcessingPayment(false);
+    }
+};
 
   if (loading) {
     return (
@@ -94,14 +160,6 @@ export default function QuoteDetailsPage() {
   const showActionButtons = quote.status === 'Quote Ready';
   const showPaymentButton = quote.status === 'Accepted';
 
-  // These would be calculated from priced data in a real scenario
-  const mockCosts = {
-    itemsTotal: quote.items.length * 4000,
-    serviceCharge: (quote.items.length * 4000) * 0.06,
-    shipping: 1500,
-    total: (quote.items.length * 4000 * 1.06) + 1500,
-  }
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4">
@@ -116,7 +174,7 @@ export default function QuoteDetailsPage() {
         </div>
         <div className="flex flex-col items-end gap-2">
             <Badge variant={getBadgeVariant(quote.status)}>{quote.status}</Badge>
-            {mockCosts && (quote.status === 'Quote Ready' || quote.status === 'Accepted') && <span className="font-bold text-lg">₦{mockCosts.total.toFixed(2)}</span>}
+            {(quote.status === 'Quote Ready' || quote.status === 'Accepted') && <span className="font-bold text-lg">₦{grandTotal.toFixed(2)}</span>}
         </div>
       </CardHeader>
       <CardContent>
@@ -151,7 +209,8 @@ export default function QuoteDetailsPage() {
                             <p className="text-muted-foreground">Quantity: {item.quantity} {item.measure === 'custom' ? item.customMeasure : item.measure}</p>
                         </div>
                         {(quote.status === 'Quote Ready' || quote.status === 'Accepted') 
-                            ? <p className="font-semibold">₦{(mockCosts.itemsTotal / quote.items.length).toFixed(2)}</p> 
+                            // @ts-ignore
+                            ? <p className="font-semibold">₦{((item.unitCost || 0) * item.quantity).toFixed(2)}</p> 
                             : <p className="text-muted-foreground">To be quoted</p>
                         }
                     </div>
@@ -179,20 +238,22 @@ export default function QuoteDetailsPage() {
                     <h3 className="font-semibold">Cost Breakdown</h3>
                     <div className="flex justify-between text-sm">
                         <span>Items Total:</span>
-                        <span>₦{mockCosts.itemsTotal.toFixed(2)}</span>
+                        <span>₦{itemsTotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                         <span>Service Charge (6%):</span>
-                        <span>₦{mockCosts.serviceCharge.toFixed(2)}</span>
+                        <span>₦{serviceCharge.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
+                         {/* @ts-ignore */}
                         <span>Shipping:</span>
-                        <span>₦{mockCosts.shipping.toFixed(2)}</span>
+                         {/* @ts-ignore */}
+                        <span>₦{(quote.shippingCost || 0).toFixed(2)}</span>
                     </div>
                     <Separator className="my-2"/>
                     <div className="flex justify-between font-bold">
                         <span>Total:</span>
-                        <span>₦{mockCosts.total.toFixed(2)}</span>
+                        <span>₦{grandTotal.toFixed(2)}</span>
                     </div>
                 </div>
             )}
@@ -239,9 +300,13 @@ export default function QuoteDetailsPage() {
                     </Button>
                 </>
              )}
-             <Button className="w-full sm:w-auto" disabled={!showPaymentButton}>
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Proceed to Payment
+             <Button className="w-full sm:w-auto" disabled={!showPaymentButton || isProcessingPayment} onClick={handleCustomOrderCheckout}>
+                {isProcessingPayment ? 'Processing...' : (
+                    <>
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        Proceed to Payment
+                    </>
+                )}
             </Button>
          </div>
       </CardFooter>
