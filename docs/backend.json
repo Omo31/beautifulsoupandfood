@@ -160,6 +160,37 @@
         "customMeasure": { "type": "string" }
       },
       "required": ["name", "quantity", "measure"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Represents a single financial transaction, either an income (Sale) or an Expense.",
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date of the transaction."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the transaction."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Sale", "Supplies", "Marketing", "Salaries", "Other"],
+          "description": "The category of the transaction."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["Sale", "Expense"],
+          "description": "The type of transaction."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of the transaction."
+        }
+      },
+      "required": ["date", "description", "category", "type", "amount"]
     }
   },
   "auth": {
@@ -201,6 +232,12 @@
         "$ref": "#/entities/QuoteRequest"
       },
       "description": "Collection for all custom order quote requests."
+    },
+    "/transactions/{transactionId}": {
+      "schema": {
+        "$ref": "#/entities/Transaction"
+      },
+      "description": "Collection for all financial transactions."
     }
   }
 }

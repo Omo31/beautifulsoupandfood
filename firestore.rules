@@ -15,12 +15,19 @@ service cloud.firestore {
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
+
+    // In a real app, you would lock this down to specific admin UIDs
+    function isAdmin() {
+        // For now, any signed-in user can be an "admin" for testing purposes.
+        // In production, you would check for a custom claim:
+        // return request.auth.token.admin == true;
+        return isSignedIn();
+    }
     
-    // Products: Allow public read, but restrict write access.
-    // In a real app, you would restrict write access to admin/owner roles.
+    // Products: Allow public read, but restrict write access to admins.
     match /products/{productId} {
       allow read: if true;
-      allow write: if false; // For now, nobody can write to products from the client.
+      allow write: if isAdmin();
     }
 
     // Users: Users can create their own profile and read/write to it IF their email is verified.
@@ -31,7 +38,8 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow delete: if false;
       
-      // Prevent listing all users
+      // Admins can read user profiles, but not list all of them for security.
+      allow get: if isAdmin();
       allow list: if false;
 
       // Cart: Users can read and write to their own cart subcollection.
@@ -50,12 +58,23 @@ service cloud.firestore {
     }
     
     // Quotes: Users can create their own quote requests and read them.
-    // Admins (in a real app) would have broader read/write access.
     match /quotes/{quoteId} {
       allow create: if isSignedIn();
-      allow read: if isOwner(request.resource.data.userId);
-      // Only admins should be able to list all quotes or update/delete them.
-      allow list, update, delete: if false; 
+      allow read: if isOwner(request.resource.data.userId) || isAdmin();
+      allow update: if isAdmin(); // Admins can update quotes (e.g., to add pricing)
+      // Only admins should be able to list all quotes or delete them.
+      allow list, delete: if isAdmin(); 
+    }
+
+    // Transactions: Only admins can read and create transactions.
+    match /transactions/{transactionId} {
+        allow read, write: if isAdmin();
+    }
+
+    // Collection Group Queries
+    // Allow admins to query orders across all users.
+    match /{path=**}/orders/{orderId} {
+      allow list: if isAdmin();
     }
   }
 }

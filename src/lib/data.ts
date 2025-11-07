@@ -1,7 +1,4 @@
 
-
-
-
 export type Product = {
   id: string;
   name: string;
@@ -67,7 +64,7 @@ export type PurchaseOrder = {
 
 export type Transaction = {
   id: string;
-  date: string;
+  date: any; // Firestore Timestamp
   description: string;
   category: 'Sale' | 'Supplies' | 'Marketing' | 'Salaries' | 'Other';
   type: 'Sale' | 'Expense';
@@ -149,6 +146,5 @@ export const homepageServices: HomepageService[] = [
 ];
 
 // Mock data below this line is now DEPRECATED and will be removed.
-export const transactions: Transaction[] = [];
 export const purchaseOrders: PurchaseOrder[] = [];
 export const conversations: Conversation[] = [];

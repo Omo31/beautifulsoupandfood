@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useMemo, type FormEvent } from 'react';
-import { transactions as initialTransactions, type Transaction } from '@/lib/data';
 import {
   Card,
   CardContent,
@@ -47,10 +46,23 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useCollection } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/utils';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import type { Transaction } from '@/lib/data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AccountingPage() {
   const { toast } = useToast();
-  const [transactions, setTransactions] = useState(initialTransactions);
+  const firestore = useFirestore();
+
+  const transactionsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'transactions');
+  }, [firestore]);
+
+  const { data: transactions, loading } = useCollection<Transaction>(transactionsQuery);
+
   const [isAddTransactionOpen, setAddTransactionOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [category, setCategory] = useState<string>('');
@@ -69,30 +81,85 @@ export default function AccountingPage() {
     };
   }, [transactions]);
 
-  const handleAddExpense = (e: FormEvent) => {
+  const handleAddExpense = async (e: FormEvent) => {
     e.preventDefault();
+    if (!firestore || !date || !category) {
+        toast({ variant: 'destructive', title: "Error", description: "Please fill out all fields."});
+        return;
+    }
+
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
     
-    const newTransaction: Transaction = {
-        id: `TRN-${Date.now().toString().slice(-4)}`,
-        date: format(date || new Date(), 'yyyy-MM-dd'),
+    const newTransactionData = {
+        date: Timestamp.fromDate(date),
         description: formData.get('description') as string,
         category: category as Transaction['category'],
-        type: 'Expense',
+        type: 'Expense' as 'Expense',
         amount: parseFloat(formData.get('amount') as string)
     };
     
-    setTransactions([newTransaction, ...transactions]);
-    toast({
-        title: "Expense Added",
-        description: `${newTransaction.description} has been successfully recorded.`
-    });
-    setAddTransactionOpen(false);
-    form.reset();
-    setDate(new Date());
-    setCategory('');
+    try {
+        await addDoc(collection(firestore, 'transactions'), newTransactionData);
+        toast({
+            title: "Expense Added",
+            description: `${newTransactionData.description} has been successfully recorded.`
+        });
+        setAddTransactionOpen(false);
+        form.reset();
+        setDate(new Date());
+        setCategory('');
+    } catch (error) {
+        console.error("Error adding transaction: ", error);
+        toast({ variant: 'destructive', title: "Error", description: "Could not record expense." });
+    }
   }
+
+  const renderTableBody = () => {
+    if (loading) {
+        return (
+            [...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                </TableRow>
+            ))
+        );
+    }
+
+    if (transactions.length === 0) {
+        return (
+            <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center">
+                    No transactions recorded yet.
+                </TableCell>
+            </TableRow>
+        );
+    }
+    
+    const sortedTransactions = [...transactions].sort((a,b) => b.date.toDate().getTime() - a.date.toDate().getTime());
+
+    return sortedTransactions.map((t) => (
+            <TableRow key={t.id}>
+                <TableCell>{format(t.date.toDate(), 'yyyy-MM-dd')}</TableCell>
+                <TableCell className="font-medium">{t.description}</TableCell>
+                <TableCell>{t.category}</TableCell>
+                <TableCell>{t.type}</TableCell>
+                <TableCell
+                className={cn(
+                    'text-right font-semibold',
+                    t.type === 'Sale' ? 'text-green-600' : 'text-destructive'
+                )}
+                >
+                {t.type === 'Sale' ? '' : '-'}₦{t.amount.toFixed(2)}
+                </TableCell>
+            </TableRow>
+        ));
+  };
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -108,7 +175,7 @@ export default function AccountingPage() {
             <CardDescription>Gross income from all sales.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{totalRevenue.toFixed(2)}</div>
+            {loading ? <Skeleton className="h-7 w-3/4" /> : <div className="text-2xl font-bold">₦{totalRevenue.toFixed(2)}</div>}
           </CardContent>
         </Card>
         <Card>
@@ -117,9 +184,7 @@ export default function AccountingPage() {
             <CardDescription>Total costs from business operations.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">
-              -₦{totalExpenses.toFixed(2)}
-            </div>
+             {loading ? <Skeleton className="h-7 w-3/4" /> : <div className="text-2xl font-bold text-destructive">-₦{totalExpenses.toFixed(2)}</div>}
           </CardContent>
         </Card>
         <Card>
@@ -128,7 +193,7 @@ export default function AccountingPage() {
             <CardDescription>Your final profit after expenses.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{netIncome.toFixed(2)}</div>
+            {loading ? <Skeleton className="h-7 w-3/4" /> : <div className="text-2xl font-bold">₦{netIncome.toFixed(2)}</div>}
           </CardContent>
         </Card>
       </div>
@@ -223,22 +288,7 @@ export default function AccountingPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell>{t.date}</TableCell>
-                  <TableCell className="font-medium">{t.description}</TableCell>
-                  <TableCell>{t.category}</TableCell>
-                  <TableCell>{t.type}</TableCell>
-                  <TableCell
-                    className={cn(
-                      'text-right font-semibold',
-                      t.type === 'Sale' ? 'text-green-600' : 'text-destructive'
-                    )}
-                  >
-                    {t.type === 'Sale' ? '' : '-'}₦{t.amount.toFixed(2)}
-                  </TableCell>
-                </TableRow>
-              ))}
+                {renderTableBody()}
             </TableBody>
           </Table>
         </CardContent>
