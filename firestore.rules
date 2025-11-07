@@ -32,6 +32,11 @@ service cloud.firestore {
       
       // Prevent listing all users
       allow list: if false;
+
+      // Cart: Users can read and write to their own cart subcollection.
+      match /cart/{productId} {
+        allow read, write, delete: if isOwner(userId);
+      }
     }
   }
 }

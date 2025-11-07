@@ -15,6 +15,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useProducts } from '@/hooks/use-products';
+import { useCart } from '@/hooks/use-cart';
+import { useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
 
 export default function ProductDetailPage() {
   const { products, findById } = useProducts();
@@ -24,6 +27,10 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [newReviewText, setNewReviewText] = useState('');
+  
+  const { addToCart } = useCart();
+  const { user } = useUser();
+  const router = useRouter();
 
   const product = findById(productId as string);
   const image = product ? PlaceHolderImages.find(p => p.id === product.imageId) : null;
@@ -41,6 +48,15 @@ export default function ProductDetailPage() {
       setQuantity(q => Math.max(1, q - 1));
     }
   };
+
+  const handleAddToCart = () => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    addToCart(product.id, quantity);
+  };
+
 
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +113,7 @@ export default function ProductDetailPage() {
                     <span className="font-bold text-lg w-8 text-center">{quantity}</span>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange('increase')}><Plus className="h-4 w-4"/></Button>
                 </div>
-                <Button size="lg" className="flex-1" disabled={product.stock === 0}>
+                <Button size="lg" className="flex-1" disabled={product.stock === 0} onClick={handleAddToCart}>
                     <Plus className="mr-2 h-5 w-5" /> Add to Cart
                 </Button>
             </div>

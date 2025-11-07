@@ -7,6 +7,9 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from './ui/badge';
+import { useCart } from '@/hooks/use-cart';
+import { useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
 
 type ProductCardProps = {
   product: Product;
@@ -14,6 +17,18 @@ type ProductCardProps = {
 
 export function ProductCard({ product }: ProductCardProps) {
   const image = PlaceHolderImages.find((img) => img.id === product.imageId);
+  const { addToCart } = useCart();
+  const { user } = useUser();
+  const router = useRouter();
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    addToCart(product.id);
+  };
 
   return (
     <Card className="flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
@@ -49,7 +64,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button className="w-full" disabled={product.stock === 0}>
+        <Button className="w-full" disabled={product.stock === 0} onClick={handleAddToCart}>
           <Plus className="mr-2 h-4 w-4" /> Add to Cart
         </Button>
       </CardFooter>

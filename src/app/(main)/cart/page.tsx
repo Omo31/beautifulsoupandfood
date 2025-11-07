@@ -17,32 +17,27 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
-import { useProducts } from "@/hooks/use-products";
+import { useCart } from "@/hooks/use-cart";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CartPage() {
-    const { products } = useProducts();
+    const { cartItems, cartLoading, updateQuantity, removeFromCart, subtotal } = useCart();
     const [shippingMethod, setShippingMethod] = useState("pickup");
     const [selectedLga, setSelectedLga] = useState<string | null>(null);
-    const initialCartItems = useMemo(() => products.slice(1, 3).map(p => ({ ...p, quantity: 1 })), [products]);
-    const [cartItems, setCartItems] = useState(initialCartItems);
 
     const handleQuantityChange = (productId: string, change: 'increase' | 'decrease') => {
-        setCartItems(currentItems =>
-            currentItems.map(item => {
-                if (item.id === productId) {
-                    const newQuantity = change === 'increase' ? item.quantity + 1 : item.quantity - 1;
-                    return { ...item, quantity: Math.max(1, newQuantity) };
-                }
-                return item;
-            })
-        );
+        const item = cartItems.find(i => i.id === productId);
+        if (!item) return;
+        const newQuantity = change === 'increase' ? item.quantity + 1 : item.quantity - 1;
+        if (newQuantity > 0) {
+            updateQuantity(productId, newQuantity);
+        }
     };
     
     const handleRemoveItem = (productId: string) => {
-        setCartItems(currentItems => currentItems.filter(item => item.id !== productId));
+        removeFromCart(productId);
     };
 
-    const subtotal = useMemo(() => cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0), [cartItems]);
     const serviceCharge = subtotal * 0.06;
 
     const shippingFee = useMemo(() => {
@@ -82,7 +77,11 @@ export default function CartPage() {
                     <div className="md:col-span-2">
                         <Card>
                             <CardContent className="p-0">
-                                {cartItems.length > 0 ? (
+                                {cartLoading ? (
+                                    <div className="p-10 text-center">
+                                        <Skeleton className="h-8 w-1/4 mx-auto" />
+                                    </div>
+                                ) : cartItems.length > 0 ? (
                                     <div className="flex flex-col">
                                         {cartItems.map((item, index) => {
                                             const image = PlaceHolderImages.find(p => p.id === item.imageId);

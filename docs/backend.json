@@ -70,6 +70,23 @@
         }
       },
       "required": ["firstName", "lastName", "role"]
+    },
+    "CartItem": {
+      "title": "Cart Item",
+      "description": "Represents a product that a user has added to their shopping cart.",
+      "type": "object",
+      "properties": {
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of the product in the cart."
+        },
+        "addedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the item was added to the cart."
+        }
+      },
+      "required": ["quantity", "addedAt"]
     }
   },
   "auth": {
@@ -87,6 +104,12 @@
         "$ref": "#/entities/UserProfile"
       },
       "description": "Collection where each document represents a user's profile, keyed by their Firebase Auth UID."
+    },
+    "/users/{userId}/cart/{productId}": {
+      "schema": {
+        "$ref": "#/entities/CartItem"
+      },
+      "description": "A sub-collection within each user's document storing items in their shopping cart. The document ID is the product ID."
     }
   }
 }
