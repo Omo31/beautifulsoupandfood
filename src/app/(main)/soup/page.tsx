@@ -1,14 +1,18 @@
+
+'use client';
+
 import { ProductCard } from "@/components/ProductCard";
-import { products } from "@/lib/data";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useProducts } from "@/hooks/use-products";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SoupPage() {
+    const { products, loading } = useProducts();
     const soupProducts = products.filter(p => p.category === 'soup');
+
     return (
         <div>
             <div className="text-center mb-12">
@@ -18,11 +22,33 @@ export default function SoupPage() {
                 </p>
             </div>
             
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {soupProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                ))}
-            </div>
+            {loading ? (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {[...Array(4)].map((_, i) => (
+                        <Card key={i}>
+                            <Skeleton className="aspect-[4/3]" />
+                            <CardContent className="p-4">
+                                <Skeleton className="h-5 w-3/4 mb-2" />
+                                <Skeleton className="h-4 w-full mb-4" />
+                                <div className="flex justify-between items-center">
+                                    <Skeleton className="h-5 w-1/4" />
+                                    <Skeleton className="h-5 w-1/4" />
+                                </div>
+                            </CardContent>
+                            <CardHeader className="p-4 pt-0">
+                               <Skeleton className="h-10 w-full" />
+                            </CardHeader>
+                        </Card>
+                    ))}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {soupProducts.map((product) => (
+                        <ProductCard key={product.id} product={product} />
+                    ))}
+                </div>
+            )}
+
 
             <Separator className="my-12" />
 
