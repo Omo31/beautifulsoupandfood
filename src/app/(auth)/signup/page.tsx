@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,6 +12,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth, useFirestore } from "@/firebase";
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 
 const signupSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -31,6 +33,8 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 export default function SignupPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const auth = useAuth();
+    const firestore = useFirestore();
 
     const form = useForm<SignupFormValues>({
         resolver: zodResolver(signupSchema),
@@ -45,12 +49,46 @@ export default function SignupPage() {
         },
     });
 
-    function onSubmit(data: SignupFormValues) {
-        console.log(data);
-        toast({
-            title: "Account Created (Mock)",
-            description: "Your account has been created. This is a mock submission.",
-        });
+    async function onSubmit(data: SignupFormValues) {
+        if (!auth || !firestore) {
+            toast({ variant: "destructive", title: "Firebase not initialized" });
+            return;
+        }
+
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+            const user = userCredential.user;
+
+            await sendEmailVerification(user);
+
+            const userProfile = {
+                firstName: data.firstName,
+                lastName: data.lastName,
+                phone: data.phone,
+                shippingAddress: data.shippingAddress,
+                role: "Customer",
+            };
+
+            await setDoc(doc(firestore, "users", user.uid), userProfile);
+            
+            toast({
+                title: "Account Created!",
+                description: "We've sent a verification link to your email. Please verify to log in.",
+            });
+            
+            router.push('/login');
+
+        } catch (error: any) {
+             let description = "An unexpected error occurred. Please try again.";
+            if (error.code === 'auth/email-already-in-use') {
+                description = "This email is already in use. Please log in or use a different email.";
+            }
+            toast({
+                variant: "destructive",
+                title: "Signup Failed",
+                description,
+            });
+        }
     }
 
     return (
@@ -160,7 +198,9 @@ export default function SignupPage() {
                     />
                     <div className="grid grid-cols-2 gap-2 mt-4">
                         <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
-                        <Button type="submit">Create an account</Button>
+                        <Button type="submit" disabled={form.formState.isSubmitting}>
+                            {form.formState.isSubmitting ? "Creating Account..." : "Create an account"}
+                        </Button>
                     </div>
                     <Button variant="outline" className="w-full">
                         Sign up with Google
