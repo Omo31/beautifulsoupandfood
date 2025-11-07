@@ -19,11 +19,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Link from "next/link";
 import { useCart } from "@/hooks/use-cart";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFirestore, useUser } from "@/firebase";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { collection, writeBatch, serverTimestamp } from "firebase/firestore";
 
 export default function CartPage() {
-    const { cartItems, cartLoading, updateQuantity, removeFromCart, subtotal } = useCart();
+    const { cartItems, cartLoading, updateQuantity, removeFromCart, subtotal, clearCart } = useCart();
     const [shippingMethod, setShippingMethod] = useState("pickup");
     const [selectedLga, setSelectedLga] = useState<string | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const firestore = useFirestore();
+    const { user } = useUser();
+    const { toast } = useToast();
+    const router = useRouter();
+
 
     const handleQuantityChange = (productId: string, change: 'increase' | 'decrease') => {
         const item = cartItems.find(i => i.id === productId);
@@ -54,11 +65,77 @@ export default function CartPage() {
     const total = subtotal + serviceCharge + shippingFee;
     
     const isPaymentDisabled = () => {
-        if (cartItems.length === 0) return true;
+        if (isProcessing || cartItems.length === 0) return true;
         if (shippingMethod === 'quote') return true;
         if (shippingMethod === 'lagos' && !selectedLga) return true;
         return false;
     }
+
+    const handleCheckout = async () => {
+        if (!firestore || !user) {
+            toast({ variant: 'destructive', title: 'You are not logged in' });
+            return;
+        }
+
+        setIsProcessing(true);
+        try {
+            const batch = writeBatch(firestore);
+
+            // 1. Create a new order document
+            const newOrderRef = doc(collection(firestore, `users/${user.uid}/orders`));
+            const orderData = {
+                createdAt: serverTimestamp(),
+                status: 'Awaiting Confirmation',
+                itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+                total: total,
+            };
+            batch.set(newOrderRef, orderData);
+
+            // 2. Create order items in a sub-collection
+            const itemsCollectionRef = collection(newOrderRef, 'items');
+            for (const item of cartItems) {
+                const itemRef = doc(itemsCollectionRef);
+                const orderItemData = {
+                    productId: item.id,
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: item.price,
+                    imageId: item.imageId
+                };
+                batch.set(itemRef, orderItemData);
+            }
+
+            // 3. Create a transaction record
+            const transactionRef = doc(collection(firestore, 'transactions'));
+            const transactionData = {
+                date: serverTimestamp(),
+                description: `Sale - Order #${newOrderRef.id.substring(0, 6)}`,
+                category: 'Sale',
+                type: 'Sale',
+                amount: total,
+            };
+            batch.set(transactionRef, transactionData);
+
+            // 4. Commit the batch
+            await batch.commit();
+
+            // 5. Clear the user's cart (as a separate operation after success)
+            await clearCart();
+
+            toast({
+                title: 'Order Placed!',
+                description: 'Your order has been successfully placed.',
+            });
+
+            // 6. Redirect to the order history page
+            router.push(`/account/orders/${newOrderRef.id}`);
+
+        } catch (error) {
+            console.error("Checkout failed: ", error);
+            toast({ variant: 'destructive', title: 'Checkout Failed', description: 'There was an issue placing your order.' });
+            setIsProcessing(false);
+        }
+    };
 
 
     return (
@@ -223,8 +300,8 @@ export default function CartPage() {
                                 </div>
                             </CardContent>
                             <CardFooter>
-                                <Button className="w-full" disabled={isPaymentDisabled()}>
-                                    Proceed to Payment
+                                <Button className="w-full" disabled={isPaymentDisabled()} onClick={handleCheckout}>
+                                    {isProcessing ? 'Processing...' : 'Proceed to Payment'}
                                 </Button>
                             </CardFooter>
                         </Card>

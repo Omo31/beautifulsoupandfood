@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, serverTimestamp, writeBatch, getDocs } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/utils';
 import { useProducts } from './use-products';
 import { useToast } from './use-toast';
@@ -104,6 +104,23 @@ export function useCart() {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not remove item from cart.' });
         }
     };
+
+    const clearCart = async () => {
+        if (!firestore || !user || !cartCollectionRef) return;
+        try {
+            const batch = writeBatch(firestore);
+            const querySnapshot = await getDocs(cartCollectionRef);
+            querySnapshot.forEach((doc) => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+        } catch (error) {
+            console.error("Error clearing cart: ", error);
+            // We don't show a toast here because this is part of a larger flow.
+            // The calling function should handle user feedback.
+            throw error; // re-throw to be caught by the checkout handler
+        }
+    };
     
     const subtotal = useMemo(() => {
         return enrichedCart.reduce((acc, item) => acc + (item.price * item.quantity), 0)
@@ -116,6 +133,7 @@ export function useCart() {
         addToCart,
         updateQuantity,
         removeFromCart,
+        clearCart,
         subtotal,
     };
 }

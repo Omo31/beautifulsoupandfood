@@ -97,8 +97,11 @@ export default function OrderDetailsPage() {
     );
   }
 
-  const serviceCharge = order.total * 0.06;
-  const subtotal = order.total - serviceCharge; // Simplified for this example
+  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const shippingFee = 0; // This would be on the order object in a real app
+  const serviceCharge = (subtotal + shippingFee) * 0.06;
+  const total = subtotal + shippingFee + serviceCharge;
+  
 
   return (
     <Card>
@@ -159,7 +162,7 @@ export default function OrderDetailsPage() {
                 </div>
                  <div className="flex justify-between text-sm">
                     <span>Shipping:</span>
-                    <span>₦0.00</span>
+                    <span>₦{shippingFee.toFixed(2)}</span>
                 </div>
                 <Separator className="my-2"/>
                  <div className="flex justify-between font-bold">
