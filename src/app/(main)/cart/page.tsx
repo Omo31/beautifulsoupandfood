@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Minus, Plus, Trash2, Info, ArrowLeft } from "lucide-react";
+import { Minus, Plus, Trash2, Info, ArrowLeft, Truck } from "lucide-react";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { products } from "@/lib/data";
 import { lagosLgas } from "@/lib/shipping";
@@ -207,6 +207,13 @@ export default function CartPage() {
                                         {shippingMethod === 'lagos' && `₦${shippingFee.toFixed(2)}`}
                                     </span>
                                 </div>
+                                {shippingMethod !== 'pickup' && (
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <Truck className="h-4 w-4" />
+                                        <span>Estimated delivery: 2-4 working days</span>
+                                    </div>
+                                )}
+
 
                                 <Separator />
                                 <div className="flex justify-between font-bold text-lg">
