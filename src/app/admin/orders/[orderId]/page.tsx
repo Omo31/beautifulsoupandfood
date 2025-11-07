@@ -1,9 +1,9 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { orders as initialOrders, products } from '@/lib/data';
 import type { Order } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -14,6 +14,8 @@ import { ArrowLeft, Truck, PackageCheck, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import notificationStore from '@/lib/notifications';
+import { useOrders } from '@/hooks/use-orders';
+import { useProducts } from '@/hooks/use-products';
 
 const getBadgeVariant = (status: Order['status']) => {
     switch (status) {
@@ -30,14 +32,24 @@ export default function AdminOrderDetailsPage() {
   const { toast } = useToast();
   const { orderId } = params;
 
-  const [order, setOrder] = useState(() => initialOrders.find(o => o.id === orderId));
+  const { findById: findOrderById, updateOrder } = useOrders();
+  const { products } = useProducts();
 
+  const [order, setOrder] = useState<Order | undefined>(undefined);
+
+  useEffect(() => {
+    const foundOrder = findOrderById(orderId as string);
+    setOrder(foundOrder);
+  }, [orderId, findOrderById]);
+  
   // For demonstration, we'll just show some products as if they were in the order
   const orderItems = products.slice(0, order?.itemCount || 2); 
 
   const handleStatusChange = (newStatus: Order['status']) => {
       if (order) {
-          setOrder({...order, status: newStatus});
+          const updatedOrder = {...order, status: newStatus};
+          updateOrder(updatedOrder);
+          setOrder(updatedOrder);
           toast({
               title: "Order Status Updated",
               description: `Order ${order.id} has been marked as ${newStatus}.`

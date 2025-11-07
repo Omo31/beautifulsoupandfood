@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from "next/image";
@@ -9,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Minus, Plus, Trash2, Info, ArrowLeft, Truck } from "lucide-react";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { products } from "@/lib/data";
 import { lagosLgas } from "@/lib/shipping";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,11 +17,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
+import { useProducts } from "@/hooks/use-products";
 
 export default function CartPage() {
+    const { products } = useProducts();
     const [shippingMethod, setShippingMethod] = useState("pickup");
     const [selectedLga, setSelectedLga] = useState<string | null>(null);
-    const initialCartItems = useMemo(() => products.slice(1, 3).map(p => ({ ...p, quantity: 1 })), []);
+    const initialCartItems = useMemo(() => products.slice(1, 3).map(p => ({ ...p, quantity: 1 })), [products]);
     const [cartItems, setCartItems] = useState(initialCartItems);
 
     const handleQuantityChange = (productId: string, change: 'increase' | 'decrease') => {

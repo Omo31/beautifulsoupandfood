@@ -4,7 +4,6 @@
 import { useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { ProductCard } from "@/components/ProductCard";
-import { products } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,8 +13,10 @@ import { Slider } from "@/components/ui/slider";
 import { ListFilter } from "lucide-react";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { SearchInput } from '@/components/SearchInput';
+import { useProducts } from '@/hooks/use-products';
 
 export default function ShopPage() {
+    const { products } = useProducts();
     const searchParams = useSearchParams();
     const searchTerm = searchParams.get('q') || '';
 
@@ -23,7 +24,7 @@ export default function ShopPage() {
         return products.filter(product =>
             product.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [searchTerm]);
+    }, [searchTerm, products]);
 
 
     return (

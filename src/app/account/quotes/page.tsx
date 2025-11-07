@@ -1,10 +1,13 @@
 
+'use client';
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { quotes, type Quote, type QuoteStatus } from "@/lib/data";
+import { type QuoteStatus } from "@/lib/data";
+import { useQuotes } from "@/hooks/use-quotes";
 
 const getBadgeVariant = (status: QuoteStatus) => {
     switch (status) {
@@ -21,6 +24,7 @@ const getBadgeVariant = (status: QuoteStatus) => {
 }
 
 export default function MyQuotesPage() {
+  const { quotes } = useQuotes();
   return (
     <Card>
       <CardHeader>

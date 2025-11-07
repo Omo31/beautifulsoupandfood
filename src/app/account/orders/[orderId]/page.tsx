@@ -1,7 +1,7 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { orders, products } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,13 +9,18 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
+import { useOrders } from '@/hooks/use-orders';
+import { useProducts } from '@/hooks/use-products';
 
 export default function OrderDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const { orderId } = params;
+  
+  const { findById: findOrderById } = useOrders();
+  const { products } = useProducts();
 
-  const order = orders.find(o => o.id === orderId);
+  const order = findOrderById(orderId as string);
 
   // For demonstration, we'll just show some products as if they were in the order
   const orderItems = products.slice(0, order?.itemCount || 2); 

@@ -1,12 +1,14 @@
+
 'use client';
 
 import { useState } from 'react';
 import { ProductCard } from "@/components/ProductCard";
-import { products } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart } from 'lucide-react';
+import { useProducts } from '@/hooks/use-products';
 
 export default function WishlistPage() {
+    const { products } = useProducts();
     const [wishlistItems, setWishlistItems] = useState(() => products.slice(3, 6)); // Mock wishlist items
 
     return (

@@ -3,7 +3,6 @@
 
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { products } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,8 +14,10 @@ import { ProductCard } from '@/components/ProductCard';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import { useProducts } from '@/hooks/use-products';
 
 export default function ProductDetailPage() {
+  const { products, findById } = useProducts();
   const params = useParams();
   const { toast } = useToast();
   const { productId } = params;
@@ -24,7 +25,7 @@ export default function ProductDetailPage() {
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [newReviewText, setNewReviewText] = useState('');
 
-  const product = products.find(p => p.id === productId);
+  const product = findById(productId as string);
   const image = product ? PlaceHolderImages.find(p => p.id === product.imageId) : null;
   
   const relatedProducts = products.filter(p => p.category === product?.category && p.id !== product?.id).slice(0, 4);

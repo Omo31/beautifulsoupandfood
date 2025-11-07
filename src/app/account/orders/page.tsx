@@ -1,11 +1,16 @@
-import { orders } from "@/lib/data";
+
+'use client';
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useOrders } from "@/hooks/use-orders";
 
 export default function OrderHistoryPage() {
+  const { orders } = useOrders();
+  
   return (
     <Card>
       <CardHeader>

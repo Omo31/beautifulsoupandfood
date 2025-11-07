@@ -1,12 +1,15 @@
 
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Star, PackageSearch, Gift, Boxes } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { products, testimonials, homepageServices, HomepageService } from '@/lib/data';
+import { testimonials, homepageServices, HomepageService } from '@/lib/data';
 import { ProductCard } from '@/components/ProductCard';
+import { useProducts } from '@/hooks/use-products';
 
 const iconMap: Record<HomepageService['iconName'], React.ElementType> = {
   PackageSearch,
@@ -15,6 +18,7 @@ const iconMap: Record<HomepageService['iconName'], React.ElementType> = {
 };
 
 export default function HomePage() {
+  const { products } = useProducts();
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero');
   const featuredProducts = products.slice(0, 4);
   const videoId = "dQw4w9WgXcQ";

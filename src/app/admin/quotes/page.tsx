@@ -26,8 +26,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
-import { quotes, type Quote, type QuoteStatus } from '@/lib/data';
+import { type QuoteStatus } from '@/lib/data';
 import { Input } from '@/components/ui/input';
+import { useQuotes } from '@/hooks/use-quotes';
 
 const getBadgeVariant = (status: QuoteStatus) => {
     switch (status) {
@@ -45,6 +46,7 @@ const getBadgeVariant = (status: QuoteStatus) => {
 
 
 export default function AdminQuotesPage() {
+  const { quotes } = useQuotes();
   return (
     <Card>
       <CardHeader>
