@@ -191,6 +191,60 @@
         }
       },
       "required": ["date", "description", "category", "type", "amount"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Represents a chat thread with a customer.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the customer."
+        },
+        "userName": {
+          "type": "string",
+          "description": "The display name of the customer."
+        },
+        "userAvatar": {
+          "type": "string",
+          "description": "The avatar URL of the customer."
+        },
+        "lastMessage": {
+          "type": "string",
+          "description": "The text of the last message sent in the conversation."
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the last message."
+        },
+        "isReadByAdmin": {
+          "type": "boolean",
+          "description": "Indicates if the admin has read the latest message."
+        }
+      },
+      "required": ["userId", "userName", "lastMessageAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Represents a single message within a conversation.",
+      "type": "object",
+      "properties": {
+        "senderId": {
+          "type": "string",
+          "description": "The UID of the message sender ('admin' for admin messages)."
+        },
+        "text": {
+          "type": "string",
+          "description": "The content of the message."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the message was sent."
+        }
+      },
+      "required": ["senderId", "text", "createdAt"]
     }
   },
   "auth": {
@@ -238,6 +292,18 @@
         "$ref": "#/entities/Transaction"
       },
       "description": "Collection for all financial transactions."
+    },
+    "/conversations/{conversationId}": {
+      "schema": {
+        "$ref": "#/entities/Conversation"
+      },
+      "description": "Top-level collection for all customer chat threads. Document ID is the customer's UID."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": {
+        "$ref": "#/entities/Message"
+      },
+      "description": "A sub-collection within each conversation storing the individual messages."
     }
   }
 }

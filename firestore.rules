@@ -71,6 +71,17 @@ service cloud.firestore {
         allow read, write: if isAdmin();
     }
 
+    // Conversations: Users can access their own conversation, Admins can access all.
+    match /conversations/{conversationId} {
+      allow get, create, update: if isOwner(conversationId);
+      allow list, read, write: if isAdmin();
+
+      // Messages: Users can write to their own conversation, Admins can write to any.
+      match /messages/{messageId} {
+        allow read, create: if isOwner(conversationId) || isAdmin();
+      }
+    }
+
     // Collection Group Queries
     // Allow admins to query orders across all users.
     match /{path=**}/orders/{orderId} {
