@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -38,5 +39,16 @@ service cloud.firestore {
         allow read, write, delete: if isOwner(userId);
       }
     }
+    
+    // Quotes: Users can create their own quote requests and read them.
+    // Admins (in a real app) would have broader read/write access.
+    match /quotes/{quoteId} {
+      allow create: if isSignedIn();
+      allow read: if isOwner(request.resource.data.userId);
+      // Only admins should be able to list all quotes or update/delete them.
+      allow list, update, delete: if false; 
+    }
   }
 }
+
+    

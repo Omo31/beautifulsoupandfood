@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Product": {
@@ -87,6 +88,51 @@
         }
       },
       "required": ["quantity", "addedAt"]
+    },
+    "QuoteRequest": {
+      "title": "Quote Request",
+      "description": "A user's request for a custom order quote.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who submitted the request."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pending Review", "Quote Ready", "Accepted", "Rejected", "Expired"],
+          "description": "The current status of the quote request."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the quote was created."
+        },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "notes": { "type": "string" },
+        "shippingMethod": { "type": "string" },
+        "shippingAddress": { "type": "string" },
+        "lga": { "type": "string" },
+        "services": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["userId", "status", "createdAt", "name", "email", "phone"]
+    },
+    "QuoteItem": {
+      "title": "Quote Item",
+      "description": "An individual item within a quote request.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "quantity": { "type": "number" },
+        "measure": { "type": "string" },
+        "customMeasure": { "type": "string" }
+      },
+      "required": ["name", "quantity", "measure"]
     }
   },
   "auth": {
@@ -110,6 +156,14 @@
         "$ref": "#/entities/CartItem"
       },
       "description": "A sub-collection within each user's document storing items in their shopping cart. The document ID is the product ID."
+    },
+    "/quotes/{quoteId}": {
+      "schema": {
+        "$ref": "#/entities/QuoteRequest"
+      },
+      "description": "Collection for all custom order quote requests."
     }
   }
 }
+
+    

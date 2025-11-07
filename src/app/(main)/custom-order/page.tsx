@@ -1,25 +1,27 @@
+
 'use client';
 
-import { useState, useRef, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
-import { PlusCircle, Trash2, Info, Plus, Minus, FileText, Truck } from 'lucide-react';
+import { PlusCircle, Trash2, Truck } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { lagosLgas } from '@/lib/shipping';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import notificationStore from '@/lib/notifications';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useUser, useFirestore } from '@/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 
 const customItemSchema = z.object({
@@ -64,6 +66,8 @@ const addonServices = ['Gift Wrapping', 'Special Packaging'];
 export default function CustomOrderPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const { user } = useUser();
+    const firestore = useFirestore();
     
     const form = useForm<CustomOrderFormValues>({
         resolver: zodResolver(customOrderSchema),
@@ -75,7 +79,7 @@ export default function CustomOrderPage() {
         }
     });
 
-    const { fields, append, remove, update } = useFieldArray({
+    const { fields, append, remove } = useFieldArray({
         control: form.control,
         name: "items"
     });
@@ -103,23 +107,41 @@ export default function CustomOrderPage() {
         return 'To be quoted';
     };
 
-    const onSubmit = (data: CustomOrderFormValues) => {
-        console.log(data);
-        
-        notificationStore.addNotification({
-            recipient: 'admin',
-            title: 'New Quote Request',
-            description: 'A new custom order has been submitted for review.',
-            href: '/admin/quotes/QT-002', 
-            icon: FileText
-        });
+    const onSubmit = async (data: CustomOrderFormValues) => {
+        if (!firestore) {
+            toast({ variant: 'destructive', title: "Database error", description: "Could not connect to the database." });
+            return;
+        }
+        if (!user) {
+            toast({ variant: 'destructive', title: "Not logged in", description: "You must be logged in to submit a quote request." });
+            router.push('/login');
+            return;
+        }
 
-        toast({
-            title: 'Request Sent!',
-            description: 'Your custom order request has been submitted. We will notify you once a quote is ready.'
-        });
+        try {
+            const quoteRequestData = {
+                ...data,
+                userId: user.uid,
+                status: 'Pending Review',
+                createdAt: serverTimestamp(),
+            };
 
-        router.push('/account/quotes');
+            await addDoc(collection(firestore, 'quotes'), quoteRequestData);
+
+            toast({
+                title: 'Request Sent!',
+                description: 'Your custom order request has been submitted. We will notify you once a quote is ready.'
+            });
+
+            router.push('/account/quotes');
+        } catch (error) {
+            console.error("Error submitting quote request: ", error);
+            toast({
+                variant: 'destructive',
+                title: 'Submission Failed',
+                description: 'There was an error submitting your request. Please try again.'
+            });
+        }
     };
 
     return (
@@ -157,15 +179,11 @@ export default function CustomOrderPage() {
                                                  <FormField
                                                     control={form.control}
                                                     name={`items.${index}.quantity`}
-                                                    render={({ field }) => (
+                                                    render={({ field: { onChange, value, ...rest } }) => (
                                                         <FormItem>
                                                             <FormLabel>Quantity</FormLabel>
                                                             <FormControl>
-                                                                <div className="flex items-center gap-2 border rounded-md p-1 bg-background h-10">
-                                                                    <Button variant="ghost" size="icon" type="button" className="h-6 w-6" onClick={() => field.onChange(Math.max(1, field.value -1))} disabled={field.value <= 1}><Minus className="h-3 w-3"/></Button>
-                                                                    <span>{field.value}</span>
-                                                                    <Button variant="ghost" size="icon" type="button" className="h-6 w-6" onClick={() => field.onChange(field.value + 1)}><Plus className="h-3 w-3"/></Button>
-                                                                </div>
+                                                                <Input type="number" value={value} onChange={e => onChange(parseInt(e.target.value, 10) || 1)} {...rest} />
                                                             </FormControl>
                                                             <FormMessage />
                                                         </FormItem>
@@ -456,8 +474,8 @@ export default function CustomOrderPage() {
                                     <Button type="button" variant="outline" onClick={() => router.back()} className="w-full">
                                         Cancel
                                     </Button>
-                                    <Button type="submit" className="w-full">
-                                        Submit Request for Quote
+                                    <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                                        {form.formState.isSubmitting ? 'Submitting...' : 'Submit Request for Quote'}
                                     </Button>
                                 </div>
                             </CardContent>
@@ -468,3 +486,5 @@ export default function CustomOrderPage() {
         </TooltipProvider>
     )
 }
+
+    

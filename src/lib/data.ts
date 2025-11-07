@@ -102,6 +102,30 @@ export type HomepageService = {
 };
 
 export type QuoteStatus = 'Quote Ready' | 'Pending Review' | 'Accepted' | 'Expired' | 'Rejected' | 'Awaiting Revision';
+
+export type QuoteRequest = {
+  id?: string;
+  userId: string;
+  status: QuoteStatus;
+  createdAt: any; // ServerTimestamp
+  items: QuoteItem[];
+  services?: string[];
+  notes?: string;
+  shippingMethod: 'pickup' | 'lagos' | 'quote';
+  lga?: string;
+  shippingAddress?: string;
+  name: string;
+  email: string;
+  phone: string;
+};
+
+export type QuoteItem = {
+    name: string;
+    quantity: number;
+    measure: string;
+    customMeasure?: string;
+};
+
 export type Quote = {
   id: string;
   date: string;
@@ -125,3 +149,5 @@ export const homepageServices: HomepageService[] = [
     { id: '2', name: 'Gift Wrapping', description: 'Send a taste of home as a beautifully wrapped gift.', iconName: 'Gift'},
     { id: '3', name: 'Bulk Orders', description: 'Catering for an event? We handle bulk orders with ease.', iconName: 'Boxes'},
 ];
+
+    
