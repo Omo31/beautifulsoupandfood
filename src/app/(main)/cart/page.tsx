@@ -72,67 +72,38 @@ export default function CartPage() {
     }
 
     const handleCheckout = async () => {
-        if (!firestore || !user) {
+        if (!user || !user.email) {
             toast({ variant: 'destructive', title: 'You are not logged in' });
+            router.push('/login');
             return;
         }
 
         setIsProcessing(true);
         try {
-            const batch = writeBatch(firestore);
-
-            // 1. Create a new order document
-            const newOrderRef = doc(collection(firestore, `users/${user.uid}/orders`));
-            const orderData = {
-                createdAt: serverTimestamp(),
-                status: 'Awaiting Confirmation',
-                itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
-                total: total,
-            };
-            batch.set(newOrderRef, orderData);
-
-            // 2. Create order items in a sub-collection
-            const itemsCollectionRef = collection(newOrderRef, 'items');
-            for (const item of cartItems) {
-                const itemRef = doc(itemsCollectionRef);
-                const orderItemData = {
-                    productId: item.id,
-                    name: item.name,
-                    quantity: item.quantity,
-                    price: item.price,
-                    imageId: item.imageId
-                };
-                batch.set(itemRef, orderItemData);
-            }
-
-            // 3. Create a transaction record
-            const transactionRef = doc(collection(firestore, 'transactions'));
-            const transactionData = {
-                date: serverTimestamp(),
-                description: `Sale - Order #${newOrderRef.id.substring(0, 6)}`,
-                category: 'Sale',
-                type: 'Sale',
-                amount: total,
-            };
-            batch.set(transactionRef, transactionData);
-
-            // 4. Commit the batch
-            await batch.commit();
-
-            // 5. Clear the user's cart (as a separate operation after success)
-            await clearCart();
-
-            toast({
-                title: 'Order Placed!',
-                description: 'Your order has been successfully placed.',
+            const response = await fetch('/api/payment/initialize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.uid,
+                    email: user.email,
+                    amount: total,
+                    cartItems: cartItems.map(item => ({ id: item.id, name: item.name, quantity: item.quantity, price: item.price, imageId: item.imageId })),
+                }),
             });
 
-            // 6. Redirect to the order history page
-            router.push(`/account/orders/${newOrderRef.id}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to initialize payment');
+            }
 
-        } catch (error) {
+            const { authorization_url } = await response.json();
+            
+            // Redirect to Paystack's payment page
+            router.push(authorization_url);
+
+        } catch (error: any) {
             console.error("Checkout failed: ", error);
-            toast({ variant: 'destructive', title: 'Checkout Failed', description: 'There was an issue placing your order.' });
+            toast({ variant: 'destructive', title: 'Checkout Failed', description: error.message || 'There was an issue initiating the payment.' });
             setIsProcessing(false);
         }
     };
