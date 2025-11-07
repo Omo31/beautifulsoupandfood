@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -16,16 +17,37 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { orders, products, users } from '@/lib/data';
+import { orders, products } from '@/lib/data';
+import { useProducts } from '@/hooks/use-products';
+import { useCollection, useFirestore } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/utils';
+import { collection, collectionGroup, query, where } from 'firebase/firestore';
+import type { Order, UserProfile } from '@/lib/data';
 import { DollarSign, ShoppingCart, Users, TrendingUp } from 'lucide-react';
 import { useMemo } from 'react';
 
 export default function AnalyticsPage() {
+    const firestore = useFirestore();
+
+    const ordersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collectionGroup(firestore, 'orders');
+    }, [firestore]);
+    
+    const usersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collection(firestore, 'users');
+    }, [firestore]);
+
+    const { data: allOrders } = useCollection<Order>(ordersQuery);
+    const { data: allUsers } = useCollection<UserProfile>(usersQuery);
+    const { products } = useProducts();
+
   const analyticsData = useMemo(() => {
-    const deliveredOrders = orders.filter((o) => o.status === 'Delivered');
+    const deliveredOrders = allOrders.filter((o) => o.status === 'Delivered');
     const totalRevenue = deliveredOrders.reduce((acc, o) => acc + o.total, 0);
-    const totalOrders = orders.length;
-    const totalCustomers = users.length;
+    const totalOrders = allOrders.length;
+    const totalCustomers = allUsers.length;
     const averageOrderValue =
       deliveredOrders.length > 0 ? totalRevenue / deliveredOrders.length : 0;
     const monthlyGoal = 500000;
@@ -36,7 +58,7 @@ export default function AnalyticsPage() {
       .slice(0, 5)
       .map((p) => ({ ...p, sales: p.reviewCount * 10 })); // Simulate sales based on review count
 
-    const orderStatusData = orders.reduce((acc, order) => {
+    const orderStatusData = allOrders.reduce((acc, order) => {
       acc[order.status] = (acc[order.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -60,7 +82,7 @@ export default function AnalyticsPage() {
       orderStatusData,
       salesByCategory
     };
-  }, []);
+  }, [allOrders, allUsers, products]);
   
   const totalCategorySales = Object.values(analyticsData.salesByCategory).reduce((sum, current) => sum + current, 0);
 
@@ -139,7 +161,7 @@ export default function AnalyticsPage() {
                     <span className="font-medium">{product.name}</span>
                     <span className="text-muted-foreground">{product.sales} units</span>
                   </div>
-                  <Progress value={(product.sales / analyticsData.topProducts[0].sales) * 100} />
+                  <Progress value={(product.sales / (analyticsData.topProducts[0]?.sales || 1)) * 100} />
                 </div>
               ))}
             </div>
@@ -212,3 +234,5 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
+    

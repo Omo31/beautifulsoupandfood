@@ -30,17 +30,6 @@ export type Testimonial = {
   imageId: string;
 };
 
-export type User = {
-    id: string;
-    name: string;
-    email: string;
-    role: 'Owner' | 'Customer' | 'Content Manager';
-    lastLogin: string;
-    avatarId: string;
-    status: 'Active' | 'Disabled';
-    joinDate: string;
-};
-
 export type Order = {
     id: string;
     status: 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Awaiting Confirmation';
@@ -51,6 +40,14 @@ export type Order = {
     // For now, we'll keep it simple for mock data.
     customerName?: string; // This will be deprecated
     date?: string; // This will be deprecated
+};
+
+export type OrderItem = {
+    id: string;
+    name: string;
+    quantity: number;
+    price: number;
+    productId: string;
 };
 
 export type PurchaseOrderItem = {
@@ -138,7 +135,7 @@ export type Quote = {
   itemCount: number;
 };
 
-// All data has been moved to the /lib/stores directory to simulate a real-time database.
+// All data has been moved to be fetched from Firestore or is mocked directly in components.
 // This file now only contains type definitions.
 
 export const testimonials: Testimonial[] = [
@@ -153,9 +150,11 @@ export const homepageServices: HomepageService[] = [
     { id: '3', name: 'Bulk Orders', description: 'Catering for an event? We handle bulk orders with ease.', iconName: 'Boxes'},
 ];
 
+// Mock data below this line is now DEPRECATED and will be removed.
 export const products: Product[] = [];
-export const users: User[] = [];
 export const orders: Order[] = [];
 export const transactions: Transaction[] = [];
 export const purchaseOrders: PurchaseOrder[] = [];
 export const conversations: Conversation[] = [];
+
+    

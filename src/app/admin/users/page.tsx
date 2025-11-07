@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { users as initialUsers, User } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -18,25 +17,55 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useCollection } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/utils';
+import { collection, doc, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import type { UserProfile } from '@/lib/data';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const RoleBadge = ({ role }: { role: User['role'] }) => {
+type UserWithStatus = UserProfile & { 
+    status: 'Active' | 'Disabled'; 
+    email: string; // Assuming email is available on the user object, not profile
+    joinDate: string; // Assuming this is available
+};
+
+const RoleBadge = ({ role }: { role: UserProfile['role'] }) => {
     const variant = role === 'Owner' ? 'destructive' : role === 'Content Manager' ? 'secondary' : 'outline';
     return <Badge variant={variant}>{role}</Badge>;
 };
 
-const StatusBadge = ({ status }: { status: User['status'] }) => {
+const StatusBadge = ({ status }: { status: UserWithStatus['status'] }) => {
     const variant = status === 'Active' ? 'default' : 'secondary';
     const className = status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
     return <Badge variant={variant} className={className}>{status}</Badge>;
 }
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 10;
 
 export default function UsersPage() {
     const { toast } = useToast();
-    const [users, setUsers] = useState<User[]>(initialUsers);
+    const firestore = useFirestore();
+
+    const usersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collection(firestore, 'users');
+    }, [firestore]);
+
+    const { data: userProfiles, loading } = useCollection<UserProfile>(usersQuery);
+    
+    // In a real app, you'd fetch Auth data to get email/joinDate. We'll mock it for now.
+    const users: UserWithStatus[] = useMemo(() => {
+        return userProfiles.map((profile, i) => ({
+            ...profile,
+            email: `${profile.firstName.toLowerCase()}.${profile.lastName.toLowerCase()}@example.com`,
+            joinDate: new Date(Date.now() - i * 1000 * 60 * 60 * 24 * 5).toISOString(),
+            status: 'Active'
+        }));
+    }, [userProfiles]);
+    
+
     const [isModalOpen, setModalOpen] = useState(false);
-    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [editingUser, setEditingUser] = useState<UserWithStatus | null>(null);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
@@ -47,7 +76,11 @@ export default function UsersPage() {
 
     const filteredUsers = useMemo(() => {
         return users
-            .filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase()))
+            .filter(u => 
+                u.firstName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                u.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                u.email.toLowerCase().includes(searchTerm.toLowerCase())
+            )
             .filter(u => roleFilter === 'all' || u.role === roleFilter)
             .filter(u => statusFilter === 'all' || u.status === statusFilter);
     }, [users, searchTerm, roleFilter, statusFilter]);
@@ -59,7 +92,7 @@ export default function UsersPage() {
 
     const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
 
-    const handleOpenModal = (user: User | null = null) => {
+    const handleOpenModal = (user: UserWithStatus | null = null) => {
         setEditingUser(user);
         setModalOpen(true);
     };
@@ -69,47 +102,47 @@ export default function UsersPage() {
         setEditingUser(null);
     };
 
-    const handleSaveUser = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSaveUser = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (!firestore) return;
+        
         const formData = new FormData(e.currentTarget);
-        const name = formData.get('name') as string;
-        const email = formData.get('email') as string;
-        const role = formData.get('role') as User['role'];
+        const firstName = formData.get('firstName') as string;
+        const lastName = formData.get('lastName') as string;
+        const role = formData.get('role') as UserProfile['role'];
 
-        if (editingUser) {
-            setUsers(users.map(u => u.id === editingUser.id ? { ...u, name, email, role } : u));
-            toast({ title: "User Updated", description: `${name} has been successfully updated.` });
-        } else {
-            const newUser: User = {
-                id: `user-${Date.now()}`,
-                name,
-                email,
-                role,
-                joinDate: new Date().toISOString(),
-                lastLogin: new Date().toISOString(),
-                status: 'Active',
-                avatarId: 'avatar-1',
-            };
-            setUsers([newUser, ...users]);
-            toast({ title: "User Created", description: `A new account for ${name} has been created.` });
+        try {
+            if (editingUser) {
+                const userDocRef = doc(firestore, 'users', editingUser.id);
+                await setDoc(userDocRef, { firstName, lastName, role }, { merge: true });
+                toast({ title: "User Updated", description: `${firstName} ${lastName}'s profile has been updated.` });
+            } else {
+                // This only creates the profile, not the Auth user.
+                const usersCollection = collection(firestore, 'users');
+                await addDoc(usersCollection, { firstName, lastName, role, phone: '', shippingAddress: '' });
+                toast({ title: "User Profile Created", description: `A new profile for ${firstName} ${lastName} has been created.` });
+            }
+            handleCloseModal();
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Save failed", description: "Could not save user profile."});
         }
-        handleCloseModal();
     };
 
-    const handleDeleteUser = (userId: string) => {
-        const userToDelete = users.find(u => u.id === userId);
-        if (userToDelete) {
-             setUsers(users.filter(u => u.id !== userId));
-             toast({ variant: 'destructive', title: "User Deleted", description: `The account for ${userToDelete.name} has been deleted.`});
+    const handleDeleteUser = async (userId: string) => {
+        if (!firestore) return;
+        try {
+            await deleteDoc(doc(firestore, 'users', userId));
+            toast({ variant: 'destructive', title: "User Deleted", description: "The user profile has been deleted."});
+        } catch (error) {
+             toast({ variant: 'destructive', title: "Delete failed", description: "Could not delete user profile."});
         }
     };
     
     const handleToggleStatus = (userId: string) => {
+        // This is a UI-only toggle as we don't have a status field in Firestore.
         const userToToggle = users.find(u => u.id === userId);
         if (userToToggle) {
-            const newStatus = userToToggle.status === 'Active' ? 'Disabled' : 'Active';
-            setUsers(users.map(u => u.id === userId ? {...u, status: newStatus} : u));
-            toast({ title: "User Status Updated", description: `The account for ${userToToggle.name} has been ${newStatus.toLowerCase()}.`});
+            toast({ title: "Status Updated", description: `This is a mock action. User status has not been changed.`});
         }
     };
     
@@ -180,16 +213,26 @@ export default function UsersPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {paginatedUsers.map((user) => (
+                        {loading ? (
+                            [...Array(5)].map((_,i) => (
+                                <TableRow key={i}>
+                                    <TableCell><Skeleton className="h-10 w-48" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                                </TableRow>
+                            ))
+                        ) : paginatedUsers.map((user) => (
                         <TableRow key={user.id} className={user.status === 'Disabled' ? 'opacity-50' : ''}>
                             <TableCell>
                                 <div className="flex items-center gap-3">
                                     <Avatar>
-                                    {avatar && <AvatarImage src={avatar.imageUrl} alt={user.name} />}
-                                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                    {avatar && <AvatarImage src={avatar.imageUrl} alt={user.firstName} />}
+                                        <AvatarFallback>{user.firstName.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <p className="font-medium">{user.name}</p>
+                                        <p className="font-medium">{user.firstName} {user.lastName}</p>
                                         <p className="text-sm text-muted-foreground">{user.email}</p>
                                     </div>
                                 </div>
@@ -258,16 +301,20 @@ export default function UsersPage() {
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="name" className="text-right">Name</Label>
-                                    <Input id="name" name="name" defaultValue={editingUser?.name} placeholder="Full Name" className="col-span-3" required />
+                                    <Label htmlFor="firstName" className="text-right">First Name</Label>
+                                    <Input id="firstName" name="firstName" defaultValue={editingUser?.firstName} placeholder="First Name" className="col-span-3" required />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="lastName" className="text-right">Last Name</Label>
+                                    <Input id="lastName" name="lastName" defaultValue={editingUser?.lastName} placeholder="Last Name" className="col-span-3" required />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="email" className="text-right">Email</Label>
-                                    <Input id="email" name="email" type="email" defaultValue={editingUser?.email} placeholder="user@example.com" className="col-span-3" required/>
+                                    <Input id="email" name="email" type="email" defaultValue={editingUser?.email} placeholder="user@example.com" className="col-span-3" required disabled={!!editingUser}/>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="role" className="text-right">Role</Label>
-                                    <Select name="role" defaultValue={editingUser?.role} required>
+                                    <Select name="role" defaultValue={editingUser?.role || 'Customer'} required>
                                         <SelectTrigger className="col-span-3">
                                             <SelectValue placeholder="Select a role" />
                                         </SelectTrigger>
@@ -290,3 +337,5 @@ export default function UsersPage() {
         </div>
     );
 }
+
+    
