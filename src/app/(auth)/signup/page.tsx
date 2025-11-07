@@ -13,7 +13,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useFirestore } from "@/firebase";
-import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
 const signupSchema = z.object({
@@ -59,6 +59,11 @@ export default function SignupPage() {
             const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
             const user = userCredential.user;
 
+            // Update Firebase Auth profile displayName
+            await updateProfile(user, {
+                displayName: `${data.firstName} ${data.lastName}`,
+            });
+
             await sendEmailVerification(user);
 
             const userProfile = {
@@ -69,6 +74,7 @@ export default function SignupPage() {
                 role: "Customer",
             };
 
+            // Create user document in Firestore
             await setDoc(doc(firestore, "users", user.uid), userProfile);
             
             toast({

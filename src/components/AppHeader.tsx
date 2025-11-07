@@ -21,21 +21,25 @@ import {
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useState } from 'react';
 import { NotificationBell } from './NotificationBell';
 import { SearchInput } from './SearchInput';
-
-// Mock authentication state. In a real app, this would come from a context or hook.
-const useMockAuth = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false); // Default to not authenticated
-    // You could expand this to include user info
-    // const [user, setUser] = useState(null); 
-    return { isAuthenticated, setIsAuthenticated };
-}
+import { useUser, useAuth } from '@/firebase';
+import { Skeleton } from './ui/skeleton';
+import { useRouter } from 'next/navigation';
 
 export default function AppHeader() {
   const userAvatar = PlaceHolderImages.find(p => p.id === 'avatar-1');
-  const { isAuthenticated } = useMockAuth();
+  const { user, loading } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    if (auth) {
+      await auth.signOut();
+      router.push('/');
+    }
+  };
+
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -64,34 +68,44 @@ export default function AppHeader() {
         </Link>
       </Button>
 
-      {isAuthenticated && <NotificationBell recipient="user" />}
+      {user && <NotificationBell recipient="user" />}
 
-      {isAuthenticated ? (
+      {loading ? (
+        <Skeleton className="h-8 w-24" />
+      ) : user ? (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="overflow-hidden rounded-full">
-                {userAvatar ? (
-                <Image
+                {user.photoURL ? (
+                  <Image
+                    src={user.photoURL}
+                    width={36}
+                    height={36}
+                    alt="User Avatar"
+                    className="rounded-full"
+                  />
+                ) : userAvatar ? (
+                  <Image
                     src={userAvatar.imageUrl}
                     width={36}
                     height={36}
                     alt="User Avatar"
                     data-ai-hint={userAvatar.imageHint}
                     className="rounded-full"
-                />
+                  />
                 ) : (
                     <User className="h-5 w-5" />
                 )}
             </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>{user.displayName || user.email}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild><Link href="/account/profile">Profile</Link></DropdownMenuItem>
             <DropdownMenuItem asChild><Link href="/account/orders">Orders</Link></DropdownMenuItem>
             <DropdownMenuItem asChild><Link href="/account/notifications">Notifications</Link></DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Logout</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
         ) : (
