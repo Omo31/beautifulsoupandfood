@@ -1,3 +1,4 @@
+
 // A simple in-memory store for mock notifications.
 // In a real app, this would be backed by Firestore.
 
