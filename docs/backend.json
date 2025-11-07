@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Represents an item available for sale in the store.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the product."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the product."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of the product."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category the product belongs to.",
+          "enum": ["foodstuff", "soup"]
+        },
+        "stock": {
+          "type": "number",
+          "description": "The current stock level of the product."
+        },
+        "imageId": {
+          "type": "string",
+          "description": "The ID for the placeholder image of the product."
+        },
+        "rating": {
+          "type": "number",
+          "description": "The average customer rating of the product."
+        },
+        "reviewCount": {
+          "type": "number",
+          "description": "The total number of reviews for the product."
+        }
+      },
+      "required": ["name", "price", "category", "stock"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores public and non-sensitive information about a user.",
+      "type": "object",
+      "properties": {
+        "firstName": {
+          "type": "string",
+          "description": "The user's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The user's last name."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The user's phone number."
+        },
+        "shippingAddress": {
+          "type": "string",
+          "description": "The user's primary shipping address."
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role in the application.",
+          "enum": ["Customer", "Content Manager", "Owner"],
+          "default": "Customer"
+        }
+      },
+      "required": ["firstName", "lastName", "role"]
+    }
+  },
+  "auth": {
+    "providers": ["email-password", "google"]
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": {
+        "$ref": "#/entities/Product"
+      },
+      "description": "Collection of all products available in the store."
+    },
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Collection where each document represents a user's profile, keyed by their Firebase Auth UID."
+    }
+  }
+}
