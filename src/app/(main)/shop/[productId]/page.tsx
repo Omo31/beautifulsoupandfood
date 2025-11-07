@@ -7,7 +7,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Star, Plus, Minus, ShieldCheck, Truck, MessageSquare } from 'lucide-react';
+import { Star, Plus, Minus, ShieldCheck, Truck, MessageSquare, Heart } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProductCard } from '@/components/ProductCard';
@@ -16,8 +16,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useProducts } from '@/hooks/use-products';
 import { useCart } from '@/hooks/use-cart';
+import { useWishlist } from '@/hooks/use-wishlist';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 export default function ProductDetailPage() {
   const { products, findById } = useProducts();
@@ -31,6 +33,7 @@ export default function ProductDetailPage() {
   const { addToCart } = useCart();
   const { user } = useUser();
   const router = useRouter();
+  const { isWishlisted, toggleWishlist } = useWishlist();
 
   const product = findById(productId as string);
   const image = product ? PlaceHolderImages.find(p => p.id === product.imageId) : null;
@@ -40,6 +43,8 @@ export default function ProductDetailPage() {
   if (!product) {
     return <div className="text-center">Product not found</div>;
   }
+  
+  const inWishlist = isWishlisted(product.id);
 
   const handleQuantityChange = (change: 'increase' | 'decrease') => {
     if (change === 'increase') {
@@ -51,11 +56,19 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (!user) {
-      router.push('/login');
+      router.push('/login?redirect=/shop/' + product.id);
       return;
     }
     addToCart(product.id, quantity);
   };
+  
+  const handleWishlistToggle = () => {
+      if (!user) {
+          router.push('/login?redirect=/shop/' + product.id);
+          return;
+      }
+      toggleWishlist(product.id);
+  }
 
 
   const handleReviewSubmit = (e: React.FormEvent) => {
@@ -115,6 +128,9 @@ export default function ProductDetailPage() {
                 </div>
                 <Button size="lg" className="flex-1" disabled={product.stock === 0} onClick={handleAddToCart}>
                     <Plus className="mr-2 h-5 w-5" /> Add to Cart
+                </Button>
+                <Button variant="outline" size="icon" onClick={handleWishlistToggle} aria-label="Add to wishlist">
+                  <Heart className={cn("h-5 w-5", inWishlist && "fill-destructive text-destructive")} />
                 </Button>
             </div>
              {product.stock <= 20 && product.stock > 0 && <p className="text-yellow-600 text-sm mt-2">Low stock! Only {product.stock} left.</p>}

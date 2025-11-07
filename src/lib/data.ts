@@ -18,6 +18,7 @@ export type UserProfile = {
   phone: string;
   shippingAddress: string;
   role: 'Customer' | 'Content Manager' | 'Owner';
+  wishlist?: string[];
 };
 
 

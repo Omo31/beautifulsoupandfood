@@ -3,15 +3,17 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Plus } from 'lucide-react';
+import { Star, Plus, Heart } from 'lucide-react';
 import type { Product } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from './ui/badge';
 import { useCart } from '@/hooks/use-cart';
+import { useWishlist } from '@/hooks/use-wishlist';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 type ProductCardProps = {
   product: Product;
@@ -20,17 +22,29 @@ type ProductCardProps = {
 export function ProductCard({ product }: ProductCardProps) {
   const image = PlaceHolderImages.find((img) => img.id === product.imageId);
   const { addToCart } = useCart();
+  const { isWishlisted, toggleWishlist } = useWishlist();
   const { user } = useUser();
   const router = useRouter();
+
+  const inWishlist = isWishlisted(product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!user) {
-      router.push('/login');
+      router.push('/login?redirect=/shop/' + product.id);
       return;
     }
     addToCart(product.id);
   };
+  
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (!user) {
+          router.push('/login?redirect=/shop/' + product.id);
+          return;
+      }
+      toggleWishlist(product.id);
+  }
 
   return (
     <Card className="flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
@@ -49,6 +63,9 @@ export function ProductCard({ product }: ProductCardProps) {
           {product.stock === 0 && (
             <Badge variant="destructive" className="absolute top-2 left-2 z-10">Out of Stock</Badge>
           )}
+          <Button variant="ghost" size="icon" onClick={handleWishlistToggle} className="absolute top-2 right-2 z-10 bg-background/70 hover:bg-background rounded-full">
+              <Heart className={cn("h-5 w-5 text-foreground/70", inWishlist && "fill-destructive text-destructive")} />
+          </Button>
         </Link>
       </CardHeader>
       <CardContent className="p-4 flex-1 flex flex-col">

@@ -68,6 +68,13 @@
           "description": "The user's role in the application.",
           "enum": ["Customer", "Content Manager", "Owner"],
           "default": "Customer"
+        },
+        "wishlist": {
+          "type": "array",
+          "description": "An array of product IDs that the user has added to their wishlist.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": ["firstName", "lastName", "role"]
