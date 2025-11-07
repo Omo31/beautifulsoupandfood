@@ -5,7 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Bar, BarChart as RechartsBarChart, Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useMemo } from 'react';
-import { orders, users } from '@/lib/data';
+import { useCollection, useFirestore } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/utils';
+import { collection, collectionGroup, query, where, Timestamp } from 'firebase/firestore';
+import type { Order, UserProfile } from '@/lib/data';
+import { Skeleton } from "@/components/ui/skeleton";
 
 const salesData = [
   { month: "Jan", sales: 186, revenue: 80 },
@@ -38,15 +42,33 @@ const chartConfig = {
 };
 
 export default function AdminDashboardPage() {
+    const firestore = useFirestore();
+
+    const ordersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collectionGroup(firestore, 'orders');
+    }, [firestore]);
+
+    const usersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collection(firestore, 'users');
+    }, [firestore]);
+
+    const { data: allOrders, loading: ordersLoading } = useCollection<Order>(ordersQuery);
+    const { data: allUsers, loading: usersLoading } = useCollection<UserProfile>(usersQuery);
+
     const dashboardData = useMemo(() => {
-        const deliveredOrders = orders.filter((o) => o.status === 'Delivered');
+        const deliveredOrders = allOrders.filter((o) => o.status === 'Delivered');
         const totalRevenue = deliveredOrders.reduce((acc, o) => acc + o.total, 0);
         const totalSales = deliveredOrders.reduce((acc, o) => acc + o.itemCount, 0);
-        const pendingOrders = orders.filter(o => o.status === 'Pending' || o.status === 'Awaiting Confirmation').length;
+        const pendingOrders = allOrders.filter(o => o.status === 'Pending' || o.status === 'Awaiting Confirmation').length;
 
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-        const newCustomers = users.filter(u => new Date(u.joinDate) > oneMonthAgo).length;
+        
+        // This part is mocked because joinDate is not in our UserProfile model.
+        // In a real app, you would fetch this from Firebase Auth user records.
+        const newCustomers = allUsers.length > 0 ? Math.floor(allUsers.length / 3) : 0;
 
         return {
             totalRevenue,
@@ -54,7 +76,34 @@ export default function AdminDashboardPage() {
             totalSales,
             pendingOrders
         };
-    }, []);
+    }, [allOrders, allUsers]);
+
+    const loading = ordersLoading || usersLoading;
+
+    if (loading) {
+        return (
+             <div className="flex flex-col gap-4">
+                <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    {[...Array(4)].map((_, i) => (
+                        <Card key={i}>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <Skeleton className="h-4 w-2/4" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-7 w-3/4" />
+                                <Skeleton className="h-3 w-2/4 mt-1" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+                 <div className="grid gap-4 md:grid-cols-2">
+                    <Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>
+                    <Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>
+                 </div>
+            </div>
+        )
+    }
 
     return (
         <div className="flex flex-col gap-4">
@@ -77,7 +126,7 @@ export default function AdminDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">+{dashboardData.newCustomers}</div>
-                        <p className="text-xs text-muted-foreground">In the last month</p>
+                        <p className="text-xs text-muted-foreground">In the last month (mocked)</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -105,7 +154,7 @@ export default function AdminDashboardPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Sales & Revenue</CardTitle>
-                        <CardDescription>January - June 2024</CardDescription>
+                        <CardDescription>January - June 2024 (Mock Data)</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
@@ -130,7 +179,7 @@ export default function AdminDashboardPage() {
                  <Card>
                     <CardHeader>
                         <CardTitle>Revenue Overview</CardTitle>
-                        <CardDescription>Last 7 Days</CardDescription>
+                        <CardDescription>Last 7 Days (Mock Data)</CardDescription>
                     </CardHeader>
                     <CardContent>
                          <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
