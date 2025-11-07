@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
-import { PlusCircle, Trash2, Info, Plus, Minus, FileText } from 'lucide-react';
+import { PlusCircle, Trash2, Info, Plus, Minus, FileText, Truck } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -243,6 +243,12 @@ export default function CustomOrderPage() {
                                             <Label htmlFor="shipping-address">Full Shipping Address</Label>
                                             <Textarea id="shipping-address" placeholder="Please enter your full street address, landmark, etc." required />
                                         </div>
+                                    </div>
+                                )}
+                                {shippingMethod !== 'pickup' && (
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-4">
+                                        <Truck className="h-4 w-4" />
+                                        <span>Estimated delivery: 2-4 working days</span>
                                     </div>
                                 )}
                             </div>
