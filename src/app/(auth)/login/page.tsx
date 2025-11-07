@@ -10,8 +10,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const loginSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address." }),
@@ -24,6 +25,7 @@ export default function LoginPage() {
     const router = useRouter();
     const { toast } = useToast();
     const auth = useAuth();
+    const firestore = useFirestore();
 
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -72,13 +74,34 @@ export default function LoginPage() {
     };
     
     const handleGoogleSignIn = async () => {
-        if (!auth) {
+        if (!auth || !firestore) {
             toast({ variant: "destructive", title: "Firebase not initialized" });
             return;
         }
         try {
             const provider = new GoogleAuthProvider();
-            await signInWithPopup(auth, provider);
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+
+            // Check if user document already exists
+            const userDocRef = doc(firestore, "users", user.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if (!userDoc.exists()) {
+                // User is signing in for the first time, create their profile
+                const [firstName, ...lastNameParts] = user.displayName?.split(' ') || ["", ""];
+                const lastName = lastNameParts.join(' ');
+                
+                const userProfile = {
+                    firstName: firstName,
+                    lastName: lastName,
+                    phone: user.phoneNumber || "",
+                    shippingAddress: "",
+                    role: "Customer", // Default role for all new signups
+                };
+                await setDoc(userDocRef, userProfile);
+            }
+
             toast({
                 title: "Logged In!",
                 description: "Welcome back.",

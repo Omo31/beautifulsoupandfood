@@ -1,0 +1,32 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Products: Allow public read, but restrict write access.
+    // In a real app, you would restrict write access to admin/owner roles.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if false; // For now, nobody can write to products from the client.
+    }
+
+    // Users: Users can create their own profile and read/write to it.
+    // They cannot read other users' profiles or delete their own profile.
+    match /users/{userId} {
+      allow read, update: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn(); // We will tighten this rule later.
+      allow delete: if false;
+      
+      // Prevent listing all users
+      allow list: if false;
+    }
+  }
+}
