@@ -1,7 +1,5 @@
 
 
-
-
 export type Product = {
   id: string;
   name: string;
@@ -106,7 +104,7 @@ export type HomepageService = {
   iconName: 'PackageSearch' | 'Gift' | 'Boxes';
 };
 
-export type QuoteStatus = 'Quote Ready' | 'Pending Review' | 'Accepted' | 'Expired' | 'Rejected' | 'Awaiting Revision';
+export type QuoteStatus = 'Quote Ready' | 'Pending Review' | 'Accepted' | 'Rejected' | 'Expired';
 
 export type QuoteRequest = {
   id?: string;
@@ -161,4 +159,3 @@ export const orders: Order[] = [];
 export const transactions: Transaction[] = [];
 export const purchaseOrders: PurchaseOrder[] = [];
 export const conversations: Conversation[] = [];
-    

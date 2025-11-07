@@ -3,7 +3,10 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useFirestore, useUser, useDoc } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/utils';
+import { doc, setDoc } from 'firebase/firestore';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,81 +15,92 @@ import { ArrowLeft, FileText, ShoppingCart, ThumbsUp, ThumbsDown, Edit } from 'l
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import type { QuoteStatus } from '@/lib/data';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { QuoteRequest, QuoteStatus } from '@/lib/data';
+import { format } from 'date-fns';
 
-// Mock data for a quote - in a real app this would be fetched from your database
-const mockQuote = {
-    id: 'QT-001',
-    date: '2024-05-22',
-    status: 'Quote Ready' as QuoteStatus,
-    items: [
-        { name: 'Fresh Ugba', quantity: 2, measure: 'Wraps', price: 3000 },
-        { name: 'Stockfish Head', quantity: 1, measure: 'Pieces', price: 15000 },
-    ],
-    notes: "Please make sure the Ugba is very fresh.",
-    shipping: {
-        method: 'Delivery within Lagos',
-        address: '123 Main Street, Ikeja, Lagos',
-        cost: 1200,
-    },
-    costs: {
-        itemsTotal: 21000,
-        serviceCharge: 1260, // 6% of itemsTotal
-        shipping: 1200,
-        total: 23460,
-    }
-};
 
-const mockPendingQuote = {
-    ...mockQuote,
-    id: 'QT-002',
-    status: 'Pending Review' as QuoteStatus,
-    costs: null,
-    items: [{ name: 'Live Goat', quantity: 1, measure: 'Pieces', price: null }]
-};
+const getBadgeVariant = (status: QuoteStatus) => {
+    let badgeVariant: "default" | "secondary" | "outline" | "destructive" = "secondary";
+    if (status === 'Quote Ready') badgeVariant = 'default';
+    if (status === 'Accepted') badgeVariant = 'outline';
+    if (status === 'Expired' || status === 'Rejected') badgeVariant = 'destructive';
+    return badgeVariant;
+}
+
 
 export default function QuoteDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const { quoteId } = params;
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  const [quote, setQuote] = useState(quoteId === 'QT-001' ? mockQuote : mockPendingQuote);
+  const quoteRef = useMemoFirebase(() => {
+    if (!firestore || !quoteId) return null;
+    return doc(firestore, 'quotes', quoteId as string);
+  }, [firestore, quoteId]);
   
-  const handleAccept = () => {
-    setQuote(q => ({...q, status: 'Accepted'}));
-    toast({
-        title: "Quote Accepted!",
-        description: "You can now proceed to payment.",
-    })
-  }
+  const { data: quote, loading } = useDoc<QuoteRequest>(quoteRef);
+
+  const handleStatusUpdate = async (newStatus: QuoteStatus) => {
+    if (!quoteRef || !quote) return;
+
+    try {
+        await setDoc(quoteRef, { status: newStatus }, { merge: true });
+        toast({
+            title: newStatus === 'Accepted' ? 'Quote Accepted!' : 'Quote Rejected',
+            description: newStatus === 'Accepted' ? 'You can now proceed to payment.' : 'This quote has been marked as rejected.',
+            variant: newStatus === 'Rejected' ? 'destructive' : 'default',
+        });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update the quote status.' });
+    }
+  };
   
-  const handleReject = () => {
-      setQuote(q => ({...q, status: 'Rejected'}));
-      toast({
-        variant: "destructive",
-        title: "Quote Rejected",
-        description: "This quote has been marked as rejected.",
-    })
+  // Basic check to prevent users from viewing other people's quotes
+  const canView = !loading && quote && quote.userId === user?.uid;
+
+  if (loading) {
+    return (
+        <Card>
+            <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+            <CardContent className="space-y-6">
+                <Skeleton className="h-4 w-3/4" />
+                <Separator />
+                <div className="space-y-4">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                </div>
+            </CardContent>
+            <CardFooter>
+                 <Skeleton className="h-10 w-32" />
+            </CardFooter>
+        </Card>
+    );
   }
 
-  if (!quote) {
+  if (!canView) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
         <h2 className="text-2xl font-bold">Quote not found</h2>
-        <p className="text-muted-foreground">The quote you are looking for does not exist.</p>
+        <p className="text-muted-foreground">The quote you are looking for does not exist or you don't have permission to view it.</p>
         <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
       </div>
     );
   }
-  
-  let badgeVariant: "default" | "secondary" | "outline" | "destructive" = "secondary";
-  if (quote.status === 'Quote Ready') badgeVariant = 'default';
-  if (quote.status === 'Accepted') badgeVariant = 'outline';
-  if (quote.status === 'Expired' || quote.status === 'Rejected') badgeVariant = 'destructive';
 
   const showActionButtons = quote.status === 'Quote Ready';
   const showPaymentButton = quote.status === 'Accepted';
+
+  // These would be calculated from priced data in a real scenario
+  const mockCosts = {
+    itemsTotal: quote.items.length * 4000,
+    serviceCharge: (quote.items.length * 4000) * 0.06,
+    shipping: 1500,
+    total: (quote.items.length * 4000 * 1.06) + 1500,
+  }
 
   return (
     <Card>
@@ -94,15 +108,15 @@ export default function QuoteDetailsPage() {
         <div>
           <CardTitle>Quote Details</CardTitle>
           <CardDescription className="mt-1">
-            Quote ID: <span className="font-medium text-foreground">{quote.id}</span>
+            Quote ID: <span className="font-medium text-foreground">#{quote.id?.substring(0,6)}</span>
           </CardDescription>
            <CardDescription>
-            Requested on: <span className="font-medium text-foreground">{quote.date}</span>
+            Requested on: <span className="font-medium text-foreground">{format(quote.createdAt.toDate(), 'MMMM d, yyyy')}</span>
           </CardDescription>
         </div>
         <div className="flex flex-col items-end gap-2">
-            <Badge variant={badgeVariant}>{quote.status}</Badge>
-            {quote.costs && <span className="font-bold text-lg">₦{quote.costs.total.toFixed(2)}</span>}
+            <Badge variant={getBadgeVariant(quote.status)}>{quote.status}</Badge>
+            {mockCosts && (quote.status === 'Quote Ready' || quote.status === 'Accepted') && <span className="font-bold text-lg">₦{mockCosts.total.toFixed(2)}</span>}
         </div>
       </CardHeader>
       <CardContent>
@@ -134,9 +148,12 @@ export default function QuoteDetailsPage() {
                     <div key={index} className="flex items-center gap-4 text-sm">
                         <div className="flex-1">
                             <h4 className="font-medium">{item.name}</h4>
-                            <p className="text-muted-foreground">Quantity: {item.quantity} {item.measure}</p>
+                            <p className="text-muted-foreground">Quantity: {item.quantity} {item.measure === 'custom' ? item.customMeasure : item.measure}</p>
                         </div>
-                        {item.price ? <p className="font-semibold">₦{(item.price * item.quantity).toFixed(2)}</p> : <p className="text-muted-foreground">To be quoted</p>}
+                        {(quote.status === 'Quote Ready' || quote.status === 'Accepted') 
+                            ? <p className="font-semibold">₦{(mockCosts.itemsTotal / quote.items.length).toFixed(2)}</p> 
+                            : <p className="text-muted-foreground">To be quoted</p>
+                        }
                     </div>
                 ))}
             </div>
@@ -153,29 +170,29 @@ export default function QuoteDetailsPage() {
             <div className="space-y-2">
                 <h3 className="font-semibold">Shipping Details</h3>
                 <p className="text-muted-foreground text-sm">
-                    Method: {quote.shipping.method}<br />
-                    {quote.shipping.address}
+                    Method: {quote.shippingMethod}<br />
+                    {quote.shippingAddress}
                 </p>
             </div>
-             {quote.costs && (
+            {(quote.status === 'Quote Ready' || quote.status === 'Accepted') && (
                 <div className="space-y-2">
                     <h3 className="font-semibold">Cost Breakdown</h3>
                     <div className="flex justify-between text-sm">
                         <span>Items Total:</span>
-                        <span>₦{quote.costs.itemsTotal.toFixed(2)}</span>
+                        <span>₦{mockCosts.itemsTotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                         <span>Service Charge (6%):</span>
-                        <span>₦{quote.costs.serviceCharge.toFixed(2)}</span>
+                        <span>₦{mockCosts.serviceCharge.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                         <span>Shipping:</span>
-                        <span>₦{quote.costs.shipping.toFixed(2)}</span>
+                        <span>₦{mockCosts.shipping.toFixed(2)}</span>
                     </div>
                     <Separator className="my-2"/>
                     <div className="flex justify-between font-bold">
                         <span>Total:</span>
-                        <span>₦{quote.costs.total.toFixed(2)}</span>
+                        <span>₦{mockCosts.total.toFixed(2)}</span>
                     </div>
                 </div>
             )}
@@ -206,19 +223,17 @@ export default function QuoteDetailsPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleReject} className="bg-destructive hover:bg-destructive/90">Reject Quote</AlertDialogAction>
+                                <AlertDialogAction onClick={() => handleStatusUpdate('Rejected')} className="bg-destructive hover:bg-destructive/90">Reject Quote</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
                     
-                    <Button variant="outline" className="w-full sm:w-auto" asChild>
-                        <Link href="/custom-order">
-                             <Edit className="mr-2 h-4 w-4" />
-                            Edit Request
-                        </Link>
+                    <Button variant="outline" className="w-full sm:w-auto" disabled>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Request
                     </Button>
 
-                    <Button className="w-full sm:w-auto" onClick={handleAccept}>
+                    <Button className="w-full sm:w-auto" onClick={() => handleStatusUpdate('Accepted')}>
                         <ThumbsUp className="mr-2 h-4 w-4" />
                         Accept Quote
                     </Button>
