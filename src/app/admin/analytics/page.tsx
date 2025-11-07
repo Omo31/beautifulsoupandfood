@@ -17,14 +17,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { orders, products } from '@/lib/data';
 import { useProducts } from '@/hooks/use-products';
 import { useCollection, useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import { collection, collectionGroup, query, where } from 'firebase/firestore';
+import { collection, collectionGroup } from 'firebase/firestore';
 import type { Order, UserProfile } from '@/lib/data';
 import { DollarSign, ShoppingCart, Users, TrendingUp } from 'lucide-react';
 import { useMemo } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 export default function AnalyticsPage() {
     const firestore = useFirestore();
@@ -39,9 +40,9 @@ export default function AnalyticsPage() {
         return collection(firestore, 'users');
     }, [firestore]);
 
-    const { data: allOrders } = useCollection<Order>(ordersQuery);
-    const { data: allUsers } = useCollection<UserProfile>(usersQuery);
-    const { products } = useProducts();
+    const { data: allOrders, loading: ordersLoading } = useCollection<Order>(ordersQuery);
+    const { data: allUsers, loading: usersLoading } = useCollection<UserProfile>(usersQuery);
+    const { products, loading: productsLoading } = useProducts();
 
   const analyticsData = useMemo(() => {
     const deliveredOrders = allOrders.filter((o) => o.status === 'Delivered');
@@ -85,6 +86,49 @@ export default function AnalyticsPage() {
   }, [allOrders, allUsers, products]);
   
   const totalCategorySales = Object.values(analyticsData.salesByCategory).reduce((sum, current) => sum + current, 0);
+
+  const loading = ordersLoading || usersLoading || productsLoading;
+
+  if (loading) {
+    return (
+        <div className="flex flex-col gap-6">
+            <div>
+                <h1 className="text-3xl font-bold font-headline">Analytics</h1>
+                <p className="text-muted-foreground">
+                An overview of your store's performance.
+                </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                    <Card key={i}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                           <Skeleton className="h-4 w-2/4" />
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton className="h-7 w-3/4" />
+                            <Skeleton className="h-3 w-2/4 mt-1" />
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <Card className="lg:col-span-4">
+                    <CardHeader>
+                         <Skeleton className="h-6 w-1/2" />
+                         <Skeleton className="h-4 w-3/4" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+                    </CardContent>
+                </Card>
+                <div className="lg:col-span-3 flex flex-col gap-4">
+                     <Card><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
+                     <Card><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
+                </div>
+            </div>
+        </div>
+    )
+  }
 
 
   return (
@@ -201,7 +245,7 @@ export default function AnalyticsPage() {
                            {Object.entries(analyticsData.orderStatusData).map(([status, count]) => (
                              <TableRow key={status}>
                                 <TableCell className="font-medium">{status}</TableCell>
-                                <TableCell className="text-right">{count}</TableCell>
+                                <TableCell className="text-right">{count as number}</TableCell>
                              </TableRow>
                            ))}
                         </TableBody>
@@ -223,9 +267,9 @@ export default function AnalyticsPage() {
                 <div key={category}>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="font-medium">{category}</span>
-                    <span className="text-muted-foreground">₦{sales.toLocaleString()}</span>
+                    <span className="text-muted-foreground">₦{(sales as number).toLocaleString()}</span>
                   </div>
-                  <Progress value={(sales / totalCategorySales) * 100} />
+                  <Progress value={(sales as number / totalCategorySales) * 100} />
                 </div>
               ))}
             </div>
@@ -234,5 +278,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-
-    

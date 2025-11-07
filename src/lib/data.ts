@@ -1,5 +1,6 @@
 
 
+
 export type Product = {
   id: string;
   name: string;
@@ -36,10 +37,6 @@ export type Order = {
     total: number;
     itemCount: number;
     createdAt: any; // Firestore Timestamp
-    // In a real app, this would contain more fields
-    // For now, we'll keep it simple for mock data.
-    customerName?: string; // This will be deprecated
-    date?: string; // This will be deprecated
 };
 
 export type OrderItem = {
@@ -151,10 +148,6 @@ export const homepageServices: HomepageService[] = [
 ];
 
 // Mock data below this line is now DEPRECATED and will be removed.
-export const products: Product[] = [];
-export const orders: Order[] = [];
 export const transactions: Transaction[] = [];
 export const purchaseOrders: PurchaseOrder[] = [];
 export const conversations: Conversation[] = [];
-
-    
