@@ -7,6 +7,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isVerified() {
+        return request.auth.token.email_verified == true;
+    }
+
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
@@ -18,11 +22,12 @@ service cloud.firestore {
       allow write: if false; // For now, nobody can write to products from the client.
     }
 
-    // Users: Users can create their own profile and read/write to it.
+    // Users: Users can create their own profile and read/write to it IF their email is verified.
     // They cannot read other users' profiles or delete their own profile.
     match /users/{userId} {
-      allow read, update: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn(); // We will tighten this rule later.
+      allow read, update: if isVerified() && isOwner(userId);
+      // Allow creation during signup, but subsequent actions require verification.
+      allow create: if isSignedIn();
       allow delete: if false;
       
       // Prevent listing all users
