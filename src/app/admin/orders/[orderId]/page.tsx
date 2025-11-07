@@ -14,8 +14,9 @@ import { ArrowLeft, Truck, PackageCheck, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import notificationStore from '@/lib/notifications';
-import { useOrders } from '@/hooks/use-orders';
+import { useOrders as useMockOrders } from '@/hooks/use-orders-mock';
 import { useProducts } from '@/hooks/use-products';
+import { format } from 'date-fns';
 
 const getBadgeVariant = (status: Order['status']) => {
     switch (status) {
@@ -32,7 +33,8 @@ export default function AdminOrderDetailsPage() {
   const { toast } = useToast();
   const { orderId } = params;
 
-  const { findById: findOrderById, updateOrder } = useOrders();
+  // We'll use the mock store for the admin page for now
+  const { findById: findOrderById, updateOrder } = useMockOrders();
   const { products } = useProducts();
 
   const [order, setOrder] = useState<Order | undefined>(undefined);
@@ -87,6 +89,9 @@ export default function AdminOrderDetailsPage() {
     );
   }
 
+  const serviceCharge = order.total * 0.06;
+  const subtotal = order.total - serviceCharge; // Simplified for this example
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4">
@@ -96,7 +101,7 @@ export default function AdminOrderDetailsPage() {
             Order ID: <span className="font-medium text-foreground">{order.id}</span>
           </CardDescription>
            <CardDescription>
-            Placed on: <span className="font-medium text-foreground">{order.date}</span>
+            Placed on: <span className="font-medium text-foreground">{format(new Date(order.date || Date.now()), 'MMMM d, yyyy')}</span>
           </CardDescription>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -141,11 +146,11 @@ export default function AdminOrderDetailsPage() {
                 <h3 className="font-semibold">Payment Summary</h3>
                 <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
-                    <span>₦{(order.total * 0.94).toFixed(2)}</span>
+                    <span>₦{subtotal.toFixed(2)}</span>
                 </div>
                  <div className="flex justify-between text-sm">
                     <span>Service Charge (6%):</span>
-                    <span>₦{(order.total * 0.06).toFixed(2)}</span>
+                    <span>₦{serviceCharge.toFixed(2)}</span>
                 </div>
                  <div className="flex justify-between text-sm">
                     <span>Shipping:</span>

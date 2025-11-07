@@ -2,6 +2,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
+import { useMemo } from 'react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,19 +12,80 @@ import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import { useOrders } from '@/hooks/use-orders';
 import { useProducts } from '@/hooks/use-products';
+import { doc, collection } from 'firebase/firestore';
+import { useDoc, useCollection, useFirestore, useUser } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/utils';
+import type { Order } from '@/lib/data';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
+
+type OrderItem = {
+    id: string;
+    name: string;
+    quantity: number;
+    price: number;
+    productId: string;
+    imageId: string;
+}
+
+const getBadgeVariant = (status: Order['status']) => {
+    switch (status) {
+        case 'Delivered': return 'default';
+        case 'Shipped': return 'secondary';
+        case 'Cancelled': return 'destructive';
+        default: return 'outline';
+    }
+}
 
 export default function OrderDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const { orderId } = params;
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const orderRef = useMemoFirebase(() => {
+    if (!firestore || !user || !orderId) return null;
+    return doc(firestore, 'users', user.uid, 'orders', orderId as string);
+  }, [firestore, user, orderId]);
   
-  const { findById: findOrderById } = useOrders();
-  const { products } = useProducts();
+  const { data: order, loading: orderLoading } = useDoc<Order>(orderRef);
+  
+  const itemsRef = useMemoFirebase(() => {
+    if (!orderRef) return null;
+    return collection(orderRef, 'items');
+  }, [orderRef]);
 
-  const order = findOrderById(orderId as string);
+  const { data: items, loading: itemsLoading } = useCollection<OrderItem>(itemsRef);
+  
+  const enrichedItems = useMemo(() => {
+    return items.map(item => {
+        const image = PlaceHolderImages.find(p => p.id === item.imageId);
+        return { ...item, imageUrl: image?.imageUrl };
+    });
+  }, [items]);
 
-  // For demonstration, we'll just show some products as if they were in the order
-  const orderItems = products.slice(0, order?.itemCount || 2); 
+
+  if (orderLoading || itemsLoading) {
+    return (
+        <Card>
+            <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+            <CardContent className="space-y-6">
+                <Skeleton className="h-4 w-3/4" />
+                <Separator />
+                <div className="space-y-4">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                </div>
+                <Separator />
+                <Skeleton className="h-24 w-full" />
+            </CardContent>
+            <CardFooter>
+                 <Skeleton className="h-10 w-32" />
+            </CardFooter>
+        </Card>
+    );
+  }
 
   if (!order) {
     return (
@@ -35,7 +97,8 @@ export default function OrderDetailsPage() {
     );
   }
 
-  const badgeVariant = order.status === "Delivered" ? "default" : order.status === "Cancelled" ? "destructive" : "secondary";
+  const serviceCharge = order.total * 0.06;
+  const subtotal = order.total - serviceCharge; // Simplified for this example
 
   return (
     <Card>
@@ -43,14 +106,14 @@ export default function OrderDetailsPage() {
         <div>
           <CardTitle>Order Details</CardTitle>
           <CardDescription className="mt-1">
-            Order ID: <span className="font-medium text-foreground">{order.id}</span>
+            Order ID: <span className="font-medium text-foreground">#{order.id.substring(0, 6)}</span>
           </CardDescription>
            <CardDescription>
-            Placed on: <span className="font-medium text-foreground">{order.date}</span>
+            Placed on: <span className="font-medium text-foreground">{format(order.createdAt.toDate(), 'MMMM d, yyyy')}</span>
           </CardDescription>
         </div>
         <div className="flex flex-col items-end gap-2">
-            <Badge variant={badgeVariant}>{order.status}</Badge>
+            <Badge variant={getBadgeVariant(order.status)}>{order.status}</Badge>
             <span className="font-bold text-lg">₦{order.total.toFixed(2)}</span>
         </div>
       </CardHeader>
@@ -59,21 +122,18 @@ export default function OrderDetailsPage() {
         <div className="my-6">
             <h3 className="font-semibold mb-4">Items in this Order ({order.itemCount})</h3>
             <div className="space-y-4">
-                {orderItems.map(item => {
-                    const image = PlaceHolderImages.find(p => p.id === item.imageId);
-                    return (
-                        <div key={item.id} className="flex items-center gap-4">
-                            <div className="relative h-16 w-16 rounded-md overflow-hidden border">
-                                {image && <Image src={image.imageUrl} alt={item.name} fill className="object-cover" />}
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="font-medium">{item.name}</h4>
-                                <p className="text-sm text-muted-foreground">x1</p>
-                            </div>
-                            <p className="font-semibold">₦{item.price.toFixed(2)}</p>
+                {enrichedItems.map(item => (
+                    <div key={item.id} className="flex items-center gap-4">
+                        <div className="relative h-16 w-16 rounded-md overflow-hidden border">
+                            {item.imageUrl && <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />}
                         </div>
-                    )
-                })}
+                        <div className="flex-1">
+                            <h4 className="font-medium">{item.name}</h4>
+                            <p className="text-sm text-muted-foreground">x{item.quantity}</p>
+                        </div>
+                        <p className="font-semibold">₦{(item.price * item.quantity).toFixed(2)}</p>
+                    </div>
+                ))}
             </div>
         </div>
         <Separator />
@@ -81,7 +141,7 @@ export default function OrderDetailsPage() {
             <div className="space-y-2">
                 <h3 className="font-semibold">Shipping Address</h3>
                 <p className="text-muted-foreground">
-                    {order.customerName}<br />
+                    {user?.displayName}<br />
                     123 Main Street<br />
                     Lagos, 100242<br />
                     Nigeria
@@ -91,11 +151,11 @@ export default function OrderDetailsPage() {
                 <h3 className="font-semibold">Payment Summary</h3>
                 <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
-                    <span>₦{(order.total * 0.94).toFixed(2)}</span>
+                    <span>₦{subtotal.toFixed(2)}</span>
                 </div>
                  <div className="flex justify-between text-sm">
                     <span>Service Charge (6%):</span>
-                    <span>₦{(order.total * 0.06).toFixed(2)}</span>
+                    <span>₦{serviceCharge.toFixed(2)}</span>
                 </div>
                  <div className="flex justify-between text-sm">
                     <span>Shipping:</span>

@@ -89,6 +89,33 @@
       },
       "required": ["quantity", "addedAt"]
     },
+    "Order": {
+      "title": "Order",
+      "description": "Represents a customer's order.",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["Pending", "Shipped", "Delivered", "Cancelled", "Awaiting Confirmation"]
+        },
+        "total": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "itemCount": { "type": "number" }
+      },
+      "required": ["status", "total", "createdAt", "itemCount"]
+    },
+    "OrderItem": {
+      "title": "Order Item",
+      "description": "Represents a single item within an order.",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "name": { "type": "string" },
+        "quantity": { "type": "number" },
+        "price": { "type": "number" }
+      },
+      "required": ["productId", "name", "quantity", "price"]
+    },
     "QuoteRequest": {
       "title": "Quote Request",
       "description": "A user's request for a custom order quote.",
@@ -157,6 +184,18 @@
       },
       "description": "A sub-collection within each user's document storing items in their shopping cart. The document ID is the product ID."
     },
+     "/users/{userId}/orders/{orderId}": {
+      "schema": {
+        "$ref": "#/entities/Order"
+      },
+      "description": "A sub-collection for a user's orders."
+    },
+    "/users/{userId}/orders/{orderId}/items/{orderItemId}": {
+        "schema": {
+            "$ref": "#/entities/OrderItem"
+        },
+        "description": "The individual items within a specific order."
+    },
     "/quotes/{quoteId}": {
       "schema": {
         "$ref": "#/entities/QuoteRequest"
@@ -165,5 +204,3 @@
     }
   }
 }
-
-    

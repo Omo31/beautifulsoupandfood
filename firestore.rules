@@ -38,6 +38,15 @@ service cloud.firestore {
       match /cart/{productId} {
         allow read, write, delete: if isOwner(userId);
       }
+      
+      // Orders: Users can read their own orders and their items.
+      match /orders/{orderId} {
+        allow read, create: if isOwner(userId);
+        
+        match /items/{itemId} {
+           allow read, create: if isOwner(userId);
+        }
+      }
     }
     
     // Quotes: Users can create their own quote requests and read them.
@@ -50,5 +59,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Badge } from "@/components/ui/badge";
@@ -5,8 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useMemo } from 'react';
+import { collectionGroup, getDocs, query } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 import type { Order } from "@/lib/data";
-import { useOrders } from "@/hooks/use-orders";
+import { useOrders as useMockOrders } from "@/hooks/use-orders-mock"; // Using mock for admin for now
+import { format } from "date-fns";
 
 const getBadgeVariant = (status: Order['status']) => {
     switch (status) {
@@ -18,7 +23,9 @@ const getBadgeVariant = (status: Order['status']) => {
 }
 
 export default function OrdersPage() {
-  const { orders } = useOrders();
+  // We'll use the mock store for the admin page for now
+  // In a real app, you'd fetch all orders using an admin SDK or a cloud function
+  const { orders } = useMockOrders();
   
   return (
     <Card>
@@ -45,7 +52,7 @@ export default function OrdersPage() {
               <TableRow key={order.id}>
                 <TableCell className="font-medium">{order.id}</TableCell>
                 <TableCell>{order.customerName}</TableCell>
-                <TableCell>{order.date}</TableCell>
+                <TableCell>{format(new Date(order.date || Date.now()), 'MMMM d, yyyy')}</TableCell>
                 <TableCell>
                   <Badge variant={getBadgeVariant(order.status)}>
                     {order.status}

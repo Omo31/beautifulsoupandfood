@@ -1,6 +1,7 @@
 
 
 
+
 export type Product = {
   id: string;
   name: string;
@@ -44,11 +45,14 @@ export type User = {
 
 export type Order = {
     id: string;
-    customerName: string;
-    date: string;
     status: 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Awaiting Confirmation';
     total: number;
     itemCount: number;
+    createdAt: any; // Firestore Timestamp
+    // In a real app, this would contain more fields
+    // For now, we'll keep it simple for mock data.
+    customerName?: string; // This will be deprecated
+    date?: string; // This will be deprecated
 };
 
 export type PurchaseOrderItem = {
