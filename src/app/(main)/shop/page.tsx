@@ -2,7 +2,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -20,11 +20,57 @@ export default function ShopPage() {
     const searchParams = useSearchParams();
     const searchTerm = searchParams.get('q') || '';
 
+    const [filters, setFilters] = useState({
+        categories: [] as string[],
+        priceRange: [0, 100000] as [number, number],
+        inStock: false
+    });
+
+    const [appliedFilters, setAppliedFilters] = useState(filters);
+
+    useEffect(() => {
+        setAppliedFilters(filters);
+    }, [products]);
+
+
+    const handleCategoryChange = (category: string, checked: boolean | 'indeterminate') => {
+        setFilters(prev => ({
+            ...prev,
+            categories: checked ? [...prev.categories, category] : prev.categories.filter(c => c !== category)
+        }));
+    };
+
+    const handlePriceChange = (value: number[]) => {
+        setFilters(prev => ({
+            ...prev,
+            priceRange: value as [number, number]
+        }));
+    };
+
+    const handleStockChange = (checked: boolean | 'indeterminate') => {
+        setFilters(prev => ({
+            ...prev,
+            inStock: !!checked
+        }));
+    };
+    
+    const applyFilters = () => {
+        setAppliedFilters(filters);
+    };
+
     const filteredProducts = useMemo(() => {
-        return products.filter(product =>
-            product.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [searchTerm, products]);
+        return products.filter(product => {
+            const searchMatch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            const categoryMatch = appliedFilters.categories.length === 0 || appliedFilters.categories.includes(product.category);
+
+            const priceMatch = product.price >= appliedFilters.priceRange[0] && product.price <= appliedFilters.priceRange[1];
+
+            const stockMatch = !appliedFilters.inStock || product.stock > 0;
+
+            return searchMatch && categoryMatch && priceMatch && stockMatch;
+        });
+    }, [searchTerm, products, appliedFilters]);
 
 
     return (
@@ -38,30 +84,36 @@ export default function ShopPage() {
                                 <h4 className="font-medium mb-2">Category</h4>
                                 <div className="space-y-2">
                                     <div className="flex items-center space-x-2">
-                                        <Checkbox id="foodstuff" />
+                                        <Checkbox id="foodstuff" onCheckedChange={(checked) => handleCategoryChange('foodstuff', checked)} />
                                         <Label htmlFor="foodstuff">Foodstuff</Label>
                                     </div>
                                     <div className="flex items-center space-x-2">
-                                        <Checkbox id="soups" />
+                                        <Checkbox id="soups" onCheckedChange={(checked) => handleCategoryChange('soup', checked)}/>
                                         <Label htmlFor="soups">Soups</Label>
                                     </div>
                                 </div>
                             </div>
                             <div>
                                 <h4 className="font-medium mb-2">Price Range</h4>
-                                <Slider defaultValue={[0, 50000]} max={100000} step={1000} />
+                                <Slider 
+                                    defaultValue={filters.priceRange} 
+                                    max={100000} 
+                                    step={1000}
+                                    onValueChange={handlePriceChange}
+                                />
                                 <div className="flex justify-between text-sm text-muted-foreground mt-2">
-                                    <span>₦0</span>
-                                    <span>₦100,000</span>
+                                    <span>₦{filters.priceRange[0]}</span>
+                                    <span>₦{filters.priceRange[1]}</span>
                                 </div>
                             </div>
                             <div>
                                 <h4 className="font-medium mb-2">Stock Status</h4>
                                 <div className="flex items-center space-x-2">
-                                    <Checkbox id="in-stock" />
+                                    <Checkbox id="in-stock" onCheckedChange={handleStockChange} />
                                     <Label htmlFor="in-stock">In Stock</Label>
                                 </div>
                             </div>
+                            <Button className="w-full" onClick={applyFilters}>Apply Filters</Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -122,7 +174,7 @@ export default function ShopPage() {
                     <div className="text-center py-12">
                         <h2 className="text-2xl font-semibold">No Products Found</h2>
                         <p className="text-muted-foreground mt-2">
-                            Your search for "{searchTerm}" did not match any products.
+                            Your search for "{searchTerm}" did not match any products with the selected filters.
                         </p>
                     </div>
                 )}
