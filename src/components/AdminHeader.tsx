@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +15,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { NotificationBell } from './NotificationBell';
+import { SearchInput } from './SearchInput';
 
 export default function AdminHeader() {
   const userAvatar = PlaceHolderImages.find(p => p.id === 'avatar-1');
@@ -25,12 +25,7 @@ export default function AdminHeader() {
       <SidebarTrigger className="sm:hidden" />
       
       <div className="relative ml-auto flex-1 md:grow-0">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search..."
-          className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
-        />
+        <SearchInput placeholder="Search..." />
       </div>
 
       <NotificationBell recipient="admin" />

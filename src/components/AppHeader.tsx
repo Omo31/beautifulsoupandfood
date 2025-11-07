@@ -10,7 +10,6 @@ import {
   PlusCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +23,7 @@ import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useState } from 'react';
 import { NotificationBell } from './NotificationBell';
+import { SearchInput } from './SearchInput';
 
 // Mock authentication state. In a real app, this would come from a context or hook.
 const useMockAuth = () => {
@@ -54,12 +54,7 @@ export default function AppHeader() {
       </div>
 
       <div className="relative ml-auto flex-1 md:grow-0">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search products..."
-          className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
-        />
+        <SearchInput placeholder="Search products..." />
       </div>
       
       <Button variant="ghost" size="icon" className="rounded-full" asChild>
