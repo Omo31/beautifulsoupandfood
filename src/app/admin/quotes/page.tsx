@@ -26,9 +26,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
-import { type QuoteStatus } from '@/lib/data';
+import { type QuoteStatus, type QuoteRequest } from '@/lib/data';
 import { Input } from '@/components/ui/input';
-import { useQuotes } from '@/hooks/use-quotes';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { useMemoFirebase } from '@/firebase/utils';
+import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const getBadgeVariant = (status: QuoteStatus) => {
     switch (status) {
@@ -38,7 +42,6 @@ const getBadgeVariant = (status: QuoteStatus) => {
         case 'Rejected': 
             return 'destructive';
         case 'Pending Review':
-        case 'Awaiting Revision':
         default:
             return 'secondary';
     }
@@ -46,7 +49,24 @@ const getBadgeVariant = (status: QuoteStatus) => {
 
 
 export default function AdminQuotesPage() {
-  const { quotes } = useQuotes();
+  const firestore = useFirestore();
+
+  const quotesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    const quotesRef = collection(firestore, 'quotes');
+    return query(quotesRef, orderBy('createdAt', 'desc'));
+  }, [firestore]);
+
+  const { data: quotes, loading } = useCollection<QuoteRequest>(quotesQuery);
+  
+  const calculateTotal = (quote: QuoteRequest) => {
+    if (quote.status === 'Quote Ready' || quote.status === 'Accepted') {
+      // Dummy calculation for display - real logic is on detail page
+      return quote.items.length * 5000; 
+    }
+    return null;
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -74,39 +94,54 @@ export default function AdminQuotesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {quotes.map((quote) => (
-                <TableRow key={quote.id}>
-                    <TableCell className="font-medium">{quote.id}</TableCell>
-                    <TableCell>{quote.customerName}</TableCell>
-                    <TableCell>{quote.date}</TableCell>
-                    <TableCell>
-                        <Badge variant={getBadgeVariant(quote.status)}>
-                            {quote.status}
-                        </Badge>
-                    </TableCell>
-                    <TableCell>{quote.itemCount}</TableCell>
-                    <TableCell className="text-right">
-                        {quote.total ? `₦${quote.total.toFixed(2)}` : 'N/A'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button size="icon" variant="ghost">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">Actions</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem asChild>
-                                    <Link href={`/admin/quotes/${quote.id}`}>
-                                        {quote.status === 'Pending Review' || quote.status === 'Awaiting Revision' ? 'Review & Price' : 'View Details'}
-                                    </Link>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                         </DropdownMenu>
-                    </TableCell>
-                </TableRow>
-            ))}
+             {loading ? (
+                [...Array(3)].map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-md" /></TableCell>
+                    </TableRow>
+                ))
+            ) : quotes.map((quote) => {
+                const total = calculateTotal(quote);
+                return (
+                    <TableRow key={quote.id}>
+                        <TableCell className="font-medium">#{quote.id?.substring(0, 6)}</TableCell>
+                        <TableCell>{quote.name}</TableCell>
+                        <TableCell>{format(quote.createdAt.toDate(), 'MMM d, yyyy')}</TableCell>
+                        <TableCell>
+                            <Badge variant={getBadgeVariant(quote.status)}>
+                                {quote.status}
+                            </Badge>
+                        </TableCell>
+                        <TableCell>{quote.items.length}</TableCell>
+                        <TableCell className="text-right">
+                            {total ? `~₦${total.toFixed(2)}` : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button size="icon" variant="ghost">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        <span className="sr-only">Actions</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem asChild>
+                                        <Link href={`/admin/quotes/${quote.id}`}>
+                                            {quote.status === 'Pending Review' ? 'Review & Price' : 'View Details'}
+                                        </Link>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </TableCell>
+                    </TableRow>
+                )
+            })}
           </TableBody>
         </Table>
       </CardContent>

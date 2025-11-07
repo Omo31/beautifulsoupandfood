@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Card,
@@ -19,102 +19,122 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import type { QuoteStatus } from '@/lib/data';
+import type { QuoteStatus, QuoteRequest, QuoteItem } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import notificationStore from '@/lib/notifications';
+import { useFirestore, useUser, useDoc } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/utils';
+import { doc, setDoc } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
 
-type QuoteItem = {
-    name: string;
-    quantity: number;
-    measure: string;
-    unitCost: number;
-};
-
-type QuoteService = {
-    name: string;
-    cost: number;
-};
-
-// Mock data for a quote - in a real app this would be fetched from your database
-const mockPendingQuote = {
-    id: 'QT-002',
-    date: '2024-05-21',
-    status: 'Pending Review' as QuoteStatus,
-    customer: {
-        name: 'Chioma Okoro',
-        email: 'chioma.okoro@example.com',
-        phone: '+234 802 345 6789'
-    },
-    items: [
-        { name: 'Live Goat', quantity: 1, measure: 'Pieces', unitCost: 0 },
-        { name: 'Basket of Tomatoes', quantity: 1, measure: 'Custom', unitCost: 0 },
-    ],
-    services: [
-        { name: 'Special Packaging', cost: 0 }
-    ],
-    notes: "I need the goat for a party on Saturday, please ensure it's healthy. For the tomatoes, a medium-sized basket is fine. Please package the tomatoes carefully so they don't bruise.",
-    shipping: {
-        method: 'Request Shipping Quote',
-        address: '55 Adebayo Street, Surulere, Lagos',
-        cost: 0,
-    }
-};
+type PricedQuoteItem = QuoteItem & { unitCost?: number };
 
 export default function AdminQuoteDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const { quoteId } = params;
   const { toast } = useToast();
+  const firestore = useFirestore();
 
-  const [quote, setQuote] = useState(mockPendingQuote);
+  const quoteRef = useMemoFirebase(() => {
+    if (!firestore || !quoteId) return null;
+    return doc(firestore, 'quotes', quoteId as string);
+  }, [firestore, quoteId]);
+  
+  const { data: initialQuote, loading } = useDoc<QuoteRequest>(quoteRef);
+  
+  const [quoteItems, setQuoteItems] = useState<PricedQuoteItem[]>([]);
+  const [shippingCost, setShippingCost] = useState(0);
+
+  useEffect(() => {
+    if (initialQuote) {
+      // @ts-ignore
+      setQuoteItems(initialQuote.items.map(item => ({ ...item, unitCost: item.unitCost || 0 })));
+      // @ts-ignore
+      setShippingCost(initialQuote.shippingCost || 0);
+    }
+  }, [initialQuote]);
+
   
   const handleUnitCostChange = (index: number, value: string) => {
-    const newItems = [...quote.items];
+    const newItems = [...quoteItems];
     newItems[index].unitCost = parseFloat(value) || 0;
-    setQuote({...quote, items: newItems});
-  };
-
-  const handleServiceCostChange = (index: number, value: string) => {
-      const newServices = [...quote.services];
-      newServices[index].cost = parseFloat(value) || 0;
-      setQuote({...quote, services: newServices});
+    setQuoteItems(newItems);
   };
   
   const handleShippingCostChange = (value: string) => {
-    setQuote({
-        ...quote, 
-        shipping: {...quote.shipping, cost: parseFloat(value) || 0}
-    });
+    setShippingCost(parseFloat(value) || 0);
   };
 
-  const handleSendQuote = () => {
-    // In a real app, this would update the quote in the database.
-    setQuote(q => ({...q, status: 'Quote Ready'}));
+  const handleSendQuote = async () => {
+    if (!quoteRef || !initialQuote) return;
 
-    notificationStore.addNotification({
-        recipient: 'user',
-        title: 'Quote Ready!',
-        description: `Your quote ${quote.id} is now ready for your review.`,
-        href: `/account/quotes/${quote.id}`,
-        icon: FileText,
-    });
+    try {
+        await setDoc(quoteRef, { 
+            status: 'Quote Ready',
+            items: quoteItems,
+            shippingCost: shippingCost,
+        }, { merge: true });
 
-    toast({
-        title: "Quote Sent!",
-        description: `The quote has been sent to ${quote.customer.name}.`,
-    });
+        notificationStore.addNotification({
+            recipient: 'user',
+            title: 'Quote Ready!',
+            description: `Your quote #${initialQuote.id?.substring(0,6)} is now ready for your review.`,
+            href: `/account/quotes/${initialQuote.id}`,
+            icon: FileText,
+        });
 
-    router.push('/admin/quotes');
+        toast({
+            title: "Quote Sent!",
+            description: `The quote has been sent to ${initialQuote.name}.`,
+        });
+
+        router.push('/admin/quotes');
+    } catch (error) {
+         toast({
+            variant: 'destructive',
+            title: "Send Failed",
+            description: `Could not send the quote.`,
+        });
+    }
   }
 
-  const { itemsTotal, servicesTotal, subTotal, serviceCharge, grandTotal } = useMemo(() => {
-    const itemsTotal = quote.items.reduce((acc, item) => acc + (item.unitCost * item.quantity), 0);
-    const servicesTotal = quote.services.reduce((acc, service) => acc + service.cost, 0);
-    const subTotal = itemsTotal + servicesTotal;
+  const { itemsTotal, subTotal, serviceCharge, grandTotal } = useMemo(() => {
+    const itemsTotal = quoteItems.reduce((acc, item) => acc + ((item.unitCost || 0) * item.quantity), 0);
+    const subTotal = itemsTotal; // Services can be added later
     const serviceCharge = subTotal * 0.06;
-    const grandTotal = subTotal + serviceCharge + quote.shipping.cost;
-    return { itemsTotal, servicesTotal, subTotal, serviceCharge, grandTotal };
-  }, [quote.items, quote.services, quote.shipping.cost]);
+    const grandTotal = subTotal + serviceCharge + shippingCost;
+    return { itemsTotal, subTotal, serviceCharge, grandTotal };
+  }, [quoteItems, shippingCost]);
+  
+  if (loading) {
+    return (
+        <Card>
+            <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+            <CardContent className="space-y-6">
+                 <Skeleton className="h-4 w-3/4" />
+                <div className="grid md:grid-cols-3 gap-6">
+                    <div className="md:col-span-2 space-y-6">
+                        <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                    </div>
+                    <div className="space-y-6">
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-48 w-full" />
+                    </div>
+                </div>
+            </CardContent>
+            <CardFooter>
+                 <Skeleton className="h-10 w-32" />
+            </CardFooter>
+        </Card>
+    );
+  }
+
+  if (!initialQuote) {
+    return <div>Quote not found.</div>
+  }
 
   return (
     <Card>
@@ -122,10 +142,10 @@ export default function AdminQuoteDetailsPage() {
         <div>
           <CardTitle>Quote Request Details</CardTitle>
           <CardDescription className="mt-1">
-            Quote ID: <span className="font-medium text-foreground">{quote.id}</span>
+            Quote ID: <span className="font-medium text-foreground">#{initialQuote.id?.substring(0,6)}</span>
           </CardDescription>
         </div>
-        <Badge variant={quote.status === 'Pending Review' ? 'secondary' : 'default'}>{quote.status}</Badge>
+        <Badge variant={initialQuote.status === 'Pending Review' ? 'secondary' : 'default'}>{initialQuote.status}</Badge>
       </CardHeader>
       <CardContent className="space-y-8">
         <div className="grid md:grid-cols-3 gap-6">
@@ -134,12 +154,12 @@ export default function AdminQuoteDetailsPage() {
                 <div>
                     <h3 className="font-semibold mb-4 text-lg">Requested Items</h3>
                     <div className="space-y-4">
-                        {quote.items.map((item, index) => (
+                        {quoteItems.map((item, index) => (
                             <Card key={index} className="p-4 bg-muted/50">
                                 <div className="grid grid-cols-[1fr_auto_auto] items-end gap-4">
                                     <div className="flex-1">
                                         <p className="font-medium">{item.name}</p>
-                                        <p className="text-sm text-muted-foreground">Quantity: {item.quantity} {item.measure}</p>
+                                        <p className="text-sm text-muted-foreground">Quantity: {item.quantity} {item.measure === 'custom' ? item.customMeasure : item.measure}</p>
                                     </div>
                                     <div className="grid gap-1.5">
                                         <Label htmlFor={`unit-cost-${index}`} className="text-xs">Unit Cost (₦)</Label>
@@ -150,11 +170,12 @@ export default function AdminQuoteDetailsPage() {
                                             className="w-28 h-9"
                                             value={item.unitCost || ''}
                                             onChange={e => handleUnitCostChange(index, e.target.value)}
+                                            readOnly={initialQuote.status !== 'Pending Review'}
                                         />
                                     </div>
                                     <div className="text-right">
                                         <p className="text-sm text-muted-foreground">Line Total</p>
-                                        <p className="font-semibold">₦{(item.unitCost * item.quantity).toFixed(2)}</p>
+                                        <p className="font-semibold">₦{((item.unitCost || 0) * item.quantity).toFixed(2)}</p>
                                     </div>
                                 </div>
                             </Card>
@@ -162,33 +183,10 @@ export default function AdminQuoteDetailsPage() {
                     </div>
                 </div>
 
-                {/* Services to Price */}
-                {quote.services.length > 0 && (
+                {initialQuote.services && initialQuote.services.length > 0 && (
                     <div>
                         <h3 className="font-semibold mb-4 text-lg">Add-on Services</h3>
-                        <div className="space-y-4">
-                            {quote.services.map((service, index) => (
-                                <Card key={index} className="p-4 bg-muted/50">
-                                    <div className="flex items-center justify-between gap-4">
-                                        <div className="flex items-center gap-2">
-                                            {service.name.includes('Wrapping') ? <Gift className="h-4 w-4 text-muted-foreground" /> : <Package className="h-4 w-4 text-muted-foreground" />}
-                                            <p className="font-medium">{service.name}</p>
-                                        </div>
-                                        <div className="grid gap-1.5">
-                                            <Label htmlFor={`service-cost-${index}`} className="text-xs">Service Cost (₦)</Label>
-                                            <Input
-                                                id={`service-cost-${index}`}
-                                                type="number"
-                                                placeholder="0.00"
-                                                className="w-28 h-9"
-                                                value={service.cost || ''}
-                                                onChange={e => handleServiceCostChange(index, e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))}
-                        </div>
+                         <p className="text-sm text-muted-foreground">Services pricing is not yet implemented.</p>
                     </div>
                 )}
 
@@ -196,7 +194,7 @@ export default function AdminQuoteDetailsPage() {
                 <div>
                     <h3 className="font-semibold mb-2 text-lg">Shipping</h3>
                     <p className="text-sm">
-                        <span className="font-medium">Address:</span> {quote.shipping.address}
+                        <span className="font-medium">Address:</span> {initialQuote.shippingAddress}
                     </p>
                      <div className="grid gap-1.5 mt-4 max-w-xs">
                         <Label htmlFor="shipping-cost">Shipping Cost (₦)</Label>
@@ -204,8 +202,9 @@ export default function AdminQuoteDetailsPage() {
                             id="shipping-cost"
                             type="number"
                             placeholder="0.00"
-                            value={quote.shipping.cost || ''}
+                            value={shippingCost || ''}
                             onChange={e => handleShippingCostChange(e.target.value)}
+                            readOnly={initialQuote.status !== 'Pending Review'}
                         />
                     </div>
                 </div>
@@ -218,9 +217,9 @@ export default function AdminQuoteDetailsPage() {
                         <CardTitle className="text-base">Customer Information</CardTitle>
                     </CardHeader>
                     <CardContent className="text-sm space-y-2">
-                        <p><strong>Name:</strong> {quote.customer.name}</p>
-                        <p><strong>Email:</strong> {quote.customer.email}</p>
-                        <p><strong>Phone:</strong> {quote.customer.phone}</p>
+                        <p><strong>Name:</strong> {initialQuote.name}</p>
+                        <p><strong>Email:</strong> {initialQuote.email}</p>
+                        <p><strong>Phone:</strong> {initialQuote.phone}</p>
                     </CardContent>
                 </Card>
                 
@@ -234,10 +233,6 @@ export default function AdminQuoteDetailsPage() {
                             <span>Items Total:</span>
                             <span>₦{itemsTotal.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between">
-                            <span>Services Total:</span>
-                            <span>₦{servicesTotal.toFixed(2)}</span>
-                        </div>
                         <Separator className="my-1"/>
                          <div className="flex justify-between font-medium">
                             <span>Subtotal:</span>
@@ -249,7 +244,7 @@ export default function AdminQuoteDetailsPage() {
                         </div>
                         <div className="flex justify-between">
                             <span>Shipping:</span>
-                            <span>₦{quote.shipping.cost.toFixed(2)}</span>
+                            <span>₦{shippingCost.toFixed(2)}</span>
                         </div>
                         <Separator className="my-2" />
                         <div className="flex justify-between font-bold text-lg">
@@ -259,12 +254,12 @@ export default function AdminQuoteDetailsPage() {
                     </CardContent>
                 </Card>
 
-                 {quote.notes && (
+                 {initialQuote.notes && (
                     <Alert>
                         <FileText className="h-4 w-4" />
                         <AlertTitle>Customer Notes</AlertTitle>
                         <AlertDescription className="italic">
-                        "{quote.notes}"
+                        "{initialQuote.notes}"
                         </AlertDescription>
                     </Alert>
                 )}
@@ -277,14 +272,16 @@ export default function AdminQuoteDetailsPage() {
           Back to Quotes List
         </Button>
         <div className="flex items-center gap-2">
-            <Button variant="secondary">
+            <Button variant="secondary" disabled>
                 <MessageSquare className="mr-2 h-4 w-4" />
                 Chat with Customer
             </Button>
-            <Button onClick={handleSendQuote}>
-                <Send className="mr-2 h-4 w-4" />
-                Send Quote to Customer
-            </Button>
+            {initialQuote.status === 'Pending Review' && (
+                <Button onClick={handleSendQuote}>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Quote to Customer
+                </Button>
+            )}
         </div>
       </CardFooter>
     </Card>
