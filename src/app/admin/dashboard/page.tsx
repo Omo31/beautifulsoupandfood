@@ -136,7 +136,7 @@ export default function AdminDashboardPage() {
                          <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
                             <RechartsLineChart data={revenueData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="date" tickFormatter={(val) => new Date(val).toLocaleDateString('en-US', { day: 'numeric', month: 'short'})} />
+                                <XAxis dataKey="date" tickFormatter={(val) => new Date(val).toLocaleString('en-US', { day: 'numeric', month: 'short'})} />
                                 <YAxis />
                                 <Tooltip content={<ChartTooltipContent indicator="dot" />} />
                                 <Line type="monotone" dataKey="revenue" stroke="var(--color-revenue)" strokeWidth={2} dot={false} />
