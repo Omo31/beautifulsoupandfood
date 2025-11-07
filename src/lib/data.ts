@@ -12,6 +12,16 @@ export type Product = {
   reviewCount: number;
 };
 
+export type UserProfile = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  shippingAddress: string;
+  role: 'Customer' | 'Content Manager' | 'Owner';
+};
+
+
 export type Testimonial = {
   id:string;
   name: string;
