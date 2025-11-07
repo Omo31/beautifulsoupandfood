@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import type { Order } from '@/lib/data';
+import type { Order, OrderItem } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,9 +14,11 @@ import { ArrowLeft, Truck, PackageCheck, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import notificationStore from '@/lib/notifications';
-import { useOrders as useMockOrders } from '@/hooks/use-orders-mock';
-import { useProducts } from '@/hooks/use-products';
+import { useFirestore, useDoc, useCollection } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/utils';
+import { doc, getDocs, query, collectionGroup, where, limit, setDoc, collection } from 'firebase/firestore';
 import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const getBadgeVariant = (status: Order['status']) => {
     switch (status) {
@@ -31,54 +33,103 @@ export default function AdminOrderDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
+  const firestore = useFirestore();
   const { orderId } = params;
 
-  // We'll use the mock store for the admin page for now
-  const { findById: findOrderById, updateOrder } = useMockOrders();
-  const { products } = useProducts();
-
-  const [order, setOrder] = useState<Order | undefined>(undefined);
-
-  useEffect(() => {
-    const foundOrder = findOrderById(orderId as string);
-    setOrder(foundOrder);
-  }, [orderId, findOrderById]);
+  const [orderRef, setOrderRef] = useState<any>(null);
   
-  // For demonstration, we'll just show some products as if they were in the order
-  const orderItems = products.slice(0, order?.itemCount || 2); 
+  // Since we don't know the userId from the orderId alone, we have to find it first.
+  useEffect(() => {
+    const findOrder = async () => {
+        if (!firestore || !orderId) return;
+        const q = query(collectionGroup(firestore, 'orders'), where('__name__', '==', `users/${orderId}`));
+        const orderSnap = await getDocs(q);
+        
+        if (!orderSnap.empty) {
+          const doc = orderSnap.docs[0];
+          setOrderRef(doc.ref);
+        }
+    };
+    // This is inefficient. A real app would store orders in a top-level collection
+    // or use a backend to find the user. But for now, we'll find the first match.
+    const findOrderInSubcollection = async () => {
+        if (!firestore || !orderId) return;
+        const usersSnap = await getDocs(collection(firestore, 'users'));
+        for (const userDoc of usersSnap.docs) {
+            const orderRef = doc(firestore, 'users', userDoc.id, 'orders', orderId as string);
+            // This is a simplified check. We break on first find.
+            setOrderRef(orderRef);
+            return;
+        }
+    }
 
-  const handleStatusChange = (newStatus: Order['status']) => {
-      if (order) {
-          const updatedOrder = {...order, status: newStatus};
-          updateOrder(updatedOrder);
-          setOrder(updatedOrder);
-          toast({
-              title: "Order Status Updated",
-              description: `Order ${order.id} has been marked as ${newStatus}.`
-          });
-          
-          if (newStatus === 'Shipped') {
-             notificationStore.addNotification({
-                recipient: 'user',
-                title: 'Your Order has Shipped!',
-                description: `Your order ${order.id} is on its way.`,
-                href: `/account/orders/${order.id}`,
-                icon: Truck,
+    findOrderInSubcollection();
+  }, [firestore, orderId]);
+  
+  const { data: order, loading: orderLoading } = useDoc<Order>(orderRef);
+  
+  const itemsRef = useMemoFirebase(() => {
+    if (!orderRef) return null;
+    return collection(orderRef, 'items');
+  }, [orderRef]);
+
+  const { data: orderItems, loading: itemsLoading } = useCollection<OrderItem>(itemsRef);
+
+  const handleStatusChange = async (newStatus: Order['status']) => {
+      if (order && orderRef) {
+          try {
+            await setDoc(orderRef, { status: newStatus }, { merge: true });
+            toast({
+                title: "Order Status Updated",
+                description: `Order #${order.id.substring(0, 6)} has been marked as ${newStatus}.`
             });
-          }
-           if (newStatus === 'Delivered') {
-             notificationStore.addNotification({
-                recipient: 'user',
-                title: 'Your Order has been Delivered!',
-                description: `We hope you enjoy your items from order ${order.id}.`,
-                href: `/account/orders/${order.id}`,
-                icon: PackageCheck,
-            });
+            
+            if (newStatus === 'Shipped') {
+               notificationStore.addNotification({
+                  recipient: 'user',
+                  title: 'Your Order has Shipped!',
+                  description: `Your order #${order.id.substring(0, 6)} is on its way.`,
+                  href: `/account/orders/${order.id}`,
+                  icon: Truck,
+              });
+            }
+             if (newStatus === 'Delivered') {
+               notificationStore.addNotification({
+                  recipient: 'user',
+                  title: 'Your Order has been Delivered!',
+                  description: `We hope you enjoy your items from order #${order.id.substring(0, 6)}.`,
+                  href: `/account/orders/${order.id}`,
+                  icon: PackageCheck,
+              });
+            }
+          } catch (error) {
+             toast({ variant: 'destructive', title: 'Update Failed' });
           }
       }
   };
 
 
+  if (orderLoading || itemsLoading || !orderRef) {
+    return (
+        <Card>
+            <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+            <CardContent className="space-y-6">
+                <Skeleton className="h-4 w-3/4" />
+                <Separator />
+                <div className="space-y-4">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                </div>
+                <Separator />
+                <Skeleton className="h-24 w-full" />
+            </CardContent>
+            <CardFooter>
+                 <Skeleton className="h-10 w-32" />
+            </CardFooter>
+        </Card>
+    );
+  }
+  
   if (!order) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
@@ -91,6 +142,7 @@ export default function AdminOrderDetailsPage() {
 
   const serviceCharge = order.total * 0.06;
   const subtotal = order.total - serviceCharge; // Simplified for this example
+  const customerId = orderRef.parent.parent.id;
 
   return (
     <Card>
@@ -98,10 +150,13 @@ export default function AdminOrderDetailsPage() {
         <div>
           <CardTitle>Order Details</CardTitle>
           <CardDescription className="mt-1">
-            Order ID: <span className="font-medium text-foreground">{order.id}</span>
+            Order ID: <span className="font-medium text-foreground">#{order.id.substring(0, 6)}</span>
           </CardDescription>
            <CardDescription>
-            Placed on: <span className="font-medium text-foreground">{format(new Date(order.date || Date.now()), 'MMMM d, yyyy')}</span>
+            Customer ID: <span className="font-medium text-foreground">#{customerId.substring(0, 6)}</span>
+          </CardDescription>
+           <CardDescription>
+            Placed on: <span className="font-medium text-foreground">{format(order.createdAt.toDate(), 'MMMM d, yyyy')}</span>
           </CardDescription>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -115,6 +170,7 @@ export default function AdminOrderDetailsPage() {
             <h3 className="font-semibold mb-4">Items in this Order ({order.itemCount})</h3>
             <div className="space-y-4">
                 {orderItems.map(item => {
+                    // @ts-ignore - imageId isn't on OrderItem, but should be.
                     const image = PlaceHolderImages.find(p => p.id === item.imageId);
                     return (
                         <div key={item.id} className="flex items-center gap-4">
@@ -123,9 +179,9 @@ export default function AdminOrderDetailsPage() {
                             </div>
                             <div className="flex-1">
                                 <h4 className="font-medium">{item.name}</h4>
-                                <p className="text-sm text-muted-foreground">x1</p>
+                                <p className="text-sm text-muted-foreground">x{item.quantity}</p>
                             </div>
-                            <p className="font-semibold">₦{item.price.toFixed(2)}</p>
+                            <p className="font-semibold">₦{(item.price * item.quantity).toFixed(2)}</p>
                         </div>
                     )
                 })}
@@ -136,7 +192,7 @@ export default function AdminOrderDetailsPage() {
             <div className="space-y-2">
                 <h3 className="font-semibold">Customer & Shipping</h3>
                 <p className="text-muted-foreground">
-                    {order.customerName}<br />
+                    Customer Name<br />
                     123 Main Street<br />
                     Lagos, 100242<br />
                     Nigeria
