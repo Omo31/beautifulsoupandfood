@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, type ChangeEvent, type FormEvent } from 'react';
+import { useState, useMemo, type FormEvent } from 'react';
 import {
   File,
   ListFilter,
@@ -44,7 +44,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -57,11 +56,14 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
-import { products as initialProducts, type Product } from '@/lib/data';
+import type { Product } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { useProducts } from '@/hooks/use-products';
+import { useFirestore } from '@/firebase';
+import { collection, doc, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
 
 const StockBadge = ({ stock, threshold = 20 }: { stock: number, threshold?: number }) => {
   if (stock === 0) {
@@ -77,7 +79,8 @@ const ITEMS_PER_PAGE = 10;
 
 export default function InventoryPage() {
   const { toast } = useToast();
-  const [products, setProducts] = useState(initialProducts);
+  const firestore = useFirestore();
+  const { products, loading } = useProducts();
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   
@@ -116,8 +119,9 @@ export default function InventoryPage() {
     setEditingProduct(null);
   }
 
-  const handleSaveProduct = (formData: FormData) => {
-      const newProductData: Omit<Product, 'id'> = {
+  const handleSaveProduct = async (formData: FormData) => {
+      if (!firestore) return;
+      const productData = {
           name: formData.get('name') as string,
           description: formData.get('description') as string,
           price: parseFloat(formData.get('price') as string),
@@ -128,23 +132,32 @@ export default function InventoryPage() {
           reviewCount: parseInt(formData.get('reviewCount') as string, 10) || 0,
       };
 
-      if (editingProduct) {
-          setProducts(products.map(p => p.id === editingProduct.id ? { ...p, ...newProductData, id: p.id } : p));
-          toast({ title: "Product Updated", description: `${newProductData.name} has been successfully updated.`});
-      } else {
-          const newProduct: Product = {
-              ...newProductData,
-              id: `prod-${Date.now()}`
-          };
-          setProducts([newProduct, ...products]);
-          toast({ title: "Product Added", description: `${newProductData.name} has been successfully added.`});
+      try {
+        if (editingProduct) {
+            const productRef = doc(firestore, 'products', editingProduct.id);
+            await setDoc(productRef, productData, { merge: true });
+            toast({ title: "Product Updated", description: `${productData.name} has been successfully updated.`});
+        } else {
+            const productsCollection = collection(firestore, 'products');
+            await addDoc(productsCollection, productData);
+            toast({ title: "Product Added", description: `${productData.name} has been successfully added.`});
+        }
+        handleCloseModal();
+      } catch (error) {
+        console.error("Error saving product: ", error);
+        toast({ variant: 'destructive', title: "Save failed", description: "Could not save the product."});
       }
-      handleCloseModal();
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    setProducts(products.filter(p => p.id !== productId));
-    toast({ variant: 'destructive', title: "Product Deleted", description: "The product has been removed from inventory."});
+  const handleDeleteProduct = async (productId: string) => {
+    if (!firestore) return;
+    try {
+        await deleteDoc(doc(firestore, 'products', productId));
+        toast({ variant: 'destructive', title: "Product Deleted", description: "The product has been removed from inventory."});
+    } catch (error) {
+        console.error("Error deleting product: ", error);
+        toast({ variant: 'destructive', title: "Delete failed", description: "Could not delete the product."});
+    }
   };
   
   const handlePageChange = (page: number) => {
@@ -235,7 +248,9 @@ export default function InventoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedProducts.map((product) => {
+              {loading ? (
+                <TableRow><TableCell colSpan={7} className="text-center">Loading inventory...</TableCell></TableRow>
+              ) : paginatedProducts.map((product) => {
                 const image = PlaceHolderImages.find((p) => p.id === product.imageId);
                 return (
                   <TableRow key={product.id}>

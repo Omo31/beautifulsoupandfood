@@ -1,5 +1,6 @@
 
 
+
 export type Product = {
   id: string;
   name: string;
@@ -150,4 +151,10 @@ export const homepageServices: HomepageService[] = [
     { id: '3', name: 'Bulk Orders', description: 'Catering for an event? We handle bulk orders with ease.', iconName: 'Boxes'},
 ];
 
+export const products: Product[] = [];
+export const users: User[] = [];
+export const orders: Order[] = [];
+export const transactions: Transaction[] = [];
+export const purchaseOrders: PurchaseOrder[] = [];
+export const conversations: Conversation[] = [];
     
