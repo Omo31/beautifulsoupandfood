@@ -248,7 +248,7 @@ export default function CustomOrderPage() {
                                 {shippingMethod !== 'pickup' && (
                                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-4">
                                         <Truck className="h-4 w-4" />
-                                        <span>Estimated delivery: 2-4 working days</span>
+                                        <span className="font-bold">Estimated delivery: 2-4 working days</span>
                                     </div>
                                 )}
                             </div>
