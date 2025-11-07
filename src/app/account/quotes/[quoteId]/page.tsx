@@ -29,7 +29,7 @@ type PricedQuoteItem = QuoteItem & {
 const getBadgeVariant = (status: QuoteStatus) => {
     let badgeVariant: "default" | "secondary" | "outline" | "destructive" = "secondary";
     if (status === 'Quote Ready') badgeVariant = 'default';
-    if (status === 'Accepted') badgeVariant = 'outline';
+    if (status === 'Accepted' || status === 'Paid') badgeVariant = 'outline';
     if (status === 'Expired' || status === 'Rejected') badgeVariant = 'destructive';
     return badgeVariant;
 }
@@ -174,7 +174,7 @@ export default function QuoteDetailsPage() {
         </div>
         <div className="flex flex-col items-end gap-2">
             <Badge variant={getBadgeVariant(quote.status)}>{quote.status}</Badge>
-            {(quote.status === 'Quote Ready' || quote.status === 'Accepted') && <span className="font-bold text-lg">₦{grandTotal.toFixed(2)}</span>}
+            {(quote.status === 'Quote Ready' || quote.status === 'Accepted' || quote.status === 'Paid') && <span className="font-bold text-lg">₦{grandTotal.toFixed(2)}</span>}
         </div>
       </CardHeader>
       <CardContent>
@@ -198,6 +198,15 @@ export default function QuoteDetailsPage() {
                 </AlertDescription>
             </Alert>
         )}
+        {quote.status === 'Paid' && (
+             <Alert className="my-6 bg-green-50 border-green-200 text-green-900 dark:bg-green-950 dark:border-green-800 dark:text-green-100">
+                <ThumbsUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <AlertTitle>Quote Paid!</AlertTitle>
+                <AlertDescription>
+                    Thank you for your payment. We are now processing your custom order. You can track its status on your <Button variant="link" className="p-0 h-auto" asChild><a href="/account/orders">Orders page</a></Button>.
+                </AlertDescription>
+            </Alert>
+        )}
 
         <div className="my-6">
             <h3 className="font-semibold mb-4">Requested Items</h3>
@@ -208,7 +217,7 @@ export default function QuoteDetailsPage() {
                             <h4 className="font-medium">{item.name}</h4>
                             <p className="text-muted-foreground">Quantity: {item.quantity} {item.measure === 'custom' ? item.customMeasure : item.measure}</p>
                         </div>
-                        {(quote.status === 'Quote Ready' || quote.status === 'Accepted') 
+                        {(quote.status !== 'Pending Review' && quote.status !== 'Rejected' && quote.status !== 'Expired') 
                             // @ts-ignore
                             ? <p className="font-semibold">₦{((item.unitCost || 0) * item.quantity).toFixed(2)}</p> 
                             : <p className="text-muted-foreground">To be quoted</p>
@@ -233,7 +242,7 @@ export default function QuoteDetailsPage() {
                     {quote.shippingAddress}
                 </p>
             </div>
-            {(quote.status === 'Quote Ready' || quote.status === 'Accepted') && (
+            {(quote.status !== 'Pending Review' && quote.status !== 'Rejected' && quote.status !== 'Expired') && (
                 <div className="space-y-2">
                     <h3 className="font-semibold">Cost Breakdown</h3>
                     <div className="flex justify-between text-sm">

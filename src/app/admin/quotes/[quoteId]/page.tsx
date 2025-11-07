@@ -30,6 +30,20 @@ import { format } from 'date-fns';
 
 type PricedQuoteItem = QuoteItem & { unitCost?: number };
 
+const getBadgeVariant = (status: QuoteStatus) => {
+    switch (status) {
+        case 'Quote Ready': return 'default';
+        case 'Accepted': case 'Paid': return 'outline';
+        case 'Expired':
+        case 'Rejected': 
+            return 'destructive';
+        case 'Pending Review':
+        default:
+            return 'secondary';
+    }
+}
+
+
 export default function AdminQuoteDetailsPage() {
   const router = useRouter();
   const params = useParams();
@@ -145,7 +159,7 @@ export default function AdminQuoteDetailsPage() {
             Quote ID: <span className="font-medium text-foreground">#{initialQuote.id?.substring(0,6)}</span>
           </CardDescription>
         </div>
-        <Badge variant={initialQuote.status === 'Pending Review' ? 'secondary' : 'default'}>{initialQuote.status}</Badge>
+        <Badge variant={getBadgeVariant(initialQuote.status)}>{initialQuote.status}</Badge>
       </CardHeader>
       <CardContent className="space-y-8">
         <div className="grid md:grid-cols-3 gap-6">

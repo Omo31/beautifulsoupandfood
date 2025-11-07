@@ -37,7 +37,7 @@ export async function POST(req: Request) {
                 total: amount / 100, // Convert from kobo
                 paymentReference: reference,
                 source: order_type, // 'cart' or 'quote'
-                sourceId: order_ref, // The quote ID if applicable
+                sourceId: order_ref || '', // The quote ID if applicable
             };
             batch.set(newOrderRef, orderData);
 
@@ -74,9 +74,9 @@ export async function POST(req: Request) {
                     batch.delete(cartItemRef);
                 }
             } else if (order_type === 'quote' && order_ref) {
-                 // 5. Update the quote status to 'Accepted' if it was a quote order
+                 // 5. Update the quote status to 'Paid' if it was a quote order
                 const quoteRef = doc(firestore, 'quotes', order_ref);
-                batch.update(quoteRef, { status: 'Accepted' });
+                batch.update(quoteRef, { status: 'Paid' });
             }
             
             await batch.commit();

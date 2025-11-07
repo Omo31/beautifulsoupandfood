@@ -96,7 +96,7 @@ export type HomepageService = {
   iconName: 'PackageSearch' | 'Gift' | 'Boxes';
 };
 
-export type QuoteStatus = 'Quote Ready' | 'Pending Review' | 'Accepted' | 'Rejected' | 'Expired';
+export type QuoteStatus = 'Quote Ready' | 'Pending Review' | 'Accepted' | 'Rejected' | 'Expired' | 'Paid';
 
 export type QuoteRequest = {
   id?: string;

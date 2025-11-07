@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const getBadgeVariant = (status: QuoteStatus) => {
     switch (status) {
         case 'Quote Ready': return 'default';
-        case 'Accepted': return 'outline';
+        case 'Accepted': case 'Paid': return 'outline';
         case 'Expired':
         case 'Rejected': 
             return 'destructive';
@@ -30,9 +30,13 @@ export default function MyQuotesPage() {
   const calculateTotal = (quote: QuoteRequest) => {
     // This is a simplified calculation for display.
     // In a real app, the priced quote details would be stored and retrieved.
-    if (quote.status === 'Quote Ready' || quote.status === 'Accepted') {
-      // Dummy calculation
-      return quote.items.length * 5000;
+    if (quote.status === 'Quote Ready' || quote.status === 'Accepted' || quote.status === 'Paid') {
+      // @ts-ignore
+      const itemsTotal = quote.items.reduce((acc, item) => acc + ((item.unitCost || 0) * item.quantity), 0);
+      const serviceCharge = itemsTotal * 0.06;
+      // @ts-ignore
+      const shipping = quote.shippingCost || 0;
+      return itemsTotal + serviceCharge + shipping;
     }
     return null;
   }
@@ -86,7 +90,7 @@ export default function MyQuotesPage() {
                             </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                                {total ? `~₦${total.toFixed(2)}` : 'N/A'}
+                                {total ? `₦${total.toFixed(2)}` : 'N/A'}
                             </TableCell>
                             <TableCell className="text-right">
                             <Button asChild variant="outline" size="sm">
