@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -11,6 +10,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/firebase";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 const loginSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address." }),
@@ -22,6 +23,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const auth = useAuth();
 
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -31,16 +33,62 @@ export default function LoginPage() {
         }
     });
 
-    const onSubmit = (data: LoginFormValues) => {
-        // Mock submission
-        console.log(data);
+    const handleAuthError = (errorCode: string) => {
+        let description = "An unexpected error occurred. Please try again.";
+        switch (errorCode) {
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+                description = "Invalid email or password. Please try again.";
+                break;
+            case 'auth/too-many-requests':
+                description = "Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.";
+                break;
+             case 'auth/popup-closed-by-user':
+                description = "The sign-in popup was closed before completing. Please try again.";
+                break;
+        }
         toast({
-            title: "Logged In (Mock)",
-            description: "This is a mock login. No actual authentication has occurred.",
+            variant: "destructive",
+            title: "Login Failed",
+            description,
         });
-        // In a real app, you would redirect after successful login
-        // router.push('/');
+    }
+
+    const onSubmit = async (data: LoginFormValues) => {
+        if (!auth) {
+            toast({ variant: "destructive", title: "Firebase not initialized" });
+            return;
+        }
+        try {
+            await signInWithEmailAndPassword(auth, data.email, data.password);
+            toast({
+                title: "Logged In!",
+                description: "Welcome back.",
+            });
+            router.push('/');
+        } catch (error: any) {
+            handleAuthError(error.code);
+        }
     };
+    
+    const handleGoogleSignIn = async () => {
+        if (!auth) {
+            toast({ variant: "destructive", title: "Firebase not initialized" });
+            return;
+        }
+        try {
+            const provider = new GoogleAuthProvider();
+            await signInWithPopup(auth, provider);
+            toast({
+                title: "Logged In!",
+                description: "Welcome back.",
+            });
+            router.push('/');
+        } catch (error: any) {
+            handleAuthError(error.code);
+        }
+    }
+
 
     return (
         <Form {...form}>
@@ -83,11 +131,11 @@ export default function LoginPage() {
                     />
                     <div className="grid grid-cols-2 gap-2 mt-4">
                         <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
-                        <Button type="submit">
-                            Login
+                        <Button type="submit" disabled={form.formState.isSubmitting}>
+                           {form.formState.isSubmitting ? "Logging in..." : "Login"}
                         </Button>
                     </div>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn}>
                         Login with Google
                     </Button>
                 </CardContent>

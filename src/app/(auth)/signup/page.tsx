@@ -76,6 +76,9 @@ export default function SignupPage() {
                 description: "We've sent a verification link to your email. Please verify to log in.",
             });
             
+            // Log out the user immediately after signup so they have to verify
+            await auth.signOut();
+            
             router.push('/login');
 
         } catch (error: any) {
