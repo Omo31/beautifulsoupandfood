@@ -47,6 +47,13 @@ export default function HomePage() {
   const videoDescription = settings?.homepage?.videoDescription || "Watch how we source the freshest ingredients and prepare them with love, bringing the taste of Nigeria to your kitchen. From the local market to your dinner table, our commitment to quality and tradition is in every meal.";
   const homepageServices = defaultHomepageServices; // Not dynamic in this version
 
+  const aboutTitle = settings?.homepage?.aboutTitle || "About BeautifulSoup&Food";
+  const aboutDescription1 = settings?.homepage?.aboutDescription1 || "Founded with a passion for preserving the authentic tastes of Nigerian cuisine, BeautifulSoup&Food is your trusted source for high-quality, fresh foodstuffs and lovingly prepared traditional soups. We bridge the distance, bringing the vibrant flavors of home to your doorstep, no matter where you are.";
+  const aboutDescription2 = settings?.homepage?.aboutDescription2 || "Our commitment is to quality, freshness, and customer satisfaction. We meticulously source our ingredients and prepare our meals with the same care and attention you would find in a Nigerian family kitchen.";
+  const aboutImageId = settings?.homepage?.aboutImageId || "about";
+  const aboutImage = PlaceHolderImages.find((img) => img.id === aboutImageId) || { imageUrl: "https://picsum.photos/seed/about/600/400", imageHint: 'nigerian market' };
+
+
   return (
     <div className="space-y-16 sm:space-y-24">
       {/* Hero Section */}
@@ -132,16 +139,16 @@ export default function HomePage() {
       <section className="bg-card p-8 rounded-lg">
         <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
-                 <h2 className="text-3xl font-bold font-headline">About BeautifulSoup&Food</h2>
+                 <h2 className="text-3xl font-bold font-headline">{aboutTitle}</h2>
                  <p className="mt-4 text-muted-foreground">
-                    Founded with a passion for preserving the authentic tastes of Nigerian cuisine, BeautifulSoup&Food is your trusted source for high-quality, fresh foodstuffs and lovingly prepared traditional soups. We bridge the distance, bringing the vibrant flavors of home to your doorstep, no matter where you are.
+                    {aboutDescription1}
                  </p>
                  <p className="mt-4 text-muted-foreground">
-                    Our commitment is to quality, freshness, and customer satisfaction. We meticulously source our ingredients and prepare our meals with the same care and attention you would find in a Nigerian family kitchen.
+                    {aboutDescription2}
                  </p>
             </div>
             <div className="relative h-64 rounded-lg overflow-hidden">
-                <Image src="https://picsum.photos/seed/about/600/400" alt="Nigerian market stall" fill className="object-cover" data-ai-hint="nigerian market"/>
+                <Image src={aboutImage.imageUrl} alt="Nigerian market stall" fill className="object-cover" data-ai-hint={aboutImage.imageHint}/>
             </div>
         </div>
       </section>

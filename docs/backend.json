@@ -340,7 +340,11 @@
             "heroImageId": { "type": "string" },
             "videoTitle": { "type": "string" },
             "videoId": { "type": "string" },
-            "videoDescription": { "type": "string" }
+            "videoDescription": { "type": "string" },
+            "aboutTitle": { "type": "string" },
+            "aboutDescription1": { "type": "string" },
+            "aboutDescription2": { "type": "string" },
+            "aboutImageId": { "type": "string" }
           }
         },
         "footer": {

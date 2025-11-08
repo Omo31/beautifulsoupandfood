@@ -90,6 +90,10 @@ export default function SettingsPage() {
   const [videoId, setVideoId] = useState('');
   const [videoTitle, setVideoTitle] = useState('');
   const [videoDescription, setVideoDescription] = useState('');
+  const [aboutTitle, setAboutTitle] = useState('');
+  const [aboutDescription1, setAboutDescription1] = useState('');
+  const [aboutDescription2, setAboutDescription2] = useState('');
+  const [aboutImageId, setAboutImageId] = useState('');
   const [newTestimonial, setNewTestimonial] = useState({ name: '', location: '', comment: '', imageId: '' });
   
   const [socialLinks, setSocialLinks] = useState({ facebook: '', instagram: '', twitter: '' });
@@ -117,6 +121,11 @@ export default function SettingsPage() {
       setVideoId(settings.homepage?.videoId || 'dQw4w9WgXcQ');
       setVideoTitle(settings.homepage?.videoTitle || 'Our Story');
       setVideoDescription(settings.homepage?.videoDescription || 'A short description of the video.');
+      setAboutTitle(settings.homepage?.aboutTitle || 'About BeautifulSoup&Food');
+      setAboutDescription1(settings.homepage?.aboutDescription1 || 'Founded with a passion for preserving the authentic tastes of Nigerian cuisine...');
+      setAboutDescription2(settings.homepage?.aboutDescription2 || 'Our commitment is to quality, freshness, and customer satisfaction...');
+      setAboutImageId(settings.homepage?.aboutImageId || 'about');
+
 
       setSocialLinks(settings.footer?.socialLinks || { facebook: '', instagram: '', twitter: '' });
       setLegalLinks(settings.footer?.legalLinks || { terms: '/terms-of-service', privacy: '/privacy-policy' });
@@ -130,7 +139,11 @@ export default function SettingsPage() {
 
   const handleSaveHomepage = () => {
     updateSettings({
-      homepage: { heroTitle, heroSubtitle, heroImageId, videoId, videoTitle, videoDescription }
+      homepage: { 
+        heroTitle, heroSubtitle, heroImageId, 
+        videoId, videoTitle, videoDescription,
+        aboutTitle, aboutDescription1, aboutDescription2, aboutImageId
+       }
     });
   };
   
@@ -268,6 +281,26 @@ export default function SettingsPage() {
                     placeholder="e.g., hero or jollof-rice"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-4">
+                  <h3 className="font-medium">About Us Section</h3>
+                  <div className="grid gap-2">
+                      <Label htmlFor="about-title">Title</Label>
+                      <Input id="about-title" value={aboutTitle} onChange={e => setAboutTitle(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                      <Label htmlFor="about-desc-1">Description Paragraph 1</Label>
+                      <Textarea id="about-desc-1" value={aboutDescription1} onChange={e => setAboutDescription1(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                      <Label htmlFor="about-desc-2">Description Paragraph 2</Label>
+                      <Textarea id="about-desc-2" value={aboutDescription2} onChange={e => setAboutDescription2(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                      <Label htmlFor="about-image-id">Image ID</Label>
+                      <Input id="about-image-id" value={aboutImageId} onChange={e => setAboutImageId(e.target.value)} />
+                  </div>
               </div>
               
               <div className="space-y-4">

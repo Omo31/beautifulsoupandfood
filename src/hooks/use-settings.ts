@@ -18,6 +18,10 @@ export type AppSettings = {
         videoTitle: string;
         videoId: string;
         videoDescription: string;
+        aboutTitle: string;
+        aboutDescription1: string;
+        aboutDescription2: string;
+        aboutImageId: string;
     };
     footer: {
         socialLinks: {
