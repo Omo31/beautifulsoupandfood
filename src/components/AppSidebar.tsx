@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -19,7 +20,10 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/Logo';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc } from '@/firebase';
+import type { UserProfile } from '@/lib/data';
+import { useMemoFirebase } from '@/firebase/utils';
+import { doc } from 'firebase/firestore';
 
 const menuItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -33,16 +37,24 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
   const { user } = useUser();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
 
   const handleLinkClick = () => {
     setOpenMobile(false);
   };
   
+  const isAdmin = userProfile?.role === 'Owner' || userProfile?.role === 'Content Manager';
+
   const visibleMenuItems = menuItems.filter(item => {
-    // The admin link should only be shown if the user is authenticated.
-    // In a real app, you'd also check if user.role === 'Owner'
     if (item.admin) {
-        return !!user;
+        return isAdmin;
     }
     return true;
   });
