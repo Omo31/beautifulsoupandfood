@@ -6,18 +6,12 @@
  * product description using a generative AI model.
  *
  * - generateProductDescription - The main function that invokes the flow.
- * - ProductDescriptionInput - The Zod schema for the input.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { ProductDescriptionInput, ProductDescriptionInputSchema } from '../schemas/product-description-schemas';
 
-export const ProductDescriptionInputSchema = z.object({
-  keywords: z
-    .string()
-    .describe('A comma-separated list of keywords for the product (e.g., product name, category).'),
-});
-export type ProductDescriptionInput = z.infer<typeof ProductDescriptionInputSchema>;
 
 export async function generateProductDescription(input: ProductDescriptionInput): Promise<string> {
   const result = await generateProductDescriptionFlow(input);
