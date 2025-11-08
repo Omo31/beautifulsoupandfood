@@ -27,7 +27,7 @@ import { useSettings } from "@/hooks/use-settings";
 
 export default function CartPage() {
     const { cartItems, cartLoading, updateQuantity, removeFromCart, subtotal } = useCart();
-    const { settings } = useSettings();
+    const { settings, loading: settingsLoading } = useSettings();
     const [shippingMethod, setShippingMethod] = useState("pickup");
     const [selectedLga, setSelectedLga] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -36,7 +36,13 @@ export default function CartPage() {
     const { toast } = useToast();
     const router = useRouter();
 
-    const lagosLgas = settings?.shipping?.lagosLgas || defaultLgas;
+    const lagosLgas = useMemo(() => {
+        if (settings?.shipping?.lagosLgas && settings.shipping.lagosLgas.length > 0) {
+            return settings.shipping.lagosLgas;
+        }
+        return defaultLgas;
+    }, [settings]);
+
 
     const handleQuantityChange = (productId: string, change: 'increase' | 'decrease') => {
         const item = cartItems.find(i => i.id === productId);
@@ -204,18 +210,20 @@ export default function CartPage() {
                                 {shippingMethod === 'lagos' && (
                                     <div className="grid gap-2">
                                         <Label htmlFor="lga-select">Select Location (LGA)</Label>
-                                        <Select onValueChange={setSelectedLga}>
-                                            <SelectTrigger id="lga-select">
-                                                <SelectValue placeholder="Choose your Local Government Area" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {lagosLgas.map(lga => (
-                                                    <SelectItem key={lga.id} value={lga.id}>
-                                                        {lga.name} - ₦{lga.price.toFixed(2)}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        {settingsLoading ? <Skeleton className="h-10 w-full" /> : (
+                                            <Select onValueChange={setSelectedLga}>
+                                                <SelectTrigger id="lga-select">
+                                                    <SelectValue placeholder="Choose your Local Government Area" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {lagosLgas.map(lga => (
+                                                        <SelectItem key={lga.id} value={lga.id}>
+                                                            {lga.name} - ₦{lga.price.toFixed(2)}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
                                         <Textarea placeholder="Full shipping address..." className="mt-2" />
                                     </div>
                                 )}
@@ -284,5 +292,3 @@ export default function CartPage() {
         </TooltipProvider>
     );
 }
-
-    
