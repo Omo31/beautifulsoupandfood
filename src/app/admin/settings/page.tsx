@@ -513,56 +513,7 @@ export default function SettingsPage() {
                         Define user roles and their access levels across the application.
                     </CardDescription>
                 </div>
-                <Dialog open={isNewRoleOpen} onOpenChange={setNewRoleOpen}>
-                  <DialogTrigger asChild>
-                    <Button><PlusCircle className="mr-2 h-4 w-4"/> Create New Role</Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Create New Role</DialogTitle>
-                      <DialogDescription>
-                        Define the name and permissions for the new role.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <ScrollArea className="max-h-[70vh] -mx-6 px-6">
-                        <div className="space-y-4 py-4 pr-1">
-                            <div className="space-y-2">
-                                <Label htmlFor="role-name">Role Name</Label>
-                                <Input id="role-name" placeholder="e.g., Shipper" value={newRoleName} onChange={e => setNewRoleName(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Permissions</Label>
-                                <div className="rounded-md border">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Module</TableHead>
-                                                {permissionActions.map(action => <TableHead key={action} className="text-center">{action}</TableHead>)}
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {permissionModules.map(module => (
-                                                <TableRow key={module}>
-                                                    <TableCell className="font-medium">{module}</TableCell>
-                                                    {permissionActions.map(action => (
-                                                        <TableCell key={action} className="text-center">
-                                                            <Checkbox aria-label={`${action} on ${module}`} />
-                                                        </TableCell>
-                                                    ))}
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </div>
-                        </div>
-                    </ScrollArea>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setNewRoleOpen(false)}>Cancel</Button>
-                      <Button onClick={handleCreateRole}>Save Role</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                <Button disabled><PlusCircle className="mr-2 h-4 w-4"/> Create New Role</Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -574,7 +525,6 @@ export default function SettingsPage() {
                       {permissionModules.map(module => (
                         <TableHead key={module} className="text-center">{module}</TableHead>
                       ))}
-                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -597,7 +547,7 @@ export default function SettingsPage() {
                                                     id={`${role.name}-${module}-${action}`}
                                                     aria-label={`${action} permission for ${module} in ${role.name} role`}
                                                     checked={hasPermission}
-                                                    disabled={role.name === 'Owner' || isActionDisabled}
+                                                    disabled={true}
                                                 />
                                             )
                                         })}
@@ -606,21 +556,6 @@ export default function SettingsPage() {
                                </TableCell>
                            )
                         })}
-                        <TableCell className="text-right">
-                          {role.name !== 'Owner' && role.name !== 'Customer' ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem><FilePenLine className="mr-2 h-4 w-4" /> Edit Role</DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete Role</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          ) : null}
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -628,7 +563,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
              <CardFooter>
-                <Button onClick={() => toast({ title: 'Permissions Saved', description: 'This is a demo. Permissions are not saved.'})}>Save Permissions</Button>
+                <p className="text-sm text-muted-foreground">Role management is handled on the Users page.</p>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -636,3 +571,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

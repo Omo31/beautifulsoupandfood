@@ -22,6 +22,8 @@ import { useMemoFirebase } from '@/firebase/utils';
 import { collection, doc, setDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 type UserWithStatus = UserProfile & { 
     status: 'Active' | 'Disabled'; 
@@ -108,16 +110,48 @@ export default function UsersPage() {
         const firstName = formData.get('firstName') as string;
         const lastName = formData.get('lastName') as string;
         const role = formData.get('role') as UserProfile['role'];
+        const email = formData.get('email') as string;
 
         try {
             if (editingUser) {
                 const userDocRef = doc(firestore, 'users', editingUser.id);
-                await setDoc(userDocRef, { firstName, lastName, role }, { merge: true });
-                toast({ title: "User Updated", description: `${firstName} ${lastName}'s profile has been updated.` });
+                const updateData = { firstName, lastName, role };
+                setDoc(userDocRef, updateData, { merge: true })
+                  .catch(async (serverError) => {
+                    const permissionError = new FirestorePermissionError({
+                        path: userDocRef.path,
+                        operation: 'update',
+                        requestResourceData: updateData,
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                });
+                toast({ title: "User Updated", description: `${firstName} ${lastName}'s role has been updated.` });
+
+                // In a real app, you would now call a Cloud Function to set the custom claim.
+                // For example: await setRole({ userId: editingUser.id, role: role });
+                toast({ title: 'Important Note', description: 'User role saved to database. A backend function is needed to apply security rules.', duration: 6000 });
+
             } else {
-                // This only creates the profile, not the Auth user.
+                // This only creates the profile, not the Auth user. This flow is for demonstration.
                 const usersCollection = collection(firestore, 'users');
-                await addDoc(usersCollection, { firstName, lastName, role, phone: '', shippingAddress: '', createdAt: serverTimestamp() });
+                const profileData = { 
+                    firstName, 
+                    lastName, 
+                    role, 
+                    phone: '', 
+                    shippingAddress: '', 
+                    createdAt: serverTimestamp(),
+                    wishlist: [],
+                };
+                addDoc(usersCollection, profileData).catch(async (serverError) => {
+                     const permissionError = new FirestorePermissionError({
+                        path: usersCollection.path,
+                        operation: 'create',
+                        requestResourceData: profileData,
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                });
+
                 toast({ title: "User Profile Created", description: `A new profile for ${firstName} ${lastName} has been created.` });
             }
             handleCloseModal();
@@ -132,7 +166,11 @@ export default function UsersPage() {
             await deleteDoc(doc(firestore, 'users', userId));
             toast({ variant: 'destructive', title: "User Deleted", description: "The user profile has been deleted."});
         } catch (error) {
-             toast({ variant: 'destructive', title: "Delete failed", description: "Could not delete user profile."});
+            const permissionError = new FirestorePermissionError({
+                path: `/users/${userId}`,
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
         }
     };
     
@@ -140,7 +178,7 @@ export default function UsersPage() {
         // This is a UI-only toggle as we don't have a status field in Firestore.
         const userToToggle = users.find(u => u.id === userId);
         if (userToToggle) {
-            toast({ title: "Status Updated", description: `This is a mock action. User status has not been changed.`});
+            toast({ title: "Status Updated", description: `This is a mock action. In a real app, this would disable the user's Auth account.`});
         }
     };
     
@@ -294,7 +332,7 @@ export default function UsersPage() {
                             <DialogHeader>
                                 <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
                                 <DialogDescription>
-                                    {editingUser ? 'Update the details for this user.' : 'Create a new user account and assign a role.'}
+                                    {editingUser ? "Update the user's details and role." : 'Create a new user account and assign a role.'}
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
@@ -335,3 +373,5 @@ export default function UsersPage() {
         </div>
     );
 }
+
+    
