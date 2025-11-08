@@ -15,6 +15,7 @@ import {
   MessageSquare,
   ClipboardList,
   Bell,
+  ArrowLeft,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -24,8 +25,10 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   useSidebar,
+  SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/Logo';
+import { Separator } from './ui/separator';
 
 const adminMenuItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
@@ -74,8 +77,19 @@ export function AdminSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
+      <SidebarFooter>
+        <Separator className="my-2" />
+         <SidebarMenu>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                    <Link href="/" onClick={handleLinkClick}>
+                        <ArrowLeft />
+                        <span>Back to Home</span>
+                    </Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
-
-    
