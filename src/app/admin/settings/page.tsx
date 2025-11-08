@@ -28,15 +28,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   PlusCircle,
   Trash2,
-  MoreHorizontal,
-  FilePenLine,
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -44,13 +36,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import { collection, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import type { Testimonial } from '@/lib/data';
 import { useSettings } from '@/hooks/use-settings';
 import type { LgaShippingZone } from '@/lib/shipping';
@@ -88,8 +78,9 @@ export default function SettingsPage() {
 
   const testimonialsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'testimonials');
+    return query(collection(firestore, 'testimonials'), orderBy('name'));
   }, [firestore]);
+
   const { data: testimonials, loading: testimonialsLoading } = useCollection<Testimonial>(testimonialsQuery);
 
   // States for local form management
@@ -571,5 +562,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    

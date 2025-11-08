@@ -14,8 +14,9 @@ import { useProducts } from '@/hooks/use-products';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCollection, useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import { collection } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { useSettings } from '@/hooks/use-settings';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const iconMap: Record<HomepageService['iconName'], React.ElementType> = {
   PackageSearch,
@@ -30,7 +31,7 @@ export default function HomePage() {
 
   const testimonialsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'testimonials');
+    return query(collection(firestore, 'testimonials'), orderBy('name'));
   }, [firestore]);
 
   const { data: testimonials, loading: testimonialsLoading } = useCollection<Testimonial>(testimonialsQuery);
@@ -150,7 +151,18 @@ export default function HomePage() {
         <h2 className="text-3xl font-bold font-headline text-center">What Our Customers Say</h2>
         <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
           {testimonialsLoading ? (
-            [...Array(3)].map((_, i) => <Card key={i} className="h-48"/>)
+            [...Array(3)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="pt-6"><Skeleton className="h-16 w-full" /></CardContent>
+                <CardHeader className="flex-row items-center gap-4">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </CardHeader>
+              </Card>
+            ))
           ) : (
             testimonials.map(testimonial => {
               const image = PlaceHolderImages.find(p => p.id === testimonial.imageId);
