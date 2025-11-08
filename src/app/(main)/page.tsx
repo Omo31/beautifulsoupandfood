@@ -144,31 +144,6 @@ export default function HomePage() {
           </div>
       </section>
 
-
-      {/* Testimonials */}
-      <section>
-        <h2 className="text-3xl font-bold font-headline text-center">What Our Customers Say</h2>
-        <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
-          {testimonials.map((testimonial) => {
-            const image = PlaceHolderImages.find(i => i.id === testimonial.imageId);
-            return (
-              <Card key={testimonial.id} className="text-center">
-                <CardHeader>
-                    {image && <Image src={image.imageUrl} alt={testimonial.name} width={80} height={80} className="mx-auto rounded-full" data-ai-hint={image.imageHint}/>}
-                    <CardTitle className="mt-4">{testimonial.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{testimonial.location}</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-center mb-4">
-                      {[...Array(5)].map((_, i) => <Star key={i} className="h-5 w-5 text-yellow-400 fill-yellow-400" />)}
-                  </div>
-                  <p className="text-muted-foreground italic">"{testimonial.comment}"</p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
     </div>
   );
 }
