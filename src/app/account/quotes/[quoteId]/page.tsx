@@ -203,7 +203,7 @@ export default function QuoteDetailsPage() {
                 <ThumbsUp className="h-4 w-4 text-green-600 dark:text-green-400" />
                 <AlertTitle>Quote Paid!</AlertTitle>
                 <AlertDescription>
-                    Thank you for your payment. We are now processing your custom order. You can track its status on your <Button variant="link" className="p-0 h-auto" asChild><a href="/account/orders">Orders page</a></Button>.
+                    Thank you for your payment. We are now processing your custom order. You can track its status on your <Button variant="link" className="p-0 h-auto" asChild><Link href="/account/orders">Orders page</Link></Button>.
                 </AlertDescription>
             </Alert>
         )}
