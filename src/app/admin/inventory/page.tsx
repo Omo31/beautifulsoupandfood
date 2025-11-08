@@ -9,6 +9,7 @@ import {
   MoreHorizontal,
   Upload,
   Search,
+  Sparkles,
 } from 'lucide-react';
 import {
   Card,
@@ -64,6 +65,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useProducts } from '@/hooks/use-products';
 import { useFirestore } from '@/firebase';
 import { collection, doc, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import { generateProductDescription } from '@/ai/flows/generate-product-description';
 
 const StockBadge = ({ stock, threshold = 20 }: { stock: number, threshold?: number }) => {
   if (stock === 0) {
@@ -89,6 +91,9 @@ export default function InventoryPage() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [description, setDescription] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const filteredProducts = useMemo(() => {
     return products
       .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -111,16 +116,19 @@ export default function InventoryPage() {
 
   const handleOpenModal = (product: Product | null = null) => {
     setEditingProduct(product);
+    setDescription(product?.description || '');
     setModalOpen(true);
   };
   
   const handleCloseModal = () => {
     setModalOpen(false);
     setEditingProduct(null);
+    setDescription('');
   }
 
   const handleSaveProduct = async (formData: FormData) => {
       if (!firestore) return;
+
       const productData = {
           name: formData.get('name') as string,
           description: formData.get('description') as string,
@@ -162,6 +170,27 @@ export default function InventoryPage() {
   
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+  
+  const handleGenerateDescription = async (form: HTMLFormElement) => {
+    const formData = new FormData(form);
+    const keywords = `${formData.get('name')}, ${formData.get('category')}`;
+
+    if (!keywords.trim() || keywords.trim() === ',') {
+      toast({ variant: 'destructive', title: 'Keywords needed', description: 'Please enter a name and category first.' });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const result = await generateProductDescription({ keywords });
+      setDescription(result);
+    } catch (error) {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Generation failed', description: 'Could not generate a description.' });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -337,9 +366,15 @@ export default function InventoryPage() {
                         <Label htmlFor="name" className="text-right">Name</Label>
                         <Input id="name" name="name" placeholder="Product Name" className="col-span-3" defaultValue={editingProduct?.name} required/>
                       </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="description" className="text-right">Description</Label>
-                        <Textarea id="description" name="description" placeholder="A short description..." className="col-span-3" defaultValue={editingProduct?.description} required/>
+                      <div className="grid grid-cols-4 items-start gap-4">
+                        <Label htmlFor="description" className="text-right pt-2">Description</Label>
+                        <div className="col-span-3 space-y-2">
+                           <Textarea id="description" name="description" placeholder="A short description..." value={description} onChange={(e) => setDescription(e.target.value)} required/>
+                           <Button type="button" variant="outline" size="sm" onClick={(e) => handleGenerateDescription(e.currentTarget.form!)} disabled={isGenerating}>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            {isGenerating ? 'Generating...' : 'Generate with AI'}
+                          </Button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                           <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
