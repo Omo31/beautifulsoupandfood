@@ -391,6 +391,12 @@
                 "measures": { "type": "array", "items": { "type": "string" } },
                 "services": { "type": "array", "items": { "type": "string" } }
             }
+        },
+        "store": {
+            "type": "object",
+            "properties": {
+                "monthlyRevenueGoal": { "type": "number" }
+            }
         }
       }
     }

@@ -112,6 +112,8 @@ export default function SettingsPage() {
   const [roles, setRoles] = useState(initialRoles);
   const [isNewRoleOpen, setNewRoleOpen] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
+  
+  const [monthlyRevenueGoal, setMonthlyRevenueGoal] = useState(0);
 
   // Populate local state when settings are loaded from Firestore
   useEffect(() => {
@@ -135,6 +137,8 @@ export default function SettingsPage() {
       setMeasures(settings.customOrder?.measures || ['Grams (g)', 'Kilograms (kg)', 'Pieces', 'Bunches', 'Wraps']);
       setServices(settings.customOrder?.services || ['Gift Wrapping', 'Special Packaging']);
       setLagosLgas(settings.shipping?.lagosLgas || []);
+      
+      setMonthlyRevenueGoal(settings.store?.monthlyRevenueGoal || 500000);
     }
   }, [settings]);
 
@@ -213,6 +217,10 @@ export default function SettingsPage() {
   const handleSaveShipping = () => {
       updateSettings({ shipping: { lagosLgas } });
   };
+  
+  const handleSaveStore = () => {
+    updateSettings({ store: { monthlyRevenueGoal }});
+  };
 
   const handleCreateRole = () => {
       if (newRoleName.trim()) {
@@ -242,13 +250,46 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold font-headline">Settings</h1>
       <Tabs defaultValue="homepage" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto">
+            <TabsTrigger value="store">Store</TabsTrigger>
             <TabsTrigger value="homepage">Homepage</TabsTrigger>
             <TabsTrigger value="footer">Footer</TabsTrigger>
             <TabsTrigger value="custom-order">Custom Order</TabsTrigger>
             <TabsTrigger value="shipping">Shipping</TabsTrigger>
             <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
         </TabsList>
+        
+        {/* Store Settings */}
+        <TabsContent value="store">
+           <Card>
+            <CardHeader>
+              <CardTitle>Store Configuration</CardTitle>
+              <CardDescription>
+                Manage general store settings like analytics goals.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <div className="space-y-4">
+                <h3 className="font-medium">Analytics</h3>
+                <div className="grid gap-2 max-w-sm">
+                  <Label htmlFor="revenue-goal">Monthly Revenue Goal (₦)</Label>
+                  <Input
+                    id="revenue-goal"
+                    type="number"
+                    value={monthlyRevenueGoal}
+                    onChange={e => setMonthlyRevenueGoal(parseInt(e.target.value, 10))}
+                  />
+                   <p className="text-sm text-muted-foreground">
+                    This value is used to power the Monthly Goal Tracker on the Analytics page.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleSaveStore}>Save Store Settings</Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
 
         {/* Homepage Settings */}
         <TabsContent value="homepage">

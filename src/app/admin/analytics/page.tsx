@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -24,10 +25,12 @@ import type { Order, OrderItem, UserProfile } from '@/lib/data';
 import { DollarSign, ShoppingCart, Users, TrendingUp } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useSettings } from '@/hooks/use-settings';
 
 
 export default function AnalyticsPage() {
     const firestore = useFirestore();
+    const { settings, loading: settingsLoading } = useSettings();
 
     const ordersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -58,7 +61,7 @@ export default function AnalyticsPage() {
     const totalCustomers = allUsers.length;
     const averageOrderValue =
       deliveredOrders.length > 0 ? totalRevenue / deliveredOrders.length : 0;
-    const monthlyGoal = 500000;
+    const monthlyGoal = settings?.store?.monthlyRevenueGoal || 500000;
     const monthlyGoalProgress = (totalRevenue / monthlyGoal) * 100;
 
     const salesByProduct = allOrderItems.reduce((acc, item) => {
@@ -125,11 +128,11 @@ export default function AnalyticsPage() {
       orderStatusData,
       salesByCategory
     };
-  }, [allOrders, allUsers, products, allOrderItems]);
+  }, [allOrders, allUsers, products, allOrderItems, settings]);
   
   const totalCategorySales = Object.values(analyticsData.salesByCategory).reduce((sum, current) => sum + current, 0);
 
-  const loading = ordersLoading || usersLoading || productsLoading || itemsLoading;
+  const loading = ordersLoading || usersLoading || productsLoading || itemsLoading || settingsLoading;
 
   if (loading) {
     return (

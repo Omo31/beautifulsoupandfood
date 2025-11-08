@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo } from 'react';
@@ -42,6 +43,9 @@ export type AppSettings = {
         measures: string[];
         services: string[];
     };
+    store: {
+        monthlyRevenueGoal: number;
+    }
 };
 
 export function useSettings() {
