@@ -30,7 +30,7 @@ import { useSettings } from '@/hooks/use-settings';
 
 const customItemSchema = z.object({
     name: z.string().min(1, "Item name is required"),
-    quantity: z.number().min(1),
+    quantity: z.coerce.number({invalid_type_error: 'Quantity is required'}).min(1, "Quantity must be at least 1"),
     measure: z.string().min(1, "Please select a unit"),
     customMeasure: z.string().optional(),
 }).refine(data => {
@@ -187,11 +187,11 @@ export default function CustomOrderPage() {
                                                  <FormField
                                                     control={form.control}
                                                     name={`items.${index}.quantity`}
-                                                    render={({ field: { onChange, value, ...rest } }) => (
+                                                    render={({ field }) => (
                                                         <FormItem>
                                                             <FormLabel>Quantity</FormLabel>
                                                             <FormControl>
-                                                                <Input type="number" value={value} onChange={e => onChange(parseInt(e.target.value, 10) || 1)} {...rest} />
+                                                                <Input type="number" placeholder="1" {...field} />
                                                             </FormControl>
                                                             <FormMessage />
                                                         </FormItem>
@@ -227,7 +227,7 @@ export default function CustomOrderPage() {
                                                     </Button>
                                                 </div>
                                             </div>
-                                            {form.watch(`items.${index}.measure`) === 'custom' && (
+                                            {form.watch(`items.${index}.measure`) === 'Custom...' && (
                                                 <FormField
                                                     control={form.control}
                                                     name={`items.${index}.customMeasure`}
@@ -244,7 +244,7 @@ export default function CustomOrderPage() {
                                             )}
                                         </Card>
                                     ))}
-                                    <FormMessage>{form.formState.errors.items?.message}</FormMessage>
+                                    <FormMessage>{form.formState.errors.items?.root?.message}</FormMessage>
                                     <Button type="button" variant="outline" onClick={() => append({ name: '', quantity: 1, measure: '', customMeasure: '' })} className="w-full">
                                         <PlusCircle className="mr-2 h-4 w-4" /> Add Another Item
                                     </Button>
@@ -493,3 +493,4 @@ export default function CustomOrderPage() {
 }
 
     
+
