@@ -164,16 +164,36 @@ export default function PurchaseOrdersPage() {
       }
   };
   
-  const handleStatusChange = async (poId: string, newStatus: PurchaseOrder['status']) => {
+  const handleStatusChange = async (po: PurchaseOrder, newStatus: PurchaseOrder['status']) => {
       if (!firestore) return;
-      const poRef = doc(firestore, 'purchaseOrders', poId);
+      
+      const poRef = doc(firestore, 'purchaseOrders', po.id);
+      
       try {
-          await setDoc(poRef, { status: newStatus }, { merge: true });
+          const batch = writeBatch(firestore);
+          batch.update(poRef, { status: newStatus });
+
+          // If marking as completed, create an expense transaction
+          if (newStatus === 'Completed') {
+              const transactionRef = doc(collection(firestore, 'transactions'));
+              const transactionData = {
+                  date: Timestamp.now(),
+                  description: `PO from ${po.supplier} - #${po.id.substring(0,6)}`,
+                  category: 'Supplies',
+                  type: 'Expense',
+                  amount: po.total,
+              };
+              batch.set(transactionRef, transactionData);
+          }
+          
+          await batch.commit();
+
           toast({
               title: 'Status Updated',
-              description: `PO ${poId.substring(0,6)}... has been marked as ${newStatus}.`
+              description: `PO #${po.id.substring(0,6)} has been marked as ${newStatus}.`
           });
       } catch (error) {
+          console.error("Error updating PO status:", error);
           toast({ variant: 'destructive', title: 'Update Failed'});
       }
   }
@@ -224,9 +244,9 @@ export default function PurchaseOrdersPage() {
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuItem>View Details</DropdownMenuItem>
                 {po.status === 'Draft' && <DropdownMenuItem>Edit</DropdownMenuItem>}
-                {po.status === 'Pending' && <DropdownMenuItem onClick={() => handleStatusChange(po.id, 'Completed')}>Mark as Completed</DropdownMenuItem>}
+                {po.status === 'Pending' && <DropdownMenuItem onClick={() => handleStatusChange(po, 'Completed')}>Mark as Completed</DropdownMenuItem>}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive" onClick={() => handleStatusChange(po.id, 'Cancelled')}>
+                <DropdownMenuItem className="text-destructive" onClick={() => handleStatusChange(po, 'Cancelled')}>
                     Cancel PO
                 </DropdownMenuItem>
                 </DropdownMenuContent>
