@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,6 +17,7 @@ import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, G
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import { Label } from "@/components/ui/label";
 
 const signupSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -95,8 +96,8 @@ export default function SignupPage() {
             const userProfile = {
                 firstName: data.firstName,
                 lastName: data.lastName,
-                phone: "", // Phone not collected in this form anymore
-                shippingAddress: "", // Shipping address not collected
+                phone: "",
+                shippingAddress: "",
                 role: "Customer",
                 createdAt: serverTimestamp(),
                 wishlist: []
@@ -117,7 +118,9 @@ export default function SignupPage() {
                 description: "We've sent a verification link to your email. Please verify to log in.",
             });
             
-            await auth.signOut();
+            if (auth.currentUser) {
+              await auth.signOut();
+            }
             router.push('/login');
 
         } catch (error: any) {
