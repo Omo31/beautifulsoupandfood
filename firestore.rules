@@ -90,6 +90,12 @@ service cloud.firestore {
     match /transactions/{transactionId} {
         allow read, write: if isAdmin();
     }
+    
+    // Testimonials: Public read, admin write
+    match /testimonials/{testimonialId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
 
     // Conversations: Users can access their own conversation, Admins can access all.
     match /conversations/{conversationId} {

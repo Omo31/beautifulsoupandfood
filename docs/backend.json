@@ -314,6 +314,18 @@
         "cost": { "type": "number" }
       },
       "required": ["productName", "quantity", "cost"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "A curated customer testimonial for the homepage.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "comment": { "type": "string" },
+        "imageId": { "type": "string" }
+      },
+      "required": ["name", "location", "comment", "imageId"]
     }
   },
   "auth": {
@@ -387,6 +399,10 @@
     "/purchaseOrders/{purchaseOrderId}/items/{purchaseOrderItemId}": {
       "schema": { "$ref": "#/entities/PurchaseOrderItem" },
       "description": "The individual items within a specific purchase order."
+    },
+    "/testimonials/{testimonialId}": {
+        "schema": { "$ref": "#/entities/Testimonial" },
+        "description": "Collection of curated testimonials for the homepage."
     }
   }
 }

@@ -7,10 +7,13 @@ import { ArrowRight, Star, PackageSearch, Gift, Boxes } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { testimonials, homepageServices, HomepageService } from '@/lib/data';
+import { homepageServices, HomepageService, Testimonial } from '@/lib/data';
 import { ProductCard } from '@/components/ProductCard';
 import { useProducts } from '@/hooks/use-products';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useCollection, useFirestore } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/utils';
+import { collection } from 'firebase/firestore';
 
 const iconMap: Record<HomepageService['iconName'], React.ElementType> = {
   PackageSearch,
@@ -20,6 +23,15 @@ const iconMap: Record<HomepageService['iconName'], React.ElementType> = {
 
 export default function HomePage() {
   const { products } = useProducts();
+  const firestore = useFirestore();
+
+  const testimonialsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'testimonials');
+  }, [firestore]);
+
+  const { data: testimonials, loading: testimonialsLoading } = useCollection<Testimonial>(testimonialsQuery);
+
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero');
   const featuredProducts = products.slice(0, 4);
   const videoId = "dQw4w9WgXcQ";
@@ -129,26 +141,30 @@ export default function HomePage() {
       <section>
         <h2 className="text-3xl font-bold font-headline text-center">What Our Customers Say</h2>
         <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
-          {testimonials.map(testimonial => {
-            const image = PlaceHolderImages.find(p => p.id === testimonial.imageId);
-            return (
-              <Card key={testimonial.id} className="flex flex-col">
-                <CardContent className="pt-6 flex-1">
-                  <p className="italic text-muted-foreground">"{testimonial.comment}"</p>
-                </CardContent>
-                <CardHeader className="flex-row items-center gap-4">
-                   <Avatar>
-                    {image && <AvatarImage src={image.imageUrl} alt={testimonial.name} />}
-                    <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold">{testimonial.name}</p>
-                    <p className="text-sm text-muted-foreground">{testimonial.location}</p>
-                  </div>
-                </CardHeader>
-              </Card>
-            )
-          })}
+          {testimonialsLoading ? (
+            [...Array(3)].map((_, i) => <Card key={i} className="h-48"/>)
+          ) : (
+            testimonials.map(testimonial => {
+              const image = PlaceHolderImages.find(p => p.id === testimonial.imageId);
+              return (
+                <Card key={testimonial.id} className="flex flex-col">
+                  <CardContent className="pt-6 flex-1">
+                    <p className="italic text-muted-foreground">"{testimonial.comment}"</p>
+                  </CardContent>
+                  <CardHeader className="flex-row items-center gap-4">
+                     <Avatar>
+                      {image && <AvatarImage src={image.imageUrl} alt={testimonial.name} />}
+                      <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold">{testimonial.name}</p>
+                      <p className="text-sm text-muted-foreground">{testimonial.location}</p>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )
+            })
+          )}
         </div>
       </section>
 

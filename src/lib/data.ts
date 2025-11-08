@@ -146,12 +146,6 @@ export type Quote = {
 // All data has been moved to be fetched from Firestore or is mocked directly in components.
 // This file now only contains type definitions.
 
-export const testimonials: Testimonial[] = [
-    { id: '1', name: 'Adeola Adebayo', location: 'Lagos, NG', comment: 'The quality of the ingredients is unmatched! My Jollof rice has never tasted better. Highly recommended for anyone who misses the taste of home.', imageId: 'testimonial-1' },
-    { id: '2', name: 'Chiamaka Nwosu', location: 'London, UK', comment: 'BeautifulSoup&Food is a lifesaver. I ordered the Egusi soup, and it tasted just like my mother\'s. The delivery was fast and the packaging was excellent.', imageId: 'testimonial-2' },
-    { id: '3', name: 'Emeka Okafor', location: 'Houston, USA', comment: 'I finally found a reliable source for all my Nigerian foodstuffs. The prices are fair, and the customer service is top-notch. Five stars!', imageId: 'testimonial-3' },
-];
-
 export const homepageServices: HomepageService[] = [
     { id: '1', name: 'Custom Sourcing', description: 'Looking for a rare ingredient? We can find it for you.', iconName: 'PackageSearch'},
     { id: '2', name: 'Gift Wrapping', description: 'Send a taste of home as a beautifully wrapped gift.', iconName: 'Gift'},

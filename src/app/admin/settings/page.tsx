@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, type FormEvent } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Card,
@@ -47,8 +47,12 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { lagosLgas as initialLagosLgas, LgaShippingZone } from '@/lib/shipping';
-import { homepageServices as initialHomepageServices, HomepageService } from '@/lib/data';
+import { homepageServices as initialHomepageServices, HomepageService, Testimonial } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useCollection } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/utils';
+import { collection, addDoc, deleteDoc, doc } from 'firebase/firestore';
+
 
 const initialRoles = [
   {
@@ -78,6 +82,14 @@ const initialServices = ['Gift Wrapping', 'Special Packaging'];
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const firestore = useFirestore();
+
+  const testimonialsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'testimonials');
+  }, [firestore]);
+  const { data: testimonials, loading: testimonialsLoading } = useCollection<Testimonial>(testimonialsQuery);
+
   
   // States for Homepage settings
   const [heroTitle, setHeroTitle] = useState("Authentic Nigerian Flavors, Delivered.");
@@ -87,6 +99,7 @@ export default function SettingsPage() {
   const [videoDescription, setVideoDescription] = useState("A short description of the video.");
   const [homepageServices, setHomepageServices] = useState<HomepageService[]>(initialHomepageServices);
   const [newHomepageService, setNewHomepageService] = useState({ name: '', description: '', iconName: 'PackageSearch' as HomepageService['iconName'] });
+  const [newTestimonial, setNewTestimonial] = useState({ name: '', location: '', comment: '', imageId: '' });
 
 
   // States for Footer settings
@@ -125,6 +138,30 @@ export default function SettingsPage() {
 
   const handleRemoveHomepageService = (id: string) => {
     setHomepageServices(homepageServices.filter(s => s.id !== id));
+  };
+  
+  const handleAddTestimonial = async () => {
+    if (!firestore || !newTestimonial.name || !newTestimonial.comment || !newTestimonial.imageId) {
+        toast({ variant: 'destructive', title: 'Missing fields', description: 'Please fill out all fields for the testimonial.' });
+        return;
+    }
+    try {
+        await addDoc(collection(firestore, 'testimonials'), newTestimonial);
+        setNewTestimonial({ name: '', location: '', comment: '', imageId: '' });
+        toast({ title: 'Testimonial Added', description: 'The new testimonial has been added to your homepage.' });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not add testimonial.' });
+    }
+  };
+
+  const handleRemoveTestimonial = async (id: string) => {
+      if (!firestore) return;
+      try {
+          await deleteDoc(doc(firestore, 'testimonials', id));
+          toast({ title: 'Testimonial Removed', variant: 'destructive' });
+      } catch (error) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not remove testimonial.' });
+      }
   };
 
 
@@ -206,25 +243,27 @@ export default function SettingsPage() {
               </div>
               
               <div className="space-y-4">
-                <h3 className="font-medium">Featured Services Section</h3>
+                <h3 className="font-medium">Testimonials Section</h3>
                 <div className="rounded-md border">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Icon</TableHead>
-                                <TableHead>Service Name</TableHead>
-                                <TableHead>Description</TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Location</TableHead>
+                                <TableHead>Comment</TableHead>
                                 <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {homepageServices.map(service => (
-                                <TableRow key={service.id}>
-                                    <TableCell>{service.iconName}</TableCell>
-                                    <TableCell className="font-medium">{service.name}</TableCell>
-                                    <TableCell>{service.description}</TableCell>
+                            {testimonialsLoading ? (
+                                <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>
+                            ) : testimonials.map(testimonial => (
+                                <TableRow key={testimonial.id}>
+                                    <TableCell className="font-medium">{testimonial.name}</TableCell>
+                                    <TableCell>{testimonial.location}</TableCell>
+                                    <TableCell className="max-w-xs truncate">{testimonial.comment}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveHomepageService(service.id)}>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveTestimonial(testimonial.id)}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </TableCell>
@@ -234,16 +273,24 @@ export default function SettingsPage() {
                     </Table>
                 </div>
                 <Card className="p-4 bg-muted/50">
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 items-end">
                         <div className="grid gap-2">
-                            <Label>New Service Name</Label>
-                            <Input value={newHomepageService.name} onChange={e => setNewHomepageService({...newHomepageService, name: e.target.value})} placeholder="e.g., Bulk Orders"/>
+                            <Label>Name</Label>
+                            <Input value={newTestimonial.name} onChange={e => setNewTestimonial({...newTestimonial, name: e.target.value})} placeholder="e.g., Adeola A."/>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Location</Label>
+                            <Input value={newTestimonial.location} onChange={e => setNewTestimonial({...newTestimonial, location: e.target.value})} placeholder="Lagos, NG"/>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Image ID</Label>
+                            <Input value={newTestimonial.imageId} onChange={e => setNewTestimonial({...newTestimonial, imageId: e.target.value})} placeholder="testimonial-1"/>
                         </div>
                          <div className="grid gap-2">
-                            <Label>New Service Description</Label>
-                            <Input value={newHomepageService.description} onChange={e => setNewHomepageService({...newHomepageService, description: e.target.value})} placeholder="Short description..."/>
+                            <Label>Comment</Label>
+                            <Input value={newTestimonial.comment} onChange={e => setNewTestimonial({...newTestimonial, comment: e.target.value})} placeholder="Short quote..."/>
                         </div>
-                         <Button onClick={handleAddHomepageService} className="self-end"><PlusCircle className="mr-2 h-4 w-4" /> Add Service</Button>
+                         <Button onClick={handleAddTestimonial} className="self-end"><PlusCircle className="mr-2 h-4 w-4" /> Add</Button>
                     </div>
                 </Card>
               </div>
