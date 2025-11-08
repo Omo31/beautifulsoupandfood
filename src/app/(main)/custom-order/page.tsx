@@ -22,6 +22,8 @@ import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useUser, useFirestore } from '@/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 
 const customItemSchema = z.object({
@@ -118,30 +120,30 @@ export default function CustomOrderPage() {
             return;
         }
 
-        try {
-            const quoteRequestData = {
-                ...data,
-                userId: user.uid,
-                status: 'Pending Review',
-                createdAt: serverTimestamp(),
-            };
+        const quoteRequestData = {
+            ...data,
+            userId: user.uid,
+            status: 'Pending Review',
+            createdAt: serverTimestamp(),
+        };
 
-            await addDoc(collection(firestore, 'quotes'), quoteRequestData);
-
-            toast({
-                title: 'Request Sent!',
-                description: 'Your custom order request has been submitted. We will notify you once a quote is ready.'
+        const quotesCollection = collection(firestore, 'quotes');
+        addDoc(quotesCollection, quoteRequestData)
+            .then(() => {
+                toast({
+                    title: 'Request Sent!',
+                    description: 'Your custom order request has been submitted. We will notify you once a quote is ready.'
+                });
+                router.push('/account/quotes');
+            })
+            .catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: quotesCollection.path,
+                    operation: 'create',
+                    requestResourceData: quoteRequestData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
             });
-
-            router.push('/account/quotes');
-        } catch (error) {
-            console.error("Error submitting quote request: ", error);
-            toast({
-                variant: 'destructive',
-                title: 'Submission Failed',
-                description: 'There was an error submitting your request. Please try again.'
-            });
-        }
     };
 
     return (

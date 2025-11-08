@@ -8,6 +8,8 @@ import { useMemoFirebase } from '@/firebase/utils';
 import { useProducts } from './use-products';
 import { useToast } from './use-toast';
 import type { UserProfile, Product } from '@/lib/data';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export function useWishlist() {
     const { user } = useUser();
@@ -42,25 +44,28 @@ export function useWishlist() {
 
         const product = products.find(p => p.id === productId);
         if (!product) return;
+        
+        const isCurrentlyWishlisted = isWishlisted(productId);
+        const updateData = {
+            wishlist: isCurrentlyWishlisted ? arrayRemove(productId) : arrayUnion(productId)
+        };
 
-        try {
-            if (isWishlisted(productId)) {
-                // Remove from wishlist
-                await updateDoc(userDocRef, {
-                    wishlist: arrayRemove(productId)
+        updateDoc(userDocRef, updateData)
+            .then(() => {
+                if (isCurrentlyWishlisted) {
+                    toast({ title: 'Removed from Wishlist', description: `${product.name} has been removed from your wishlist.` });
+                } else {
+                    toast({ title: 'Added to Wishlist', description: `${product.name} has been added to your wishlist.` });
+                }
+            })
+            .catch(async (serverError) => {
+                 const permissionError = new FirestorePermissionError({
+                    path: userDocRef.path,
+                    operation: 'update',
+                    requestResourceData: { wishlist: `[... current, ${isCurrentlyWishlisted ? 'removed' : 'added'}: ${productId}]` }
                 });
-                toast({ title: 'Removed from Wishlist', description: `${product.name} has been removed from your wishlist.` });
-            } else {
-                // Add to wishlist
-                await updateDoc(userDocRef, {
-                    wishlist: arrayUnion(productId)
-                });
-                toast({ title: 'Added to Wishlist', description: `${product.name} has been added to your wishlist.` });
-            }
-        } catch (error) {
-            console.error("Error updating wishlist:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not update your wishlist.' });
-        }
+                errorEmitter.emit('permission-error', permissionError);
+            });
     };
 
     return {

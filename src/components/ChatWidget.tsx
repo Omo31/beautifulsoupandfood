@@ -11,6 +11,8 @@ import { collection, doc, setDoc, addDoc, serverTimestamp, query, orderBy } from
 import { useMemoFirebase } from '@/firebase/utils';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 type Message = {
     id: string;
@@ -67,13 +69,24 @@ export function ChatWidget() {
             isReadByAdmin: false
         };
         
-        try {
-            await addDoc(messagesRef, messagePayload);
-            await setDoc(conversationRef, conversationPayload, { merge: true });
-        } catch (error) {
-            console.error("Error sending message:", error);
-            // Optionally, show an error toast
-        }
+        // Optimistically add message to UI, though useCollection should handle this
+        addDoc(messagesRef, messagePayload).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: messagesRef.path,
+                operation: 'create',
+                requestResourceData: messagePayload
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
+        
+        setDoc(conversationRef, conversationPayload, { merge: true }).catch(async (serverError) => {
+             const permissionError = new FirestorePermissionError({
+                path: conversationRef.path,
+                operation: 'update',
+                requestResourceData: conversationPayload
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
     };
 
     if (!user) {

@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth, useFirestore } from "@/firebase";
 import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 const signupSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -76,7 +78,15 @@ export default function SignupPage() {
             };
 
             // Create user document in Firestore
-            await setDoc(doc(firestore, "users", user.uid), userProfile);
+            const userDocRef = doc(firestore, "users", user.uid);
+            setDoc(userDocRef, userProfile).catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: userDocRef.path,
+                    operation: 'create',
+                    requestResourceData: userProfile,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
             
             toast({
                 title: "Account Created!",

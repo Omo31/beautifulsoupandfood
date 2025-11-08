@@ -15,6 +15,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMemoFirebase } from '@/firebase/utils';
 import type { UserProfile } from '@/lib/data';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const profileSchema = z.object({
     firstName: z.string().min(1, 'First name is required'),
@@ -57,28 +59,31 @@ export default function ProfilePage() {
     }, [userProfile, user, form]);
 
     const handleUpdate = async (data: ProfileFormValues) => {
-        if (!firestore || !user) {
+        if (!firestore || !user || !userDocRef) {
             toast({ variant: 'destructive', title: 'Error', description: 'User not logged in' });
             return;
         }
 
-        try {
-            await setDoc(doc(firestore, 'users', user.uid), {
-                firstName: data.firstName,
-                lastName: data.lastName,
-            }, { merge: true });
+        const updatedData = {
+            firstName: data.firstName,
+            lastName: data.lastName,
+        };
 
-            toast({
-                title: "Success!",
-                description: `Your profile has been updated.`,
+        setDoc(userDocRef, updatedData, { merge: true })
+            .then(() => {
+                 toast({
+                    title: "Success!",
+                    description: `Your profile has been updated.`,
+                });
+            })
+            .catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: userDocRef.path,
+                    operation: 'update',
+                    requestResourceData: updatedData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
             });
-        } catch (error) {
-             toast({
-                variant: 'destructive',
-                title: "Update failed",
-                description: "Could not update your profile. Please try again.",
-            });
-        }
     }
     
     if (userLoading || profileLoading) {

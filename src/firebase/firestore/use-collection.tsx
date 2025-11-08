@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { onSnapshot, query, collection, where, Query, DocumentData, CollectionReference } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export function useCollection<T>(q: Query | CollectionReference | null) {
   const [data, setData] = useState<T[]>([]);
@@ -26,11 +28,16 @@ export function useCollection<T>(q: Query | CollectionReference | null) {
         });
         setData(docs);
         setLoading(false);
+        setError(null);
       },
-      (err) => {
-        setError(err);
+      async (err) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'path' in q ? q.path : 'Unknown collection path',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setError(permissionError);
         setLoading(false);
-        console.error("Error fetching collection:", err);
       }
     );
 

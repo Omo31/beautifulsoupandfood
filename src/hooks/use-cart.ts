@@ -7,6 +7,8 @@ import { collection, doc, setDoc, deleteDoc, serverTimestamp, writeBatch, getDoc
 import { useMemoFirebase } from '@/firebase/utils';
 import { useProducts } from './use-products';
 import { useToast } from './use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export type CartItem = {
     id: string;
@@ -67,42 +69,60 @@ export function useCart() {
             toast({ variant: 'destructive', title: 'Out of Stock', description: `${product.name} is currently out of stock.`});
             return;
         }
+        
+        const cartDocRef = doc(firestore, 'users', user.uid, 'cart', productId);
+        const cartData = {
+            quantity,
+            addedAt: serverTimestamp(),
+        };
 
-        try {
-            const cartDocRef = doc(firestore, 'users', user.uid, 'cart', productId);
-            await setDoc(cartDocRef, {
-                quantity,
-                addedAt: serverTimestamp(),
-            }, { merge: true });
-
-            toast({ title: 'Added to Cart', description: `${product.name} has been added to your cart.` });
-        } catch (error) {
-            console.error("Error adding to cart: ", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not add item to cart.' });
-        }
+        setDoc(cartDocRef, cartData, { merge: true })
+            .then(() => {
+                toast({ title: 'Added to Cart', description: `${product.name} has been added to your cart.` });
+            })
+            .catch(async (serverError) => {
+                 const permissionError = new FirestorePermissionError({
+                    path: cartDocRef.path,
+                    operation: 'create',
+                    requestResourceData: cartData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
     };
 
     const updateQuantity = async (productId: string, newQuantity: number) => {
         if (!firestore || !user || newQuantity < 1) return;
-        try {
-            const cartDocRef = doc(firestore, 'users', user.uid, 'cart', productId);
-            await setDoc(cartDocRef, { quantity: newQuantity }, { merge: true });
-        } catch (error) {
-            console.error("Error updating quantity: ", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not update item quantity.' });
-        }
+        
+        const cartDocRef = doc(firestore, 'users', user.uid, 'cart', productId);
+        const updateData = { quantity: newQuantity };
+
+        setDoc(cartDocRef, updateData, { merge: true })
+            .catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: cartDocRef.path,
+                    operation: 'update',
+                    requestResourceData: updateData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
     };
 
     const removeFromCart = async (productId: string) => {
         if (!firestore || !user) return;
-        try {
-            const cartDocRef = doc(firestore, 'users', user.uid, 'cart', productId);
-            await deleteDoc(cartDocRef);
-            toast({ title: 'Item Removed', description: 'The item has been removed from your cart.' });
-        } catch (error) {
-            console.error("Error removing from cart: ", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not remove item from cart.' });
-        }
+        
+        const cartDocRef = doc(firestore, 'users', user.uid, 'cart', productId);
+        
+        deleteDoc(cartDocRef)
+            .then(() => {
+                toast({ title: 'Item Removed', description: 'The item has been removed from your cart.' });
+            })
+            .catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: cartDocRef.path,
+                    operation: 'delete',
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
     };
 
     const clearCart = async () => {

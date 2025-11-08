@@ -14,6 +14,8 @@ import { useFirestore, useCollection } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
 import { collection, doc, setDoc, addDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 type Conversation = {
     id: string; // The user's UID
@@ -60,10 +62,17 @@ export default function ConversationsPage() {
 
   const handleSelectConversation = async (conversationId: string) => {
     setSelectedConversationId(conversationId);
-    // Mark conversation as read
     if (firestore) {
         const convoRef = doc(firestore, 'conversations', conversationId);
-        await setDoc(convoRef, { isReadByAdmin: true }, { merge: true });
+        const updateData = { isReadByAdmin: true };
+        setDoc(convoRef, updateData, { merge: true }).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: convoRef.path,
+                operation: 'update',
+                requestResourceData: updateData
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
     }
   };
 
@@ -88,12 +97,22 @@ export default function ConversationsPage() {
             lastMessageAt: serverTimestamp(),
         };
 
-       try {
-            await addDoc(messagesRef, messagePayload);
-            await setDoc(conversationRef, conversationPayload, { merge: true });
-        } catch (error) {
-            console.error("Error sending message:", error);
-        }
+        addDoc(messagesRef, messagePayload).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: messagesRef.path,
+                operation: 'create',
+                requestResourceData: messagePayload,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
+        setDoc(conversationRef, conversationPayload, { merge: true }).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: conversationRef.path,
+                operation: 'update',
+                requestResourceData: conversationPayload,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
   }
   
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);

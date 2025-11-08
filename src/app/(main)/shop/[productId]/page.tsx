@@ -24,6 +24,8 @@ import { collection, doc, addDoc, runTransaction, serverTimestamp } from 'fireba
 import { useMemoFirebase } from '@/firebase/utils';
 import type { Review } from '@/lib/data';
 import { formatDistanceToNow } from 'date-fns';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function ProductDetailPage() {
   const { products, findById } = useProducts();
@@ -48,7 +50,7 @@ export default function ProductDetailPage() {
       return collection(firestore, `products/${productId}/reviews`);
   }, [firestore, productId]);
 
-  const { data: reviews, loading: reviewsLoading } = useCollection<Review>(reviewsQuery);
+  const { data: reviews, loading: reviewsLoading, error: reviewsError } = useCollection<Review>(reviewsQuery);
   
   const relatedProducts = products.filter(p => p.category === product?.category && p.id !== product?.id).slice(0, 4);
 
@@ -107,47 +109,42 @@ export default function ProductDetailPage() {
         createdAt: serverTimestamp(),
     };
     
-    try {
-      const productRef = doc(firestore, 'products', product.id);
-      const reviewsRef = collection(productRef, 'reviews');
+    const productRef = doc(firestore, 'products', product.id);
+    const reviewsRef = collection(productRef, 'reviews');
 
-      await runTransaction(firestore, async (transaction) => {
-          const productDoc = await transaction.get(productRef);
-          if (!productDoc.exists()) {
-              throw "Product does not exist!";
-          }
+    runTransaction(firestore, async (transaction) => {
+        const productDoc = await transaction.get(productRef);
+        if (!productDoc.exists()) {
+            throw "Product does not exist!";
+        }
 
-          // Add the new review
-          transaction.set(doc(reviewsRef), reviewData);
+        transaction.set(doc(reviewsRef), reviewData);
 
-          // Calculate new average rating
-          const currentRating = productDoc.data().rating || 0;
-          const currentReviewCount = productDoc.data().reviewCount || 0;
-          const newReviewCount = currentReviewCount + 1;
-          const newTotalRating = (currentRating * currentReviewCount) + newReviewRating;
-          const newAverageRating = newTotalRating / newReviewCount;
-          
-          // Update the product document
-          transaction.update(productRef, {
-              rating: newAverageRating,
-              reviewCount: newReviewCount
-          });
-      });
-
-      toast({
-          title: 'Review Submitted!',
-          description: 'Thank you for your feedback.',
-      });
-      setNewReviewRating(0);
-      setNewReviewText('');
-    } catch (error) {
-        console.error("Review submission failed: ", error);
-        toast({
-            variant: 'destructive',
-            title: 'Submission Failed',
-            description: 'Could not submit your review. Please try again.',
+        const currentRating = productDoc.data().rating || 0;
+        const currentReviewCount = productDoc.data().reviewCount || 0;
+        const newReviewCount = currentReviewCount + 1;
+        const newTotalRating = (currentRating * currentReviewCount) + newReviewRating;
+        const newAverageRating = newTotalRating / newReviewCount;
+        
+        transaction.update(productRef, {
+            rating: newAverageRating,
+            reviewCount: newReviewCount
         });
-    }
+    }).then(() => {
+        toast({
+            title: 'Review Submitted!',
+            description: 'Thank you for your feedback.',
+        });
+        setNewReviewRating(0);
+        setNewReviewText('');
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: reviewsRef.path,
+            operation: 'create',
+            requestResourceData: reviewData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   }
 
   return (

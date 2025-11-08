@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth, useFirestore } from "@/firebase";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 const loginSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address." }),
@@ -100,7 +102,14 @@ export default function LoginPage() {
                     role: "Customer", // Default role for all new signups
                     createdAt: serverTimestamp(),
                 };
-                await setDoc(userDocRef, userProfile);
+                setDoc(userDocRef, userProfile).catch(async (serverError) => {
+                    const permissionError = new FirestorePermissionError({
+                        path: userDocRef.path,
+                        operation: 'create',
+                        requestResourceData: userProfile,
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                });
             }
 
             toast({
