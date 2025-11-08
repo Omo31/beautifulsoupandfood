@@ -16,46 +16,58 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // In a real app, you would lock this down to specific admin UIDs
+    // Check for a custom claim `role` on the user's auth token.
+    // This claim must be set via the Firebase Admin SDK.
+    function hasRole(role) {
+        return request.auth.token.role == role;
+    }
+
+    // Admin roles are 'Owner' or 'Content Manager'
     function isAdmin() {
-        // For now, any signed-in user can be an "admin" for testing purposes.
-        // In production, you would check for a custom claim:
-        // return request.auth.token.admin == true;
-        return isSignedIn();
+        return hasRole('Owner') || hasRole('Content Manager');
     }
     
+    // The highest privilege, only for the 'Owner'
+    function isOwnerRole() {
+        return hasRole('Owner');
+    }
+
     // Products: Allow public read, but restrict write access to admins.
     match /products/{productId} {
       allow read: if true;
       allow write: if isAdmin();
 
-      // Reviews: Allow any signed-in user to create a review.
+      // Reviews: Allow any verified, signed-in user to create a review.
       // Do not allow updates or deletes to maintain integrity.
+      // An owner can delete reviews if necessary.
       match /reviews/{reviewId} {
         allow read: if true;
-        allow create: if isSignedIn();
-        allow update, delete: if false;
+        allow create: if isSignedIn() && isVerified();
+        allow update: if false;
+        allow delete: if isOwnerRole();
       }
     }
 
-    // Users: Users can create their own profile and read/write to it IF their email is verified.
-    // They cannot read other users' profiles or delete their own profile.
+    // Users: Users can read/update their own profile. Only Owners can manage all users.
     match /users/{userId} {
-      allow read, update: if isVerified() && isOwner(userId);
-      // Allow creation during signup, but subsequent actions require verification.
+      allow read, update: if isOwner(userId);
+      // Allow creation during signup.
       allow create: if isSignedIn();
-      allow delete: if false;
+      // Only the Owner can delete user profiles.
+      allow delete: if isOwnerRole();
       
-      // Admins can read user profiles, but not list all of them for security.
+      // Admins can get a specific user's profile, but not list all of them.
       allow get: if isAdmin();
-      allow list: if false;
+      // Listing all users is restricted for security, even for admins,
+      // unless they are the Owner.
+      allow list: if isOwnerRole();
 
       // Cart: Users can read and write to their own cart subcollection.
       match /cart/{productId} {
         allow read, write, delete: if isOwner(userId);
       }
       
-      // Orders: Users can read their own orders and their items.
+      // Orders: Users can create and read their own orders and their items.
       match /orders/{orderId} {
         allow read, create: if isOwner(userId);
         
@@ -65,7 +77,7 @@ service cloud.firestore {
       }
     }
     
-    // Quotes: Users can create their own quote requests and read them.
+    // Quotes: Users can create their own quote requests. Admins can read/update them.
     match /quotes/{quoteId} {
       allow create: if isSignedIn();
       allow read: if isOwner(request.resource.data.userId) || isAdmin();
@@ -74,13 +86,14 @@ service cloud.firestore {
       allow list, delete: if isAdmin(); 
     }
 
-    // Transactions: Only admins can read and create transactions.
+    // Transactions: Only admins can read and write transactions.
     match /transactions/{transactionId} {
         allow read, write: if isAdmin();
     }
 
     // Conversations: Users can access their own conversation, Admins can access all.
     match /conversations/{conversationId} {
+      // isOwner check ensures user can only manage their own conversation document
       allow get, create, update: if isOwner(conversationId);
       allow list, read, write: if isAdmin();
 
