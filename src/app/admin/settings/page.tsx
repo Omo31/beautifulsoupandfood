@@ -36,6 +36,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection } from '@/firebase';
@@ -50,7 +51,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 const initialRoles = [
   {
     name: 'Owner',
-    permissions: {},
+    permissions: {}, // In this mock, empty means all permissions
   },
   {
     name: 'Content Manager',
@@ -63,7 +64,7 @@ const initialRoles = [
   },
   {
     name: 'Customer',
-    permissions: {},
+    permissions: {}, // No admin permissions
   },
 ];
 
@@ -107,7 +108,7 @@ export default function SettingsPage() {
   
   const [lagosLgas, setLagosLgas] = useState<LgaShippingZone[]>([]);
 
-  // Roles are not saved to Firestore in this version
+  // Roles are now managed in state
   const [roles, setRoles] = useState(initialRoles);
   const [isNewRoleOpen, setNewRoleOpen] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
@@ -221,6 +222,11 @@ export default function SettingsPage() {
           toast({ title: 'Role Created', description: `The role "${newRoleName.trim()}" has been successfully created. (This is a demo and is not saved)`});
       }
   };
+  
+  const handleDeleteRole = (roleName: string) => {
+    setRoles(roles.filter(role => role.name !== roleName));
+    toast({ title: 'Role Deleted', description: `The role "${roleName}" has been removed. (This is a demo and is not saved)`, variant: 'destructive'});
+  }
 
   if (settingsLoading) {
     return (
@@ -537,7 +543,26 @@ export default function SettingsPage() {
                         Define user roles and their access levels across the application.
                     </CardDescription>
                 </div>
-                <Button disabled><PlusCircle className="mr-2 h-4 w-4"/> Create New Role</Button>
+                <Dialog open={isNewRoleOpen} onOpenChange={setNewRoleOpen}>
+                    <DialogTrigger asChild>
+                        <Button><PlusCircle className="mr-2 h-4 w-4"/> Create New Role</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Create New Role</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="new-role-name">Role Name</Label>
+                                <Input id="new-role-name" value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} placeholder="e.g., Shipper" />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setNewRoleOpen(false)}>Cancel</Button>
+                            <Button onClick={handleCreateRole}>Create Role</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent>
@@ -545,10 +570,11 @@ export default function SettingsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="font-bold">Role</TableHead>
+                      <TableHead className="font-bold w-[200px]">Role</TableHead>
                       {permissionModules.map(module => (
                         <TableHead key={module} className="text-center">{module}</TableHead>
                       ))}
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -580,6 +606,17 @@ export default function SettingsPage() {
                                </TableCell>
                            )
                         })}
+                         <TableCell className="text-right">
+                           <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                disabled={role.name === 'Owner' || role.name === 'Customer'}
+                                onClick={() => handleDeleteRole(role.name)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -587,7 +624,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
              <CardFooter>
-                <p className="text-sm text-muted-foreground">Role management is handled on the Users page.</p>
+                <p className="text-sm text-muted-foreground">Note: Role and permission changes here are for UI demonstration and are not saved to the backend.</p>
             </CardFooter>
           </Card>
         </TabsContent>
