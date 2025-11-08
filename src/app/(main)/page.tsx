@@ -10,6 +10,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { testimonials, homepageServices, HomepageService } from '@/lib/data';
 import { ProductCard } from '@/components/ProductCard';
 import { useProducts } from '@/hooks/use-products';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const iconMap: Record<HomepageService['iconName'], React.ElementType> = {
   PackageSearch,
@@ -121,6 +122,33 @@ export default function HomePage() {
             <div className="relative h-64 rounded-lg overflow-hidden">
                 <Image src="https://picsum.photos/seed/about/600/400" alt="Nigerian market stall" fill className="object-cover" data-ai-hint="nigerian market"/>
             </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section>
+        <h2 className="text-3xl font-bold font-headline text-center">What Our Customers Say</h2>
+        <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
+          {testimonials.map(testimonial => {
+            const image = PlaceHolderImages.find(p => p.id === testimonial.imageId);
+            return (
+              <Card key={testimonial.id} className="flex flex-col">
+                <CardContent className="pt-6 flex-1">
+                  <p className="italic text-muted-foreground">"{testimonial.comment}"</p>
+                </CardContent>
+                <CardHeader className="flex-row items-center gap-4">
+                   <Avatar>
+                    {image && <AvatarImage src={image.imageUrl} alt={testimonial.name} />}
+                    <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold">{testimonial.name}</p>
+                    <p className="text-sm text-muted-foreground">{testimonial.location}</p>
+                  </div>
+                </CardHeader>
+              </Card>
+            )
+          })}
         </div>
       </section>
 

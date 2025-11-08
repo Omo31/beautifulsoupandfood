@@ -4,9 +4,6 @@
 import { ProductCard } from "@/components/ProductCard";
 import { useProducts } from "@/hooks/use-products";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Star } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SoupPage() {
@@ -48,53 +45,6 @@ export default function SoupPage() {
                     ))}
                 </div>
             )}
-
-
-            <Separator className="my-12" />
-
-            <section>
-                <h2 className="text-3xl font-bold font-headline mb-8 text-center">Customer Reviews</h2>
-                <div className="grid md:grid-cols-2 gap-8">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center gap-4">
-                                <Avatar>
-                                    <AvatarImage src="https://picsum.photos/seed/rev1/40/40" />
-                                    <AvatarFallback>CN</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <CardTitle>Chiamaka Nwosu</CardTitle>
-                                    <div className="flex items-center gap-0.5">
-                                        {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 text-yellow-400 fill-yellow-400" />)}
-                                    </div>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground italic">"The Egusi soup was absolutely divine! It tasted just like home. I'll definitely be ordering again."</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center gap-4">
-                                <Avatar>
-                                    <AvatarImage src="https://picsum.photos/seed/rev2/40/40" />
-                                    <AvatarFallback>BO</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <CardTitle>Bayo Ojo</CardTitle>
-                                    <div className="flex items-center gap-0.5">
-                                         {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 text-yellow-400 fill-yellow-400" />)}
-                                    </div>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                             <p className="text-muted-foreground italic">"I tried the Banga soup and was blown away. So rich and flavorful. Quick delivery too!"</p>
-                        </CardContent>
-                    </Card>
-                </div>
-            </section>
         </div>
     )
 }
