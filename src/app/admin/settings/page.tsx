@@ -29,6 +29,9 @@ import {
   Trash2,
   MoreHorizontal,
   FilePenLine,
+  PackageSearch,
+  Gift,
+  Boxes,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -602,4 +605,6 @@ export default function SettingsPage() {
     </div>
   );
 }
+    
+
     
