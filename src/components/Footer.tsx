@@ -11,6 +11,7 @@ export function Footer() {
 
     const socialLinks = settings?.footer?.socialLinks || { facebook: '#', instagram: '#', twitter: '#' };
     const legalLinks = settings?.footer?.legalLinks || { terms: '#', privacy: '#' };
+    const openingHours = settings?.footer?.openingHours || 'Mon - Fri: 9am - 6pm';
 
     return (
         <footer className="bg-muted text-muted-foreground">
@@ -52,6 +53,7 @@ export function Footer() {
                 </div>
                 <div className="border-t mt-8 pt-6 text-center text-sm">
                     <p>&copy; {new Date().getFullYear()} BeautifulSoup&Food. All rights reserved.</p>
+                    <p className="mt-1">{openingHours}</p>
                 </div>
             </div>
         </footer>
