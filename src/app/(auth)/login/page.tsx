@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useFirestore } from "@/firebase";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const loginSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address." }),
@@ -98,6 +98,7 @@ export default function LoginPage() {
                     phone: user.phoneNumber || "",
                     shippingAddress: "",
                     role: "Customer", // Default role for all new signups
+                    createdAt: serverTimestamp(),
                 };
                 await setDoc(userDocRef, userProfile);
             }

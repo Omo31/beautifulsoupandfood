@@ -19,14 +19,13 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import { collection, doc, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type UserWithStatus = UserProfile & { 
     status: 'Active' | 'Disabled'; 
     email: string; // Assuming email is available on the user object, not profile
-    joinDate: string; // Assuming this is available
 };
 
 const RoleBadge = ({ role }: { role: UserProfile['role'] }) => {
@@ -58,7 +57,6 @@ export default function UsersPage() {
         return userProfiles.map((profile, i) => ({
             ...profile,
             email: `${profile.firstName.toLowerCase()}.${profile.lastName.toLowerCase()}@example.com`,
-            joinDate: new Date(Date.now() - i * 1000 * 60 * 60 * 24 * 5).toISOString(),
             status: 'Active'
         }));
     }, [userProfiles]);
@@ -119,7 +117,7 @@ export default function UsersPage() {
             } else {
                 // This only creates the profile, not the Auth user.
                 const usersCollection = collection(firestore, 'users');
-                await addDoc(usersCollection, { firstName, lastName, role, phone: '', shippingAddress: '' });
+                await addDoc(usersCollection, { firstName, lastName, role, phone: '', shippingAddress: '', createdAt: serverTimestamp() });
                 toast({ title: "User Profile Created", description: `A new profile for ${firstName} ${lastName} has been created.` });
             }
             handleCloseModal();
@@ -243,7 +241,7 @@ export default function UsersPage() {
                              <TableCell>
                                 <StatusBadge status={user.status} />
                             </TableCell>
-                            <TableCell>{format(new Date(user.joinDate), 'yyyy-MM-dd')}</TableCell>
+                            <TableCell>{user.createdAt ? format(user.createdAt.toDate(), 'yyyy-MM-dd') : 'N/A'}</TableCell>
                             <TableCell className="text-right">
                                <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -337,5 +335,3 @@ export default function UsersPage() {
         </div>
     );
 }
-
-    

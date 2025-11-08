@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useFirestore } from "@/firebase";
 import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const signupSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -72,6 +72,7 @@ export default function SignupPage() {
                 phone: data.phone,
                 shippingAddress: data.shippingAddress,
                 role: "Customer",
+                createdAt: serverTimestamp(),
             };
 
             // Create user document in Firestore

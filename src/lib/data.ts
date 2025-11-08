@@ -20,6 +20,7 @@ export type UserProfile = {
   shippingAddress: string;
   role: 'Customer' | 'Content Manager' | 'Owner';
   wishlist?: string[];
+  createdAt: any; // Firestore Timestamp
 };
 
 export type Review = {

@@ -10,25 +10,7 @@ import { useMemoFirebase } from '@/firebase/utils';
 import { collection, collectionGroup, query, where, Timestamp } from 'firebase/firestore';
 import type { Order, UserProfile } from '@/lib/data';
 import { Skeleton } from "@/components/ui/skeleton";
-
-const salesData = [
-  { month: "Jan", sales: 186, revenue: 80 },
-  { month: "Feb", sales: 305, revenue: 200 },
-  { month: "Mar", sales: 237, revenue: 120 },
-  { month: "Apr", sales: 73, revenue: 190 },
-  { month: "May", sales: 209, revenue: 130 },
-  { month: "Jun", sales: 214, revenue: 140 },
-];
-
-const revenueData = [
-    { date: '2024-05-01', revenue: 550 },
-    { date: '2024-05-02', revenue: 680 },
-    { date: '2024-05-03', revenue: 430 },
-    { date: '2024-05-04', revenue: 810 },
-    { date: '2024-05-05', revenue: 760 },
-    { date: '2024-05-06', revenue: 920 },
-    { date: '2024-05-07', revenue: 780 },
-]
+import { subMonths, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
 
 const chartConfig = {
   sales: {
@@ -63,18 +45,53 @@ export default function AdminDashboardPage() {
         const totalSales = deliveredOrders.reduce((acc, o) => acc + o.itemCount, 0);
         const pendingOrders = allOrders.filter(o => o.status === 'Pending' || o.status === 'Awaiting Confirmation').length;
 
-        const oneMonthAgo = new Date();
-        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        const oneMonthAgo = subMonths(new Date(), 1);
+        const newCustomers = allUsers.filter(u => u.createdAt && u.createdAt.toDate() > oneMonthAgo).length;
+
+        // Monthly Sales & Revenue Chart Data
+        const salesData = Array.from({ length: 6 }, (_, i) => {
+            const date = subMonths(new Date(), 5 - i);
+            return {
+                month: format(date, 'MMM'),
+                sales: 0,
+                revenue: 0,
+            };
+        });
+
+        deliveredOrders.forEach(order => {
+            const month = format(order.createdAt.toDate(), 'MMM');
+            const monthIndex = salesData.findIndex(d => d.month === month);
+            if (monthIndex > -1) {
+                salesData[monthIndex].sales += order.itemCount;
+                salesData[monthIndex].revenue += order.total;
+            }
+        });
+
+        // Daily Revenue Chart Data (last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+        const dayInterval = eachDayOfInterval({ start: sevenDaysAgo, end: new Date() });
+        const revenueData = dayInterval.map(day => ({
+             date: format(day, 'yyyy-MM-dd'),
+             revenue: 0
+        }));
         
-        // This part is mocked because joinDate is not in our UserProfile model.
-        // In a real app, you would fetch this from Firebase Auth user records.
-        const newCustomers = allUsers.length > 0 ? Math.floor(allUsers.length / 3) : 0;
+        deliveredOrders.forEach(order => {
+            const orderDate = order.createdAt.toDate();
+            const matchingDay = revenueData.find(d => isSameDay(new Date(d.date), orderDate));
+            if (matchingDay) {
+                matchingDay.revenue += order.total;
+            }
+        });
+
 
         return {
             totalRevenue,
             newCustomers,
             totalSales,
-            pendingOrders
+            pendingOrders,
+            salesData,
+            revenueData
         };
     }, [allOrders, allUsers]);
 
@@ -126,7 +143,7 @@ export default function AdminDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">+{dashboardData.newCustomers}</div>
-                        <p className="text-xs text-muted-foreground">In the last month (mocked)</p>
+                        <p className="text-xs text-muted-foreground">In the last month</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -154,11 +171,11 @@ export default function AdminDashboardPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Sales & Revenue</CardTitle>
-                        <CardDescription>January - June 2024 (Mock Data)</CardDescription>
+                        <CardDescription>Last 6 Months</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-                            <RechartsBarChart accessibilityLayer data={salesData}>
+                            <RechartsBarChart accessibilityLayer data={dashboardData.salesData}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis
                                     dataKey="month"
@@ -167,11 +184,12 @@ export default function AdminDashboardPage() {
                                     axisLine={false}
                                     tickFormatter={(value) => value.slice(0, 3)}
                                 />
-                                <YAxis />
+                                <YAxis yAxisId="left" orientation="left" stroke="hsl(var(--primary))" />
+                                <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--accent))" />
                                 <ChartTooltip content={<ChartTooltipContent />} />
                                 <ChartLegend content={<ChartLegendContent />} />
-                                <Bar dataKey="sales" fill="var(--color-sales)" radius={4} />
-                                <Bar dataKey="revenue" fill="var(--color-revenue)" radius={4} />
+                                <Bar yAxisId="left" dataKey="sales" fill="var(--color-sales)" radius={4} />
+                                <Bar yAxisId="right" dataKey="revenue" fill="var(--color-revenue)" radius={4} />
                             </RechartsBarChart>
                         </ChartContainer>
                     </CardContent>
@@ -179,11 +197,11 @@ export default function AdminDashboardPage() {
                  <Card>
                     <CardHeader>
                         <CardTitle>Revenue Overview</CardTitle>
-                        <CardDescription>Last 7 Days (Mock Data)</CardDescription>
+                        <CardDescription>Last 7 Days</CardDescription>
                     </CardHeader>
                     <CardContent>
                          <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-                            <RechartsLineChart data={revenueData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
+                            <RechartsLineChart data={dashboardData.revenueData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="date" tickFormatter={(val) => new Date(val).toLocaleString('en-US', { day: 'numeric', month: 'short'})} />
                                 <YAxis />

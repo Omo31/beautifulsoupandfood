@@ -20,10 +20,10 @@ import {
 import { useProducts } from '@/hooks/use-products';
 import { useCollection, useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import { collection, collectionGroup } from 'firebase/firestore';
-import type { Order, UserProfile } from '@/lib/data';
+import { collection, collectionGroup, getDocs, query, where } from 'firebase/firestore';
+import type { Order, OrderItem, UserProfile } from '@/lib/data';
 import { DollarSign, ShoppingCart, Users, TrendingUp } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -43,6 +43,41 @@ export default function AnalyticsPage() {
     const { data: allOrders, loading: ordersLoading } = useCollection<Order>(ordersQuery);
     const { data: allUsers, loading: usersLoading } = useCollection<UserProfile>(usersQuery);
     const { products, loading: productsLoading } = useProducts();
+    const [allOrderItems, setAllOrderItems] = useState<OrderItem[]>([]);
+    const [itemsLoading, setItemsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchAllItems = async () => {
+            if (!firestore || !allOrders.length) {
+                setItemsLoading(false);
+                return;
+            };
+
+            setItemsLoading(true);
+            const itemPromises = allOrders.map(order => {
+                 // The parent of an order is the user document.
+                const userDocId = (order as any).ref.parent.parent.id;
+                const itemsRef = collection(firestore, 'users', userDocId, 'orders', order.id, 'items');
+                return getDocs(itemsRef);
+            });
+            
+            const itemSnapshots = await Promise.all(itemPromises);
+            const allItems: OrderItem[] = [];
+            itemSnapshots.forEach(snapshot => {
+                snapshot.forEach(doc => {
+                    allItems.push(doc.data() as OrderItem);
+                })
+            })
+            setAllOrderItems(allItems);
+            setItemsLoading(false);
+        }
+        
+        if (!ordersLoading) {
+            fetchAllItems();
+        }
+
+    }, [allOrders, firestore, ordersLoading]);
+
 
   const analyticsData = useMemo(() => {
     const deliveredOrders = allOrders.filter((o) => o.status === 'Delivered');
@@ -54,20 +89,34 @@ export default function AnalyticsPage() {
     const monthlyGoal = 500000;
     const monthlyGoalProgress = (totalRevenue / monthlyGoal) * 100;
 
-    const topProducts = [...products]
-      .sort((a, b) => b.reviewCount - a.reviewCount)
-      .slice(0, 5)
-      .map((p) => ({ ...p, sales: p.reviewCount * 10 })); // Simulate sales based on review count
+    const salesByProduct = allOrderItems.reduce((acc, item) => {
+        acc[item.productId] = (acc[item.productId] || 0) + item.quantity;
+        return acc;
+    }, {} as Record<string, number>);
+
+    const topProducts = Object.entries(salesByProduct)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([productId, sales]) => {
+            const product = products.find(p => p.id === productId);
+            return {
+                id: productId,
+                name: product?.name || 'Unknown Product',
+                sales: sales
+            };
+        });
 
     const orderStatusData = allOrders.reduce((acc, order) => {
       acc[order.status] = (acc[order.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const salesByCategory = products.reduce((acc, product) => {
+    const salesByCategory = allOrderItems.reduce((acc, item) => {
+        const product = products.find(p => p.id === item.productId);
+        if (!product) return acc;
+        
         const categoryKey = product.category === 'soup' ? 'Soups' : 'Foodstuff';
-        //Simulate sales data
-        const sales = product.price * product.reviewCount;
+        const sales = item.price * item.quantity;
         acc[categoryKey] = (acc[categoryKey] || 0) + sales;
         return acc;
     }, {} as Record<string, number>);
@@ -83,11 +132,11 @@ export default function AnalyticsPage() {
       orderStatusData,
       salesByCategory
     };
-  }, [allOrders, allUsers, products]);
+  }, [allOrders, allUsers, products, allOrderItems]);
   
   const totalCategorySales = Object.values(analyticsData.salesByCategory).reduce((sum, current) => sum + current, 0);
 
-  const loading = ordersLoading || usersLoading || productsLoading;
+  const loading = ordersLoading || usersLoading || productsLoading || itemsLoading;
 
   if (loading) {
     return (
@@ -194,7 +243,7 @@ export default function AnalyticsPage() {
           <CardHeader>
             <CardTitle>Top Selling Products</CardTitle>
             <CardDescription>
-              Your most popular products by sales volume.
+              Your most popular products by units sold.
             </CardDescription>
           </CardHeader>
           <CardContent>

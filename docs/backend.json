@@ -75,9 +75,14 @@
           "items": {
             "type": "string"
           }
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the user account was created."
         }
       },
-      "required": ["firstName", "lastName", "role"]
+      "required": ["firstName", "lastName", "role", "createdAt"]
     },
     "CartItem": {
       "title": "Cart Item",
