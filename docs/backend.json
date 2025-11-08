@@ -326,6 +326,68 @@
         "imageId": { "type": "string" }
       },
       "required": ["name", "location", "comment", "imageId"]
+    },
+    "AppSettings": {
+      "title": "Application Settings",
+      "description": "A single document to hold various dynamic configurations for the app.",
+      "type": "object",
+      "properties": {
+        "homepage": {
+          "type": "object",
+          "properties": {
+            "heroTitle": { "type": "string" },
+            "heroSubtitle": { "type": "string" },
+            "videoTitle": { "type": "string" },
+            "videoId": { "type": "string" },
+            "videoDescription": { "type": "string" }
+          }
+        },
+        "footer": {
+            "type": "object",
+            "properties": {
+                "socialLinks": {
+                    "type": "object",
+                    "properties": {
+                        "facebook": { "type": "string" },
+                        "instagram": { "type": "string" },
+                        "twitter": { "type": "string" }
+                    }
+                },
+                "legalLinks": {
+                    "type": "object",
+                    "properties": {
+                        "terms": { "type": "string" },
+                        "privacy": { "type": "string" }
+                    }
+                },
+                "openingHours": { "type": "string" }
+            }
+        },
+        "shipping": {
+            "type": "object",
+            "properties": {
+                "lagosLgas": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": { "type": "string" },
+                            "name": { "type": "string" },
+                            "price": { "type": "number" }
+                        },
+                        "required": ["id", "name", "price"]
+                    }
+                }
+            }
+        },
+        "customOrder": {
+            "type": "object",
+            "properties": {
+                "measures": { "type": "array", "items": { "type": "string" } },
+                "services": { "type": "array", "items": { "type": "string" } }
+            }
+        }
+      }
     }
   },
   "auth": {
@@ -403,6 +465,10 @@
     "/testimonials/{testimonialId}": {
         "schema": { "$ref": "#/entities/Testimonial" },
         "description": "Collection of curated testimonials for the homepage."
+    },
+    "/settings/app": {
+        "schema": { "$ref": "#/entities/AppSettings" },
+        "description": "A single document to hold all dynamic application settings."
     }
   }
 }

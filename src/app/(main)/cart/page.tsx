@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Image from "next/image";
@@ -10,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Minus, Plus, Trash2, Info, ArrowLeft, Truck } from "lucide-react";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { lagosLgas } from "@/lib/shipping";
+import { lagosLgas as defaultLgas } from "@/lib/shipping";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,9 +24,11 @@ import { useFirestore, useUser } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { collection, writeBatch, serverTimestamp } from "firebase/firestore";
+import { useSettings } from "@/hooks/use-settings";
 
 export default function CartPage() {
     const { cartItems, cartLoading, updateQuantity, removeFromCart, subtotal, clearCart } = useCart();
+    const { settings } = useSettings();
     const [shippingMethod, setShippingMethod] = useState("pickup");
     const [selectedLga, setSelectedLga] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -35,6 +38,7 @@ export default function CartPage() {
     const { toast } = useToast();
     const router = useRouter();
 
+    const lagosLgas = settings?.shipping?.lagosLgas || defaultLgas;
 
     const handleQuantityChange = (productId: string, change: 'increase' | 'decrease') => {
         const item = cartItems.find(i => i.id === productId);
@@ -60,7 +64,7 @@ export default function CartPage() {
             return lga ? lga.price : 0;
         }
         return 0;
-    }, [shippingMethod, selectedLga]);
+    }, [shippingMethod, selectedLga, lagosLgas]);
 
     const total = subtotal + serviceCharge + shippingFee;
     

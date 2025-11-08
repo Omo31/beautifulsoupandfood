@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Image from 'next/image';
@@ -7,13 +8,14 @@ import { ArrowRight, Star, PackageSearch, Gift, Boxes } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { homepageServices, HomepageService, Testimonial } from '@/lib/data';
+import { homepageServices as defaultHomepageServices, HomepageService, Testimonial } from '@/lib/data';
 import { ProductCard } from '@/components/ProductCard';
 import { useProducts } from '@/hooks/use-products';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCollection, useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
 import { collection } from 'firebase/firestore';
+import { useSettings } from '@/hooks/use-settings';
 
 const iconMap: Record<HomepageService['iconName'], React.ElementType> = {
   PackageSearch,
@@ -24,6 +26,7 @@ const iconMap: Record<HomepageService['iconName'], React.ElementType> = {
 export default function HomePage() {
   const { products } = useProducts();
   const firestore = useFirestore();
+  const { settings } = useSettings();
 
   const testimonialsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -34,9 +37,13 @@ export default function HomePage() {
 
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero');
   const featuredProducts = products.slice(0, 4);
-  const videoId = "dQw4w9WgXcQ";
-  const videoTitle = "Our Story";
-  const videoDescription = "Watch how we source the freshest ingredients and prepare them with love, bringing the taste of Nigeria to your kitchen. From the local market to your dinner table, our commitment to quality and tradition is in every meal.";
+
+  const heroTitle = settings?.homepage?.heroTitle || "Authentic Nigerian Flavors, Delivered.";
+  const heroSubtitle = settings?.homepage?.heroSubtitle || "From our kitchen to yours, experience the rich taste of Nigeria with our fresh ingredients and ready-to-eat soups.";
+  const videoId = settings?.homepage?.videoId || "dQw4w9WgXcQ";
+  const videoTitle = settings?.homepage?.videoTitle || "Our Story";
+  const videoDescription = settings?.homepage?.videoDescription || "Watch how we source the freshest ingredients and prepare them with love, bringing the taste of Nigeria to your kitchen. From the local market to your dinner table, our commitment to quality and tradition is in every meal.";
+  const homepageServices = defaultHomepageServices; // Not dynamic in this version
 
   return (
     <div className="space-y-16 sm:space-y-24">
@@ -57,10 +64,10 @@ export default function HomePage() {
         </div>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
           <h1 className="text-4xl md:text-6xl font-headline font-bold drop-shadow-lg">
-            Authentic Nigerian Flavors, Delivered.
+            {heroTitle}
           </h1>
           <p className="mt-4 max-w-2xl text-lg md:text-xl text-gray-200 drop-shadow-md">
-            From our kitchen to yours, experience the rich taste of Nigeria with our fresh ingredients and ready-to-eat soups.
+            {heroSubtitle}
           </p>
           <Button asChild size="lg" className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90">
             <Link href="/shop">

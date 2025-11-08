@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { useState, useMemo, type FormEvent } from 'react';
+import { useState, useMemo, type FormEvent, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Card,
@@ -29,9 +30,6 @@ import {
   Trash2,
   MoreHorizontal,
   FilePenLine,
-  PackageSearch,
-  Gift,
-  Boxes,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -49,12 +47,14 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { lagosLgas as initialLagosLgas, LgaShippingZone } from '@/lib/shipping';
-import { homepageServices as initialHomepageServices, HomepageService, Testimonial } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
 import { collection, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import type { Testimonial } from '@/lib/data';
+import { useSettings } from '@/hooks/use-settings';
+import type { LgaShippingZone } from '@/lib/shipping';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const initialRoles = [
@@ -80,12 +80,11 @@ const initialRoles = [
 const permissionModules = ['Dashboard', 'Orders', 'Users', 'Inventory', 'Conversations', 'Purchase Orders', 'Accounting', 'Analytics', 'Settings'];
 const permissionActions = ['View', 'Create', 'Edit', 'Delete'];
 
-const initialMeasures = ['Grams (g)', 'Kilograms (kg)', 'Pieces', 'Bunches', 'Wraps'];
-const initialServices = ['Gift Wrapping', 'Special Packaging'];
 
 export default function SettingsPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { settings, updateSettings, loading: settingsLoading } = useSettings();
 
   const testimonialsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -93,54 +92,53 @@ export default function SettingsPage() {
   }, [firestore]);
   const { data: testimonials, loading: testimonialsLoading } = useCollection<Testimonial>(testimonialsQuery);
 
-  
-  // States for Homepage settings
-  const [heroTitle, setHeroTitle] = useState("Authentic Nigerian Flavors, Delivered.");
-  const [heroSubtitle, setHeroSubtitle] = useState("From our kitchen to yours, experience the rich taste of Nigeria with our fresh ingredients and ready-to-eat soups.");
-  const [videoId, setVideoId] = useState("dQw4w9WgXcQ");
-  const [videoTitle, setVideoTitle] = useState("Our Story");
-  const [videoDescription, setVideoDescription] = useState("A short description of the video.");
-  const [homepageServices, setHomepageServices] = useState<HomepageService[]>(initialHomepageServices);
-  const [newHomepageService, setNewHomepageService] = useState({ name: '', description: '', iconName: 'PackageSearch' as HomepageService['iconName'] });
+  // States for local form management
+  const [heroTitle, setHeroTitle] = useState('');
+  const [heroSubtitle, setHeroSubtitle] = useState('');
+  const [videoId, setVideoId] = useState('');
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoDescription, setVideoDescription] = useState('');
   const [newTestimonial, setNewTestimonial] = useState({ name: '', location: '', comment: '', imageId: '' });
-
-
-  // States for Footer settings
-  const [socialLinks, setSocialLinks] = useState({ facebook: '', instagram: '', twitter: '' });
-  const [legalLinks, setLegalLinks] = useState({ terms: '/terms-of-service', privacy: '/privacy-policy' });
-  const [openingHours, setOpeningHours] = useState('Mon - Fri: 9am - 6pm');
   
-  // States for Custom Order settings
-  const [measures, setMeasures] = useState(initialMeasures);
-  const [services, setServices] = useState(initialServices);
+  const [socialLinks, setSocialLinks] = useState({ facebook: '', instagram: '', twitter: '' });
+  const [legalLinks, setLegalLinks] = useState({ terms: '', privacy: '' });
+  const [openingHours, setOpeningHours] = useState('');
+
+  const [measures, setMeasures] = useState<string[]>([]);
+  const [services, setServices] = useState<string[]>([]);
   const [newMeasure, setNewMeasure] = useState('');
   const [newService, setNewService] = useState('');
+  
+  const [lagosLgas, setLagosLgas] = useState<LgaShippingZone[]>([]);
 
-  // State for Shipping settings
-  const [lagosLgas, setLagosLgas] = useState<LgaShippingZone[]>(initialLagosLgas);
-
-  // States for Roles & Permissions settings
+  // Roles are not saved to Firestore in this version
   const [roles, setRoles] = useState(initialRoles);
   const [isNewRoleOpen, setNewRoleOpen] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
-  
-  const showToast = (title: string, description: string) => {
-    toast({ title, description });
-  };
 
-  const handleAddHomepageService = () => {
-    if (newHomepageService.name.trim() && newHomepageService.description.trim()) {
-        const newService: HomepageService = {
-            id: `service-${Date.now()}`,
-            ...newHomepageService
-        };
-        setHomepageServices([...homepageServices, newService]);
-        setNewHomepageService({ name: '', description: '', iconName: 'PackageSearch' });
+  // Populate local state when settings are loaded from Firestore
+  useEffect(() => {
+    if (settings) {
+      setHeroTitle(settings.homepage?.heroTitle || "Authentic Nigerian Flavors, Delivered.");
+      setHeroSubtitle(settings.homepage?.heroSubtitle || "From our kitchen to yours, experience the rich taste of Nigeria with our fresh ingredients and ready-to-eat soups.");
+      setVideoId(settings.homepage?.videoId || 'dQw4w9WgXcQ');
+      setVideoTitle(settings.homepage?.videoTitle || 'Our Story');
+      setVideoDescription(settings.homepage?.videoDescription || 'A short description of the video.');
+
+      setSocialLinks(settings.footer?.socialLinks || { facebook: '', instagram: '', twitter: '' });
+      setLegalLinks(settings.footer?.legalLinks || { terms: '/terms-of-service', privacy: '/privacy-policy' });
+      setOpeningHours(settings.footer?.openingHours || 'Mon - Fri: 9am - 6pm');
+      
+      setMeasures(settings.customOrder?.measures || ['Grams (g)', 'Kilograms (kg)', 'Pieces', 'Bunches', 'Wraps']);
+      setServices(settings.customOrder?.services || ['Gift Wrapping', 'Special Packaging']);
+      setLagosLgas(settings.shipping?.lagosLgas || []);
     }
-  };
+  }, [settings]);
 
-  const handleRemoveHomepageService = (id: string) => {
-    setHomepageServices(homepageServices.filter(s => s.id !== id));
+  const handleSaveHomepage = () => {
+    updateSettings({
+      homepage: { heroTitle, heroSubtitle, videoId, videoTitle, videoDescription }
+    });
   };
   
   const handleAddTestimonial = async () => {
@@ -167,41 +165,66 @@ export default function SettingsPage() {
       }
   };
 
-
+  const handleSaveFooter = () => {
+    updateSettings({ footer: { socialLinks, legalLinks, openingHours } });
+  };
+  
   const handleAddMeasure = () => {
     if (newMeasure.trim()) {
-      setMeasures([...measures, newMeasure.trim()]);
+      const updatedMeasures = [...measures, newMeasure.trim()];
+      setMeasures(updatedMeasures);
       setNewMeasure('');
+      updateSettings({ customOrder: { ...settings?.customOrder, measures: updatedMeasures }});
     }
   };
 
   const handleRemoveMeasure = (measureToRemove: string) => {
-    setMeasures(measures.filter(m => m !== measureToRemove));
+    const updatedMeasures = measures.filter(m => m !== measureToRemove);
+    setMeasures(updatedMeasures);
+    updateSettings({ customOrder: { ...settings?.customOrder, measures: updatedMeasures }});
   };
   
   const handleAddService = () => {
     if (newService.trim()) {
-      setServices([...services, newService.trim()]);
+      const updatedServices = [...services, newService.trim()];
+      setServices(updatedServices);
       setNewService('');
+      updateSettings({ customOrder: { ...settings?.customOrder, services: updatedServices }});
     }
   };
 
   const handleRemoveService = (serviceToRemove: string) => {
-    setServices(services.filter(s => s !== serviceToRemove));
+    const updatedServices = services.filter(s => s !== serviceToRemove);
+    setServices(updatedServices);
+    updateSettings({ customOrder: { ...settings?.customOrder, services: updatedServices }});
   };
   
   const handleLgaPriceChange = (id: string, price: number) => {
     setLagosLgas(lgas => lgas.map(lga => lga.id === id ? { ...lga, price: isNaN(price) ? 0 : price } : lga));
   };
   
+  const handleSaveShipping = () => {
+      updateSettings({ shipping: { lagosLgas } });
+  };
+
   const handleCreateRole = () => {
       if (newRoleName.trim()) {
           setRoles([...roles, { name: newRoleName.trim(), permissions: {} }]);
           setNewRoleName('');
           setNewRoleOpen(false);
-          showToast('Role Created', `The role "${newRoleName.trim()}" has been successfully created.`);
+          toast({ title: 'Role Created', description: `The role "${newRoleName.trim()}" has been successfully created. (This is a demo and is not saved)`});
       }
   };
+
+  if (settingsLoading) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-3xl font-bold font-headline">Settings</h1>
+        <Skeleton className="h-10 w-full" />
+        <Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -315,7 +338,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={() => showToast('Changes Saved', 'Your homepage settings have been updated.')}>Save Changes</Button>
+              <Button onClick={handleSaveHomepage}>Save Homepage</Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -369,7 +392,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={() => showToast('Changes Saved', 'Your footer settings have been updated.')}>Save Changes</Button>
+              <Button onClick={handleSaveFooter}>Save Footer</Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -419,9 +442,6 @@ export default function SettingsPage() {
                 </div>
               </div>
             </CardContent>
-             <CardFooter>
-                <Button onClick={() => showToast('Configurations Saved', 'Your custom order settings have been updated.')}>Save Configurations</Button>
-            </CardFooter>
           </Card>
         </TabsContent>
 
@@ -466,7 +486,7 @@ export default function SettingsPage() {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button onClick={() => showToast('Prices Saved', 'Your shipping prices have been updated.')}>Save Shipping Prices</Button>
+                    <Button onClick={handleSaveShipping}>Save Shipping Prices</Button>
                 </CardFooter>
             </Card>
         </TabsContent>
@@ -597,7 +617,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
              <CardFooter>
-                <Button onClick={() => showToast('Permissions Saved', 'The roles and permissions have been updated.')}>Save Permissions</Button>
+                <Button onClick={() => toast({ title: 'Permissions Saved', description: 'This is a demo. Permissions are not saved.'})}>Save Permissions</Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -605,6 +625,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-    
-
-    

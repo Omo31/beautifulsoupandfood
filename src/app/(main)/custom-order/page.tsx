@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo } from 'react';
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { lagosLgas } from '@/lib/shipping';
+import { lagosLgas as defaultLgas } from '@/lib/shipping';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFieldArray, useForm } from 'react-hook-form';
@@ -24,6 +25,7 @@ import { useUser, useFirestore } from '@/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useSettings } from '@/hooks/use-settings';
 
 
 const customItemSchema = z.object({
@@ -63,14 +65,18 @@ const customOrderSchema = z.object({
 
 type CustomOrderFormValues = z.infer<typeof customOrderSchema>;
 
-const addonServices = ['Gift Wrapping', 'Special Packaging'];
 
 export default function CustomOrderPage() {
     const router = useRouter();
     const { toast } = useToast();
     const { user } = useUser();
     const firestore = useFirestore();
+    const { settings } = useSettings();
     
+    const measures = settings?.customOrder?.measures || ['Grams (g)', 'Kilograms (kg)', 'Pieces', 'Bunches', 'Wraps', 'Custom...'];
+    const addonServices = settings?.customOrder?.services || ['Gift Wrapping', 'Special Packaging'];
+    const lagosLgas = settings?.shipping?.lagosLgas || defaultLgas;
+
     const form = useForm<CustomOrderFormValues>({
         resolver: zodResolver(customOrderSchema),
         defaultValues: {
@@ -98,7 +104,7 @@ export default function CustomOrderPage() {
             return lga ? lga.price : 0;
         }
         return 0;
-    }, [shippingMethod, selectedLga]);
+    }, [shippingMethod, selectedLga, lagosLgas]);
 
     const getShippingFeeDisplay = () => {
         if (shippingMethod === 'pickup') return '₦0.00';
@@ -205,12 +211,9 @@ export default function CustomOrderPage() {
                                                                         </SelectTrigger>
                                                                     </FormControl>
                                                                     <SelectContent>
-                                                                        <SelectItem value="grams">Grams (g)</SelectItem>
-                                                                        <SelectItem value="kilograms">Kilograms (kg)</SelectItem>
-                                                                        <SelectItem value="pieces">Pieces</SelectItem>
-                                                                        <SelectItem value="bunches">Bunches</SelectItem>
-                                                                        <SelectItem value="wraps">Wraps</SelectItem>
-                                                                        <SelectItem value="custom">Custom...</SelectItem>
+                                                                        {measures.map(measure => (
+                                                                            <SelectItem key={measure} value={measure}>{measure}</SelectItem>
+                                                                        ))}
                                                                     </SelectContent>
                                                                 </Select>
                                                                 <FormMessage />

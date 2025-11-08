@@ -118,6 +118,12 @@ service cloud.firestore {
         }
     }
 
+    // Settings: Public read, admin write.
+    match /settings/{docId} {
+        allow read: if true;
+        allow write: if isAdmin();
+    }
+
     // Collection Group Queries
     // Allow admins to query orders across all users.
     match /{path=**}/orders/{orderId} {
