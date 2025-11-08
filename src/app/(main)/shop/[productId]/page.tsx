@@ -1,14 +1,14 @@
 
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Star, Plus, Minus, ShieldCheck, Truck, MessageSquare, Heart } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProductCard } from '@/components/ProductCard';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,7 +18,6 @@ import { useProducts } from '@/hooks/use-products';
 import { useCart } from '@/hooks/use-cart';
 import { useWishlist } from '@/hooks/use-wishlist';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { collection, doc, addDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/utils';
@@ -26,10 +25,12 @@ import type { Review } from '@/lib/data';
 import { formatDistanceToNow } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProductDetailPage() {
-  const { products, findById } = useProducts();
+  const { products, findById, loading: productsLoading } = useProducts();
   const params = useParams();
+  const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
   const { productId } = params;
@@ -39,10 +40,17 @@ export default function ProductDetailPage() {
   
   const { addToCart } = useCart();
   const { user } = useUser();
-  const router = useRouter();
   const { isWishlisted, toggleWishlist } = useWishlist();
 
   const product = findById(productId as string);
+  
+  // Redirect if product is not found after loading has finished
+  useEffect(() => {
+    if (!productsLoading && !product) {
+      router.replace(`/shop/unavailable?category=${product?.category || ''}`);
+    }
+  }, [productsLoading, product, router, productId]);
+
   const image = product ? PlaceHolderImages.find(p => p.id === product.imageId) : null;
   
   const reviewsQuery = useMemoFirebase(() => {
@@ -54,8 +62,29 @@ export default function ProductDetailPage() {
   
   const relatedProducts = products.filter(p => p.category === product?.category && p.id !== product?.id).slice(0, 4);
 
-  if (!product) {
-    return <div className="text-center">Product not found</div>;
+  if (productsLoading || !product) {
+    return (
+        <div className="space-y-12">
+            <Card>
+                <div className="grid md:grid-cols-2 gap-8">
+                    <div className="md:p-4">
+                        <Skeleton className="aspect-square rounded-lg" />
+                    </div>
+                    <div className="p-6 pt-0 md:pt-6 flex flex-col gap-4">
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-5 w-1/4" />
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-10 w-1/3" />
+                         <div className="flex items-center gap-4">
+                            <Skeleton className="h-12 w-24" />
+                            <Skeleton className="h-12 flex-1" />
+                            <Skeleton className="h-12 w-12" />
+                        </div>
+                    </div>
+                </div>
+            </Card>
+        </div>
+    );
   }
   
   const inWishlist = isWishlisted(product.id);
