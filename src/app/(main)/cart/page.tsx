@@ -37,11 +37,13 @@ export default function CartPage() {
     const router = useRouter();
 
     const lagosLgas = useMemo(() => {
+        // Prioritize settings from the database. Only use default if settings are loaded but empty.
+        if (settingsLoading) return []; // Return empty array while loading
         if (settings?.shipping?.lagosLgas && settings.shipping.lagosLgas.length > 0) {
             return settings.shipping.lagosLgas;
         }
-        return defaultLgas;
-    }, [settings]);
+        return defaultLgas; // Fallback only if settings are loaded but have no LGAs defined
+    }, [settings, settingsLoading]);
 
 
     const handleQuantityChange = (productId: string, change: 'increase' | 'decrease') => {
