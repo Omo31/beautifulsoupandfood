@@ -260,8 +260,11 @@ export default function SignupPage() {
                         Sign up with Google
                     </Button>
                 </CardContent>
-                <CardFooter className="flex justify-center text-sm">
-                    Already have an account? <Link href="/login" className="underline ml-1">Login</Link>
+                <CardFooter className="flex-col gap-3 text-sm">
+                    <div className="flex justify-center">
+                        Already have an account? <Link href="/login" className="underline ml-1">Login</Link>
+                    </div>
+                    <Link href="/" className="underline text-muted-foreground">Back to Home</Link>
                 </CardFooter>
             </form>
         </Form>

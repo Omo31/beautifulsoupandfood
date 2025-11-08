@@ -179,8 +179,11 @@ export default function LoginPage() {
                         Login with Google
                     </Button>
                 </CardContent>
-                <CardFooter className="flex justify-center text-sm">
-                    Don't have an account? <Link href="/signup" className="underline ml-1">Sign up</Link>
+                <CardFooter className="flex-col gap-3 text-sm">
+                    <div className="flex justify-center">
+                         Don't have an account? <Link href="/signup" className="underline ml-1">Sign up</Link>
+                    </div>
+                    <Link href="/" className="underline text-muted-foreground">Back to Home</Link>
                 </CardFooter>
             </form>
         </Form>
