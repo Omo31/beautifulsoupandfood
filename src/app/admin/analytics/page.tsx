@@ -43,40 +43,13 @@ export default function AnalyticsPage() {
     const { data: allOrders, loading: ordersLoading } = useCollection<Order>(ordersQuery);
     const { data: allUsers, loading: usersLoading } = useCollection<UserProfile>(usersQuery);
     const { products, loading: productsLoading } = useProducts();
-    const [allOrderItems, setAllOrderItems] = useState<OrderItem[]>([]);
-    const [itemsLoading, setItemsLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchAllItems = async () => {
-            if (!firestore || !allOrders.length) {
-                setItemsLoading(false);
-                return;
-            };
+    const allItemsQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return collectionGroup(firestore, 'items');
+    }, [firestore]);
 
-            setItemsLoading(true);
-            const itemPromises = allOrders.map(order => {
-                 // The parent of an order is the user document.
-                const userDocId = (order as any).ref.parent.parent.id;
-                const itemsRef = collection(firestore, 'users', userDocId, 'orders', order.id, 'items');
-                return getDocs(itemsRef);
-            });
-            
-            const itemSnapshots = await Promise.all(itemPromises);
-            const allItems: OrderItem[] = [];
-            itemSnapshots.forEach(snapshot => {
-                snapshot.forEach(doc => {
-                    allItems.push(doc.data() as OrderItem);
-                })
-            })
-            setAllOrderItems(allItems);
-            setItemsLoading(false);
-        }
-        
-        if (!ordersLoading) {
-            fetchAllItems();
-        }
-
-    }, [allOrders, firestore, ordersLoading]);
+    const { data: allOrderItems, loading: itemsLoading } = useCollection<OrderItem>(allItemsQuery);
 
 
   const analyticsData = useMemo(() => {
@@ -90,21 +63,41 @@ export default function AnalyticsPage() {
     const monthlyGoalProgress = (totalRevenue / monthlyGoal) * 100;
 
     const salesByProduct = allOrderItems.reduce((acc, item) => {
-        acc[item.productId] = (acc[item.productId] || 0) + item.quantity;
+        const saleAmount = item.price * item.quantity;
+        if (!acc[item.productId]) {
+            acc[item.productId] = { quantity: 0, revenue: 0 };
+        }
+        acc[item.productId].quantity += item.quantity;
+        acc[item.productId].revenue += saleAmount;
         return acc;
-    }, {} as Record<string, number>);
+    }, {} as Record<string, { quantity: number; revenue: number }>);
 
-    const topProducts = Object.entries(salesByProduct)
-        .sort(([, a], [, b]) => b - a)
+    const topProductsByUnits = Object.entries(salesByProduct)
+        .sort(([, a], [, b]) => b.quantity - a.quantity)
         .slice(0, 5)
-        .map(([productId, sales]) => {
+        .map(([productId, data]) => {
             const product = products.find(p => p.id === productId);
             return {
                 id: productId,
                 name: product?.name || 'Unknown Product',
-                sales: sales
+                value: data.quantity,
+                isUnits: true,
             };
         });
+    
+    const topProductsByRevenue = Object.entries(salesByProduct)
+        .sort(([, a], [, b]) => b.revenue - a.revenue)
+        .slice(0, 5)
+        .map(([productId, data]) => {
+            const product = products.find(p => p.id === productId);
+            return {
+                id: productId,
+                name: product?.name || 'Unknown Product',
+                value: data.revenue,
+                isUnits: false,
+            };
+        });
+
 
     const orderStatusData = allOrders.reduce((acc, order) => {
       acc[order.status] = (acc[order.status] || 0) + 1;
@@ -128,7 +121,8 @@ export default function AnalyticsPage() {
       averageOrderValue,
       monthlyGoal,
       monthlyGoalProgress,
-      topProducts,
+      topProductsByUnits,
+      topProductsByRevenue,
       orderStatusData,
       salesByCategory
     };
@@ -160,8 +154,8 @@ export default function AnalyticsPage() {
                     </Card>
                 ))}
             </div>
-             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="lg:col-span-4">
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+                <Card>
                     <CardHeader>
                          <Skeleton className="h-6 w-1/2" />
                          <Skeleton className="h-4 w-3/4" />
@@ -170,8 +164,26 @@ export default function AnalyticsPage() {
                         {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
                     </CardContent>
                 </Card>
+                <Card>
+                    <CardHeader>
+                         <Skeleton className="h-6 w-1/2" />
+                         <Skeleton className="h-4 w-3/4" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+                    </CardContent>
+                </Card>
+            </div>
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <Card className="lg:col-span-4">
+                    <CardHeader>
+                         <Skeleton className="h-6 w-1/2" />
+                    </CardHeader>
+                    <CardContent>
+                       <Skeleton className="h-16 w-full" />
+                    </CardContent>
+                </Card>
                 <div className="lg:col-span-3 flex flex-col gap-4">
-                     <Card><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
                      <Card><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
                 </div>
             </div>
@@ -237,30 +249,74 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Top Selling Products */}
-        <Card className="lg:col-span-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Top Selling Products by Units */}
+        <Card>
           <CardHeader>
-            <CardTitle>Top Selling Products</CardTitle>
+            <CardTitle>Top Selling Products (by Units)</CardTitle>
             <CardDescription>
-              Your most popular products by units sold.
+              Your most popular products by quantity sold.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analyticsData.topProducts.map((product) => (
+              {analyticsData.topProductsByUnits.map((product) => (
                 <div key={product.id}>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="font-medium">{product.name}</span>
-                    <span className="text-muted-foreground">{product.sales} units</span>
+                    <span className="text-muted-foreground">{product.value} units</span>
                   </div>
-                  <Progress value={(product.sales / (analyticsData.topProducts[0]?.sales || 1)) * 100} />
+                  <Progress value={(product.value / (analyticsData.topProductsByUnits[0]?.value || 1)) * 100} />
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
+        
+        {/* Top Selling Products by Revenue */}
+         <Card>
+          <CardHeader>
+            <CardTitle>Top Selling Products (by Revenue)</CardTitle>
+            <CardDescription>
+              Your most profitable products.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {analyticsData.topProductsByRevenue.map((product) => (
+                <div key={product.id}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-medium">{product.name}</span>
+                    <span className="text-muted-foreground">₦{product.value.toLocaleString()}</span>
+                  </div>
+                  <Progress value={(product.value / (analyticsData.topProductsByRevenue[0]?.value || 1)) * 100} />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+       <Card className="lg:col-span-4">
+        <CardHeader>
+            <CardTitle>Sales by Category</CardTitle>
+            <CardDescription>A breakdown of your revenue by product category.</CardDescription>
+        </CardHeader>
+        <CardContent>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+              {Object.entries(analyticsData.salesByCategory).map(([category, sales]) => (
+                <div key={category}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-medium">{category}</span>
+                    <span className="text-muted-foreground">₦{(sales as number).toLocaleString()}</span>
+                  </div>
+                  <Progress value={((sales as number) / totalCategorySales) * 100} />
+                </div>
+              ))}
+            </div>
+        </CardContent>
+      </Card>
         {/* Monthly Goal & Order Status */}
         <div className="lg:col-span-3 flex flex-col gap-4">
             <Card>
@@ -303,27 +359,6 @@ export default function AnalyticsPage() {
             </Card>
         </div>
       </div>
-      
-       {/* Sales by Category */}
-      <Card>
-        <CardHeader>
-            <CardTitle>Sales by Category</CardTitle>
-            <CardDescription>A breakdown of your revenue by product category.</CardDescription>
-        </CardHeader>
-        <CardContent>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-              {Object.entries(analyticsData.salesByCategory).map(([category, sales]) => (
-                <div key={category}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium">{category}</span>
-                    <span className="text-muted-foreground">₦{(sales as number).toLocaleString()}</span>
-                  </div>
-                  <Progress value={(sales as number / totalCategorySales) * 100} />
-                </div>
-              ))}
-            </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
