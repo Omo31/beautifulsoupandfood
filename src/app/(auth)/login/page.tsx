@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useFirestore } from "@/firebase";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
@@ -22,6 +22,35 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+
+// Shared function to handle user profile creation on first sign-in
+const ensureUserProfile = async (firestore: any, user: User) => {
+    const userDocRef = doc(firestore, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+        const [firstName, ...lastNameParts] = user.displayName?.split(' ') || ["", ""];
+        const lastName = lastNameParts.join(' ');
+        
+        const userProfile = {
+            firstName: firstName,
+            lastName: lastName,
+            phone: user.phoneNumber || "",
+            shippingAddress: "",
+            role: "Customer",
+            createdAt: serverTimestamp(),
+            wishlist: []
+        };
+        setDoc(userDocRef, userProfile).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: userDocRef.path,
+                operation: 'create',
+                requestResourceData: userProfile,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
+    }
+};
 
 export default function LoginPage() {
     const router = useRouter();
@@ -83,34 +112,7 @@ export default function LoginPage() {
         try {
             const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
-            const user = result.user;
-
-            // Check if user document already exists
-            const userDocRef = doc(firestore, "users", user.uid);
-            const userDoc = await getDoc(userDocRef);
-
-            if (!userDoc.exists()) {
-                // User is signing in for the first time, create their profile
-                const [firstName, ...lastNameParts] = user.displayName?.split(' ') || ["", ""];
-                const lastName = lastNameParts.join(' ');
-                
-                const userProfile = {
-                    firstName: firstName,
-                    lastName: lastName,
-                    phone: user.phoneNumber || "",
-                    shippingAddress: "",
-                    role: "Customer", // Default role for all new signups
-                    createdAt: serverTimestamp(),
-                };
-                setDoc(userDocRef, userProfile).catch(async (serverError) => {
-                    const permissionError = new FirestorePermissionError({
-                        path: userDocRef.path,
-                        operation: 'create',
-                        requestResourceData: userProfile,
-                    });
-                    errorEmitter.emit('permission-error', permissionError);
-                });
-            }
+            await ensureUserProfile(firestore, result.user);
 
             toast({
                 title: "Logged In!",
@@ -126,7 +128,7 @@ export default function LoginPage() {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-                <CardHeader>
+                <CardHeader className="text-center">
                     <CardTitle className="text-2xl">Login</CardTitle>
                     <CardDescription>Enter your email below to login to your account.</CardDescription>
                 </CardHeader>
@@ -162,11 +164,16 @@ export default function LoginPage() {
                             </FormItem>
                         )}
                     />
-                    <div className="grid grid-cols-2 gap-2 mt-4">
-                        <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
-                        <Button type="submit" disabled={form.formState.isSubmitting}>
-                           {form.formState.isSubmitting ? "Logging in..." : "Login"}
-                        </Button>
+                    <Button type="submit" className="w-full mt-4" disabled={form.formState.isSubmitting}>
+                       {form.formState.isSubmitting ? "Logging in..." : "Login"}
+                    </Button>
+                    <div className="relative my-2">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                        </div>
                     </div>
                     <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn}>
                         Login with Google

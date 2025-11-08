@@ -13,8 +13,8 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useFirestore } from "@/firebase";
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
@@ -22,8 +22,6 @@ const signupSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
     email: z.string().email("Invalid email address"),
-    phone: z.string().min(1, "Phone number is required"),
-    shippingAddress: z.string().min(1, "Shipping address is required"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     terms: z.literal<boolean>(true, {
         errorMap: () => ({ message: "You must accept the terms and conditions" }),
@@ -31,6 +29,35 @@ const signupSchema = z.object({
 });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
+
+// Shared function to handle user profile creation on first sign-in
+const ensureUserProfile = async (firestore: any, user: User) => {
+    const userDocRef = doc(firestore, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+        const [firstName, ...lastNameParts] = user.displayName?.split(' ') || ["", ""];
+        const lastName = lastNameParts.join(' ');
+        
+        const userProfile = {
+            firstName: firstName,
+            lastName: lastName,
+            phone: user.phoneNumber || "",
+            shippingAddress: "",
+            role: "Customer",
+            createdAt: serverTimestamp(),
+            wishlist: []
+        };
+        setDoc(userDocRef, userProfile).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: userDocRef.path,
+                operation: 'create',
+                requestResourceData: userProfile,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
+    }
+};
 
 export default function SignupPage() {
     const router = useRouter();
@@ -44,8 +71,6 @@ export default function SignupPage() {
             firstName: "",
             lastName: "",
             email: "",
-            phone: "",
-            shippingAddress: "",
             password: "",
             terms: false,
         },
@@ -61,7 +86,6 @@ export default function SignupPage() {
             const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
             const user = userCredential.user;
 
-            // Update Firebase Auth profile displayName
             await updateProfile(user, {
                 displayName: `${data.firstName} ${data.lastName}`,
             });
@@ -71,13 +95,13 @@ export default function SignupPage() {
             const userProfile = {
                 firstName: data.firstName,
                 lastName: data.lastName,
-                phone: data.phone,
-                shippingAddress: data.shippingAddress,
+                phone: "", // Phone not collected in this form anymore
+                shippingAddress: "", // Shipping address not collected
                 role: "Customer",
                 createdAt: serverTimestamp(),
+                wishlist: []
             };
 
-            // Create user document in Firestore
             const userDocRef = doc(firestore, "users", user.uid);
             setDoc(userDocRef, userProfile).catch(async (serverError) => {
                 const permissionError = new FirestorePermissionError({
@@ -93,9 +117,7 @@ export default function SignupPage() {
                 description: "We've sent a verification link to your email. Please verify to log in.",
             });
             
-            // Log out the user immediately after signup so they have to verify
             await auth.signOut();
-            
             router.push('/login');
 
         } catch (error: any) {
@@ -110,13 +132,43 @@ export default function SignupPage() {
             });
         }
     }
+    
+    const handleGoogleSignUp = async () => {
+        if (!auth || !firestore) {
+            toast({ variant: "destructive", title: "Firebase not initialized" });
+            return;
+        }
+        try {
+            const provider = new GoogleAuthProvider();
+            const result = await signInWithPopup(auth, provider);
+            await ensureUserProfile(firestore, result.user);
+            
+            toast({
+                title: "Account Created!",
+                description: "Welcome! Your account has been successfully created.",
+            });
+            router.push('/');
+        } catch (error: any) {
+            let description = "An unexpected error occurred. Please try again.";
+            if (error.code === 'auth/popup-closed-by-user') {
+                description = "The sign-up popup was closed before completing. Please try again.";
+            } else if (error.code === 'auth/email-already-in-use') {
+                 description = "This email is already associated with an account. Please log in instead.";
+            }
+             toast({
+                variant: "destructive",
+                title: "Sign-up Failed",
+                description,
+            });
+        }
+    }
 
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-                <CardHeader>
-                    <CardTitle className="text-2xl">Sign Up</CardTitle>
-                    <CardDescription>Enter your information to create an account.</CardDescription>
+                <CardHeader className="text-center">
+                    <CardTitle className="text-2xl">Create an Account</CardTitle>
+                    <CardDescription>Enter your information to get started.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -162,32 +214,6 @@ export default function SignupPage() {
                     />
                     <FormField
                         control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Phone Number</FormLabel>
-                                <FormControl>
-                                    <Input type="tel" placeholder="+234 801 234 5678" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="shippingAddress"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Shipping Address</FormLabel>
-                                <FormControl>
-                                    <Textarea placeholder="Enter your full shipping address" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
                         name="password"
                         render={({ field }) => (
                             <FormItem>
@@ -203,26 +229,31 @@ export default function SignupPage() {
                         control={form.control}
                         name="terms"
                         render={({ field }) => (
-                            <FormItem className="flex items-center space-x-2">
+                            <FormItem className="flex items-start space-x-3 pt-2">
                                 <FormControl>
-                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} id="terms" />
                                 </FormControl>
-                                <div className="space-y-1 leading-none">
-                                    <FormLabel className="text-sm font-normal">
+                                <div className="grid gap-1.5 leading-none">
+                                    <Label htmlFor="terms" className="text-sm font-normal">
                                         I agree to the <Link href="/terms" className="underline">Terms and Conditions</Link>
-                                    </FormLabel>
+                                    </Label>
                                     <FormMessage />
                                 </div>
                             </FormItem>
                         )}
                     />
-                    <div className="grid grid-cols-2 gap-2 mt-4">
-                        <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
-                        <Button type="submit" disabled={form.formState.isSubmitting}>
-                            {form.formState.isSubmitting ? "Creating Account..." : "Create an account"}
-                        </Button>
+                    <Button type="submit" className="w-full mt-4" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting ? "Creating Account..." : "Create an account"}
+                    </Button>
+                     <div className="relative my-2">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                        </div>
                     </div>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignUp}>
                         Sign up with Google
                     </Button>
                 </CardContent>

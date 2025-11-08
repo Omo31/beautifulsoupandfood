@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
             });
             router.push('/login');
         } catch (error: any) {
-            // We still show the success message to prevent email enumeration
+            // We still show the success message to prevent email enumeration attacks
              toast({
                 title: "Password Reset Link Sent",
                 description: `If an account exists for ${data.email}, a reset link has been sent.`,
@@ -56,10 +56,10 @@ export default function ForgotPasswordPage() {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-                <CardHeader>
+                <CardHeader className="text-center">
                     <CardTitle className="text-2xl">Forgot Password</CardTitle>
                     <CardDescription>
-                        Enter your email address and we will send you a link to reset your password.
+                        Enter your email to receive a reset link.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4">
@@ -77,15 +77,12 @@ export default function ForgotPasswordPage() {
                             </FormItem>
                         )}
                     />
-                    <div className="grid grid-cols-2 gap-2 mt-4">
-                        <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
-                        <Button type="submit" disabled={form.formState.isSubmitting}>
-                            {form.formState.isSubmitting ? "Sending..." : "Send Reset Link"}
-                        </Button>
-                    </div>
+                    <Button type="submit" className="w-full mt-4" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting ? "Sending..." : "Send Reset Link"}
+                    </Button>
                 </CardContent>
                 <CardFooter className="flex justify-center text-sm">
-                    Remember your password? <Link href="/login" className="underline ml-1">Login</Link>
+                    <Link href="/login" className="underline">Back to Login</Link>
                 </CardFooter>
             </form>
         </Form>
