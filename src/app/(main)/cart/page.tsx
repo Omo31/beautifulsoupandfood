@@ -23,17 +23,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFirestore, useUser } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { collection, writeBatch, serverTimestamp } from "firebase/firestore";
 import { useSettings } from "@/hooks/use-settings";
 
 export default function CartPage() {
-    const { cartItems, cartLoading, updateQuantity, removeFromCart, subtotal, clearCart } = useCart();
+    const { cartItems, cartLoading, updateQuantity, removeFromCart, subtotal } = useCart();
     const { settings } = useSettings();
     const [shippingMethod, setShippingMethod] = useState("pickup");
     const [selectedLga, setSelectedLga] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
-    const firestore = useFirestore();
     const { user } = useUser();
     const { toast } = useToast();
     const router = useRouter();
@@ -286,3 +284,5 @@ export default function CartPage() {
         </TooltipProvider>
     );
 }
+
+    

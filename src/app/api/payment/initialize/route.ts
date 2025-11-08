@@ -1,14 +1,6 @@
 
 import { NextResponse } from 'next/server';
 import paystack from '@/lib/paystack';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
-
-// Initialize Firebase Admin for server-side operations
-// Note: In a real production app, you'd use firebase-admin for this.
-// For simplicity, we are using client SDK on the server, which is not recommended for production.
-const app = initializeFirebase();
-const firestore = getFirestore(app);
 
 export async function POST(req: Request) {
   try {
@@ -24,12 +16,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'No items in order' }, { status: 400 });
     }
 
-    // You might want to verify the amount on the server-side by recalculating it
-    // based on the cartItems to prevent tampering. For now, we trust the client.
+    // In a real app, you would verify the amount on the server-side 
+    // to prevent tampering. For now, we trust the client.
 
     const response = await paystack.transaction.initialize({
       email: email,
-      amount: amount * 100, // Paystack expects amount in kobo
+      amount: Math.round(amount * 100), // Paystack expects amount in kobo
       metadata: {
         user_id: userId,
         order_items: JSON.stringify(items),
@@ -50,3 +42,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message || 'Failed to initialize payment' }, { status: 500 });
   }
 }
+
+    
