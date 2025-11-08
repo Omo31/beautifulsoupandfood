@@ -69,8 +69,8 @@ export default function QuoteDetailsPage() {
   // Basic check to prevent users from viewing other people's quotes
   const canView = !loading && quote && quote.userId === user?.uid;
 
-    const { itemsTotal, subTotal, serviceCharge, grandTotal } = useMemo(() => {
-        if (!quote) return { itemsTotal: 0, subTotal: 0, serviceCharge: 0, grandTotal: 0 };
+    const { itemsTotal, subTotal, serviceCharge, grandTotal, shipping } = useMemo(() => {
+        if (!quote) return { itemsTotal: 0, subTotal: 0, serviceCharge: 0, grandTotal: 0, shipping: 0 };
         // @ts-ignore
         const itemsTotal = quote.items.reduce((acc, item) => acc + ((item.unitCost || 0) * item.quantity), 0);
         const subTotal = itemsTotal; // Services can be added later
@@ -254,10 +254,8 @@ export default function QuoteDetailsPage() {
                         <span>₦{serviceCharge.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                         {/* @ts-ignore */}
                         <span>Shipping:</span>
-                         {/* @ts-ignore */}
-                        <span>₦{(quote.shippingCost || 0).toFixed(2)}</span>
+                        <span>₦{shipping.toFixed(2)}</span>
                     </div>
                     <Separator className="my-2"/>
                     <div className="flex justify-between font-bold">
@@ -309,14 +307,16 @@ export default function QuoteDetailsPage() {
                     </Button>
                 </>
              )}
-             <Button className="w-full sm:w-auto" disabled={!showPaymentButton || isProcessingPayment} onClick={handleCustomOrderCheckout}>
-                {isProcessingPayment ? 'Processing...' : (
-                    <>
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        Proceed to Payment
-                    </>
-                )}
-            </Button>
+             {showPaymentButton && (
+                <Button className="w-full sm:w-auto" disabled={isProcessingPayment} onClick={handleCustomOrderCheckout}>
+                    {isProcessingPayment ? 'Processing...' : (
+                        <>
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Proceed to Payment
+                        </>
+                    )}
+                </Button>
+            )}
          </div>
       </CardFooter>
     </Card>

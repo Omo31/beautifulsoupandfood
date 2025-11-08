@@ -28,8 +28,6 @@ export default function MyQuotesPage() {
   const { quotes, loading } = useQuotes();
 
   const calculateTotal = (quote: QuoteRequest) => {
-    // This is a simplified calculation for display.
-    // In a real app, the priced quote details would be stored and retrieved.
     if (quote.status === 'Quote Ready' || quote.status === 'Accepted' || quote.status === 'Paid') {
       // @ts-ignore
       const itemsTotal = quote.items.reduce((acc, item) => acc + ((item.unitCost || 0) * item.quantity), 0);
