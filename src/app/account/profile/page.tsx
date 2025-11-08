@@ -17,11 +17,14 @@ import { useMemoFirebase } from '@/firebase/utils';
 import type { UserProfile } from '@/lib/data';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Textarea } from '@/components/ui/textarea';
 
 const profileSchema = z.object({
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
     email: z.string().email(),
+    phone: z.string().min(1, 'Phone number is required'),
+    shippingAddress: z.string().min(1, 'Shipping address is required'),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -45,6 +48,8 @@ export default function ProfilePage() {
             firstName: '',
             lastName: '',
             email: '',
+            phone: '',
+            shippingAddress: ''
         }
     });
 
@@ -54,6 +59,8 @@ export default function ProfilePage() {
                 firstName: userProfile.firstName,
                 lastName: userProfile.lastName,
                 email: user?.email || '',
+                phone: userProfile.phone || '',
+                shippingAddress: userProfile.shippingAddress || '',
             });
         }
     }, [userProfile, user, form]);
@@ -67,6 +74,8 @@ export default function ProfilePage() {
         const updatedData = {
             firstName: data.firstName,
             lastName: data.lastName,
+            phone: data.phone,
+            shippingAddress: data.shippingAddress,
         };
 
         setDoc(userDocRef, updatedData, { merge: true })
@@ -97,6 +106,8 @@ export default function ProfilePage() {
                     <div className="space-y-4">
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-10 w-full" />
+                         <Skeleton className="h-10 w-full" />
+                         <Skeleton className="h-24 w-full" />
                     </div>
                 </CardContent>
             </Card>
@@ -153,6 +164,32 @@ export default function ProfilePage() {
                                     </FormItem>
                                 )}
                             />
+                         <FormField
+                                control={form.control}
+                                name="phone"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Phone Number</FormLabel>
+                                        <FormControl>
+                                            <Input type="tel" {...field} placeholder="+234..." />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                          <FormField
+                                control={form.control}
+                                name="shippingAddress"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Shipping Address</FormLabel>
+                                        <FormControl>
+                                            <Textarea {...field} placeholder="123 Main St, Lagos..." />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         <div className="flex gap-2">
                             <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
                             <Button type="submit" disabled={form.formState.isSubmitting}>
@@ -161,28 +198,6 @@ export default function ProfilePage() {
                         </div>
                     </form>
                 </Form>
-
-                <div className="border-t pt-6">
-                    <h3 className="text-lg font-medium">Change Password</h3>
-                    <form className="space-y-4 mt-4" onSubmit={(e) => {e.preventDefault(); toast({title: "Coming Soon!", description: "Password changes will be available in a future update."})}}>
-                        <div className="grid gap-2">
-                            <FormLabel htmlFor="current-password">Current Password</FormLabel>
-                            <Input id="current-password" type="password" />
-                        </div>
-                        <div className="grid gap-2">
-                            <FormLabel htmlFor="new-password">New Password</FormLabel>
-                            <Input id="new-password" type="password" />
-                        </div>
-                        <div className="grid gap-2">
-                            <FormLabel htmlFor="confirm-password">Confirm New Password</FormLabel>
-                            <Input id="confirm-password" type="password" />
-                        </div>
-                        <div className="flex gap-2">
-                            <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
-                            <Button type="submit">Change Password</Button>
-                        </div>
-                    </form>
-                </div>
             </CardContent>
         </Card>
     );
