@@ -13,7 +13,8 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { chat, type ChatInput } from '@/ai/flows/chat-flow';
+import { chat } from '@/ai/flows/chat-flow';
+import type { ChatInput } from '@/ai/schemas/chat-schemas';
 
 type Message = {
     role: 'user' | 'model';
