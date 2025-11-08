@@ -18,6 +18,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { QuoteRequest, QuoteStatus, QuoteItem } from '@/lib/data';
 import { format } from 'date-fns';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 type PricedQuoteItem = QuoteItem & { 
     unitCost?: number,
@@ -54,16 +56,21 @@ export default function QuoteDetailsPage() {
   const handleStatusUpdate = async (newStatus: QuoteStatus) => {
     if (!quoteRef || !quote) return;
 
-    try {
-        await setDoc(quoteRef, { status: newStatus }, { merge: true });
+    const updateData = { status: newStatus };
+    setDoc(quoteRef, updateData, { merge: true }).then(() => {
         toast({
             title: newStatus === 'Accepted' ? 'Quote Accepted!' : 'Quote Rejected',
             description: newStatus === 'Accepted' ? 'You can now proceed to payment.' : 'This quote has been marked as rejected.',
             variant: newStatus === 'Rejected' ? 'destructive' : 'default',
         });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update the quote status.' });
-    }
+    }).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: quoteRef.path,
+            operation: 'update',
+            requestResourceData: updateData
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
   
   // Basic check to prevent users from viewing other people's quotes
