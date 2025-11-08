@@ -1,62 +1,83 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { MessageSquare, Send } from 'lucide-react';
+import { MessageSquare, Send, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from './ui/scroll-area';
-import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, doc, setDoc, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
-import { useMemoFirebase } from '@/firebase/utils';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, doc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useProducts } from '@/hooks/use-products';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { chat, type ChatInput } from '@/ai/flows/chat-flow';
 
 type Message = {
-    id: string;
-    senderId: 'admin' | string;
+    role: 'user' | 'model';
     text: string;
-    createdAt: any;
 };
 
 export function ChatWidget() {
     const { user } = useUser();
     const firestore = useFirestore();
+    const { products } = useProducts();
+
+    const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isOpen, setIsOpen] = useState(false);
+    const [isThinking, setIsThinking] = useState(false);
+
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
-    const messagesQuery = useMemoFirebase(() => {
-        if (!firestore || !user) return null;
-        const messagesRef = collection(firestore, 'conversations', user.uid, 'messages');
-        return query(messagesRef, orderBy('createdAt', 'asc'));
-    }, [firestore, user]);
-
-    const { data: messages, loading } = useCollection<Message>(messagesQuery);
-    
     useEffect(() => {
-        // Scroll to the bottom when messages are loaded or new ones arrive
         if (chatContainerRef.current) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
     }, [messages]);
 
-
     const handleSendMessage = async (e: FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || !firestore || !user) return;
+        if (!newMessage.trim() || !user) return;
 
-        const messageText = newMessage;
+        const userMessage: Message = { role: 'user', text: newMessage };
+        setMessages(prev => [...prev, userMessage]);
         setNewMessage('');
+        setIsThinking(true);
 
+        try {
+            const chatHistory = [...messages, userMessage].map(msg => ({
+                role: msg.role,
+                content: [{ text: msg.text }],
+            }));
+
+            const aiResponseText = await chat({ history: chatHistory, products });
+            const aiMessage: Message = { role: 'model', text: aiResponseText };
+            setMessages(prev => [...prev, aiMessage]);
+
+        } catch (error) {
+            console.error("AI chat failed:", error);
+            const errorMessage: Message = { role: 'model', text: "Sorry, I'm having trouble connecting right now. Please try again later." };
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setIsThinking(false);
+        }
+        
+        // Also save the conversation for admin review
+        saveConversation(userMessage.text);
+    };
+
+    const saveConversation = (lastMessageText: string) => {
+        if (!firestore || !user) return;
+        
         const conversationRef = doc(firestore, 'conversations', user.uid);
         const messagesRef = collection(conversationRef, 'messages');
         
         const messagePayload = {
             senderId: user.uid,
-            text: messageText,
+            text: lastMessageText,
             createdAt: serverTimestamp()
         };
 
@@ -64,12 +85,11 @@ export function ChatWidget() {
             userId: user.uid,
             userName: user.displayName || user.email,
             userAvatar: user.photoURL || '',
-            lastMessage: messageText,
+            lastMessage: lastMessageText,
             lastMessageAt: serverTimestamp(),
             isReadByAdmin: false
         };
         
-        // Optimistically add message to UI, though useCollection should handle this
         addDoc(messagesRef, messagePayload).catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({
                 path: messagesRef.path,
@@ -89,6 +109,7 @@ export function ChatWidget() {
         });
     };
 
+
     if (!user) {
         return null; // Don't show the widget if the user is not logged in
     }
@@ -103,40 +124,54 @@ export function ChatWidget() {
             <PopoverContent side="top" align="end" className="w-80 rounded-lg shadow-2xl p-0">
                 <div className="flex flex-col h-96">
                     <div className="p-4 bg-primary text-primary-foreground rounded-t-lg">
-                        <h3 className="font-bold text-lg">Chat with us</h3>
-                        <p className="text-sm">We're here to help!</p>
+                        <h3 className="font-bold text-lg">AI Assistant</h3>
+                        <p className="text-sm">How can I help you today?</p>
                     </div>
                     <ScrollArea className="flex-1 bg-background" ref={chatContainerRef}>
                         <div className="p-4 flex flex-col gap-4">
-                            {loading ? (
-                                <p className="text-sm text-muted-foreground text-center">Loading chat...</p>
-                            ) : messages.length === 0 ? (
-                                 <div className="p-3 rounded-lg bg-muted max-w-xs text-sm">
-                                    Hello! How can we help you today?
+                             <div className={cn("flex items-end gap-2", 'justify-start')}>
+                                <Avatar className="h-8 w-8">
+                                    <AvatarFallback><Bot /></AvatarFallback>
+                                </Avatar>
+                                <div className={cn("max-w-xs p-3 rounded-lg text-sm", "bg-muted")}>
+                                    <p>Hello! I'm the BeautifulSoup&Food AI assistant. Ask me about our products!</p>
                                 </div>
-                            ) : (
-                                messages.map(message => (
-                                     <div key={message.id} className={cn("flex items-end gap-2", message.senderId !== 'admin' ? 'justify-end' : 'justify-start')}>
-                                         {message.senderId === 'admin' && (
-                                             <Avatar className="h-8 w-8">
-                                                <AvatarFallback>A</AvatarFallback>
-                                            </Avatar>
-                                         )}
-                                        <div className={cn(
-                                            "max-w-xs p-3 rounded-lg text-sm",
-                                            message.senderId !== 'admin' ? "bg-primary text-primary-foreground" : "bg-muted"
-                                        )}>
-                                            <p>{message.text}</p>
+                            </div>
+                            {messages.map((message, index) => (
+                                <div key={index} className={cn("flex items-end gap-2", message.role === 'user' ? 'justify-end' : 'justify-start')}>
+                                    {message.role === 'model' && (
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarFallback><Bot /></AvatarFallback>
+                                        </Avatar>
+                                    )}
+                                    <div className={cn(
+                                        "max-w-xs p-3 rounded-lg text-sm",
+                                        message.role === 'user' ? "bg-primary text-primary-foreground" : "bg-muted"
+                                    )}>
+                                        <p>{message.text}</p>
+                                    </div>
+                                </div>
+                            ))}
+                             {isThinking && (
+                                <div className="flex items-end gap-2 justify-start">
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarFallback><Bot /></AvatarFallback>
+                                    </Avatar>
+                                    <div className="max-w-xs p-3 rounded-lg text-sm bg-muted">
+                                        <div className="flex items-center gap-2">
+                                            <span className="h-2 w-2 bg-foreground rounded-full animate-pulse [animation-delay:-0.3s]"></span>
+                                            <span className="h-2 w-2 bg-foreground rounded-full animate-pulse [animation-delay:-0.15s]"></span>
+                                            <span className="h-2 w-2 bg-foreground rounded-full animate-pulse"></span>
                                         </div>
                                     </div>
-                                ))
+                                </div>
                             )}
                         </div>
                     </ScrollArea>
                     <div className="p-2 border-t">
                         <form className="flex gap-2" onSubmit={handleSendMessage}>
                             <Input placeholder="Type a message..." className="flex-1" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
-                            <Button type="submit" disabled={!newMessage.trim()}>
+                            <Button type="submit" disabled={!newMessage.trim() || isThinking}>
                                 <Send className="h-4 w-4" />
                             </Button>
                         </form>
