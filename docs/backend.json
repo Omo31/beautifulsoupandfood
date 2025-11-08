@@ -252,6 +252,39 @@
         }
       },
       "required": ["senderId", "text", "createdAt"]
+    },
+    "Review": {
+      "title": "Product Review",
+      "description": "A user's review of a product.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who wrote the review."
+        },
+        "userName": {
+          "type": "string",
+          "description": "The name of the user."
+        },
+        "userAvatar": {
+          "type": "string",
+          "description": "URL for the user's avatar image."
+        },
+        "rating": {
+          "type": "number",
+          "description": "The star rating given by the user (1-5)."
+        },
+        "comment": {
+          "type": "string",
+          "description": "The user's review text."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the review was created."
+        }
+      },
+      "required": ["userId", "userName", "rating", "comment", "createdAt"]
     }
   },
   "auth": {
@@ -263,6 +296,12 @@
         "$ref": "#/entities/Product"
       },
       "description": "Collection of all products available in the store."
+    },
+    "/products/{productId}/reviews/{reviewId}": {
+      "schema": {
+        "$ref": "#/entities/Review"
+      },
+      "description": "Sub-collection for reviews on a specific product."
     },
     "/users/{userId}": {
       "schema": {

@@ -28,6 +28,14 @@ service cloud.firestore {
     match /products/{productId} {
       allow read: if true;
       allow write: if isAdmin();
+
+      // Reviews: Allow any signed-in user to create a review.
+      // Do not allow updates or deletes to maintain integrity.
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        allow update, delete: if false;
+      }
     }
 
     // Users: Users can create their own profile and read/write to it IF their email is verified.

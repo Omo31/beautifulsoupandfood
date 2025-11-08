@@ -1,4 +1,5 @@
 
+
 export type Product = {
   id: string;
   name: string;
@@ -19,6 +20,16 @@ export type UserProfile = {
   shippingAddress: string;
   role: 'Customer' | 'Content Manager' | 'Owner';
   wishlist?: string[];
+};
+
+export type Review = {
+    id: string;
+    userId: string;
+    userName: string;
+    userAvatar?: string;
+    rating: number;
+    comment: string;
+    createdAt: any; // Firestore Timestamp
 };
 
 

@@ -17,14 +17,19 @@ import { Label } from '@/components/ui/label';
 import { useProducts } from '@/hooks/use-products';
 import { useCart } from '@/hooks/use-cart';
 import { useWishlist } from '@/hooks/use-wishlist';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { collection, doc, addDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { useMemoFirebase } from '@/firebase/utils';
+import type { Review } from '@/lib/data';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function ProductDetailPage() {
   const { products, findById } = useProducts();
   const params = useParams();
   const { toast } = useToast();
+  const firestore = useFirestore();
   const { productId } = params;
   const [quantity, setQuantity] = useState(1);
   const [newReviewRating, setNewReviewRating] = useState(0);
@@ -37,6 +42,13 @@ export default function ProductDetailPage() {
 
   const product = findById(productId as string);
   const image = product ? PlaceHolderImages.find(p => p.id === product.imageId) : null;
+  
+  const reviewsQuery = useMemoFirebase(() => {
+      if (!firestore || !productId) return null;
+      return collection(firestore, `products/${productId}/reviews`);
+  }, [firestore, productId]);
+
+  const { data: reviews, loading: reviewsLoading } = useCollection<Review>(reviewsQuery);
   
   const relatedProducts = products.filter(p => p.category === product?.category && p.id !== product?.id).slice(0, 4);
 
@@ -71,8 +83,12 @@ export default function ProductDetailPage() {
   }
 
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!firestore || !user || !product) {
+        toast({ variant: 'destructive', title: 'You must be logged in to leave a review.' });
+        return;
+    }
     if (newReviewRating === 0 || !newReviewText.trim()) {
         toast({
             variant: 'destructive',
@@ -81,12 +97,57 @@ export default function ProductDetailPage() {
         });
         return;
     }
-    toast({
-        title: 'Review Submitted!',
-        description: 'Thank you for your feedback.',
-    });
-    setNewReviewRating(0);
-    setNewReviewText('');
+
+    const reviewData = {
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        userAvatar: user.photoURL || '',
+        rating: newReviewRating,
+        comment: newReviewText,
+        createdAt: serverTimestamp(),
+    };
+    
+    try {
+      const productRef = doc(firestore, 'products', product.id);
+      const reviewsRef = collection(productRef, 'reviews');
+
+      await runTransaction(firestore, async (transaction) => {
+          const productDoc = await transaction.get(productRef);
+          if (!productDoc.exists()) {
+              throw "Product does not exist!";
+          }
+
+          // Add the new review
+          transaction.set(doc(reviewsRef), reviewData);
+
+          // Calculate new average rating
+          const currentRating = productDoc.data().rating || 0;
+          const currentReviewCount = productDoc.data().reviewCount || 0;
+          const newReviewCount = currentReviewCount + 1;
+          const newTotalRating = (currentRating * currentReviewCount) + newReviewRating;
+          const newAverageRating = newTotalRating / newReviewCount;
+          
+          // Update the product document
+          transaction.update(productRef, {
+              rating: newAverageRating,
+              reviewCount: newReviewCount
+          });
+      });
+
+      toast({
+          title: 'Review Submitted!',
+          description: 'Thank you for your feedback.',
+      });
+      setNewReviewRating(0);
+      setNewReviewText('');
+    } catch (error) {
+        console.error("Review submission failed: ", error);
+        toast({
+            variant: 'destructive',
+            title: 'Submission Failed',
+            description: 'Could not submit your review. Please try again.',
+        });
+    }
   }
 
   return (
@@ -111,7 +172,7 @@ export default function ProductDetailPage() {
             <div className="flex items-center gap-2 mt-2">
                 <div className="flex items-center gap-1">
                     <Star className="w-5 h-5 text-yellow-400 fill-yellow-400"/>
-                    <span className="font-medium">{product.rating}</span>
+                    <span className="font-medium">{product.rating.toFixed(1)}</span>
                 </div>
                 <Separator orientation="vertical" className="h-4" />
                 <span className="text-sm text-muted-foreground">{product.reviewCount} Reviews</span>
@@ -159,41 +220,33 @@ export default function ProductDetailPage() {
       {/* Reviews Section */}
       <section>
         <h2 className="text-2xl font-bold font-headline mb-6">Customer Reviews</h2>
-        <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-                <CardHeader className="flex flex-row items-center gap-4">
-                    <Avatar>
-                        <AvatarImage src="https://picsum.photos/seed/rev1/40/40" />
-                        <AvatarFallback>CN</AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <CardTitle className="text-base">Chiamaka Nwosu</CardTitle>
-                        <div className="flex items-center gap-0.5">
-                            {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 text-yellow-400 fill-yellow-400" />)}
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground italic">"The {product.name} was absolutely divine! It tasted just like home. I'll definitely be ordering again."</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center gap-4">
-                    <Avatar>
-                        <AvatarImage src="https://picsum.photos/seed/rev2/40/40" />
-                        <AvatarFallback>BO</AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <CardTitle className="text-base">Bayo Ojo</CardTitle>
-                         <div className="flex items-center gap-0.5">
-                            {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 text-yellow-400 fill-yellow-400" />)}
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground italic">"I tried the {product.name} and was blown away. So rich and flavorful. Quick delivery too!"</p>
-                </CardContent>
-            </Card>
+        <div className="space-y-6">
+            {reviewsLoading ? (
+                <p>Loading reviews...</p>
+            ) : reviews.length > 0 ? (
+                reviews.map(review => (
+                    <Card key={review.id}>
+                        <CardHeader className="flex flex-row items-center gap-4">
+                            <Avatar>
+                                {review.userAvatar ? <AvatarImage src={review.userAvatar} /> : <AvatarImage src="https://picsum.photos/seed/avatar/40/40" />}
+                                <AvatarFallback>{review.userName.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <CardTitle className="text-base">{review.userName}</CardTitle>
+                                <div className="flex items-center gap-0.5">
+                                    {[...Array(5)].map((_, i) => <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />)}
+                                </div>
+                            </div>
+                            <span className="text-sm text-muted-foreground ml-auto">{formatDistanceToNow(review.createdAt.toDate(), { addSuffix: true })}</span>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground italic">"{review.comment}"</p>
+                        </CardContent>
+                    </Card>
+                ))
+            ) : (
+                <p className="text-muted-foreground text-center">No reviews for this product yet. Be the first!</p>
+            )}
         </div>
 
         <Card className="mt-8">
