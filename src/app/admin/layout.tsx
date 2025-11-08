@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ReactNode } from "react";
@@ -17,6 +18,21 @@ function ProtectedAdminLayout({ children }: { children: ReactNode }) {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+
+  // Allow access in development mode without a real user for testing purposes
+  if (process.env.NODE_ENV === 'development' && !user) {
+    return (
+      <SidebarProvider defaultOpen>
+        <AdminSidebar />
+        <SidebarInset>
+          <AdminHeader />
+          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            {children}
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
