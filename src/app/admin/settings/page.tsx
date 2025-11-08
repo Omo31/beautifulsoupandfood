@@ -107,6 +107,8 @@ export default function SettingsPage() {
   const [newService, setNewService] = useState('');
   
   const [lagosLgas, setLagosLgas] = useState<LgaShippingZone[]>([]);
+  const [newLgaName, setNewLgaName] = useState('');
+  const [newLgaPrice, setNewLgaPrice] = useState(0);
 
   // Roles are now managed in state
   const [roles, setRoles] = useState(initialRoles);
@@ -214,6 +216,26 @@ export default function SettingsPage() {
     setLagosLgas(lgas => lgas.map(lga => lga.id === id ? { ...lga, price: isNaN(price) ? 0 : price } : lga));
   };
   
+  const handleAddLga = () => {
+    if (newLgaName.trim() && newLgaPrice > 0) {
+      const newId = newLgaName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const newLga: LgaShippingZone = {
+        id: newId,
+        name: newLgaName,
+        price: newLgaPrice
+      };
+      setLagosLgas([...lagosLgas, newLga]);
+      setNewLgaName('');
+      setNewLgaPrice(0);
+    } else {
+      toast({ variant: 'destructive', title: 'Invalid Input', description: 'Please provide a valid name and price for the new location.'})
+    }
+  };
+
+  const handleRemoveLga = (id: string) => {
+    setLagosLgas(lagosLgas.filter(lga => lga.id !== id));
+  };
+
   const handleSaveShipping = () => {
       updateSettings({ shipping: { lagosLgas } });
   };
@@ -545,13 +567,14 @@ export default function SettingsPage() {
                                     <TableRow>
                                         <TableHead>Local Government Area</TableHead>
                                         <TableHead className="w-[200px] text-right">Price (₦)</TableHead>
+                                        <TableHead className="w-[80px] text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {lagosLgas.map(lga => (
                                         <TableRow key={lga.id}>
                                             <TableCell className="font-medium">{lga.name}</TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell>
                                                 <Input 
                                                     type="number" 
                                                     className="w-full text-right"
@@ -560,11 +583,29 @@ export default function SettingsPage() {
                                                     placeholder="0.00"
                                                 />
                                             </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveLga(lga.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
                             </Table>
                         </div>
+                         <Card className="p-4 bg-muted/50">
+                            <div className="grid grid-cols-[1fr_auto_auto] gap-4 items-end">
+                                <div className="grid gap-2">
+                                    <Label>New Location Name</Label>
+                                    <Input value={newLgaName} onChange={e => setNewLgaName(e.target.value)} placeholder="e.g., Victoria Island"/>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label>Price (₦)</Label>
+                                    <Input type="number" value={newLgaPrice} onChange={e => setNewLgaPrice(Number(e.target.value))} placeholder="0.00" />
+                                </div>
+                                <Button onClick={handleAddLga}><PlusCircle className="mr-2 h-4 w-4" /> Add</Button>
+                            </div>
+                        </Card>
                     </div>
                 </CardContent>
                 <CardFooter>
