@@ -285,6 +285,30 @@
         }
       },
       "required": ["userId", "userName", "rating", "comment", "createdAt"]
+    },
+    "PurchaseOrder": {
+      "title": "Purchase Order",
+      "description": "Represents an order placed with a supplier.",
+      "type": "object",
+      "properties": {
+        "supplier": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Draft", "Pending", "Completed", "Cancelled"] },
+        "total": { "type": "number" }
+      },
+      "required": ["supplier", "date", "status", "total"]
+    },
+    "PurchaseOrderItem": {
+      "title": "Purchase Order Item",
+      "description": "A single item within a purchase order.",
+      "type": "object",
+      "properties": {
+        "productName": { "type": "string" },
+        "productId": { "type": "string" },
+        "quantity": { "type": "number" },
+        "cost": { "type": "number" }
+      },
+      "required": ["productName", "quantity", "cost"]
     }
   },
   "auth": {
@@ -350,6 +374,14 @@
         "$ref": "#/entities/Message"
       },
       "description": "A sub-collection within each conversation storing the individual messages."
+    },
+    "/purchaseOrders/{purchaseOrderId}": {
+      "schema": { "$ref": "#/entities/PurchaseOrder" },
+      "description": "Collection of all purchase orders sent to suppliers."
+    },
+    "/purchaseOrders/{purchaseOrderId}/items/{purchaseOrderItemId}": {
+      "schema": { "$ref": "#/entities/PurchaseOrderItem" },
+      "description": "The individual items within a specific purchase order."
     }
   }
 }

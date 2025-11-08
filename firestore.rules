@@ -90,6 +90,15 @@ service cloud.firestore {
       }
     }
 
+    // Purchase Orders: Only admins can manage POs.
+    match /purchaseOrders/{purchaseOrderId} {
+        allow read, write: if isAdmin();
+        
+        match /items/{itemId} {
+            allow read, write: if isAdmin();
+        }
+    }
+
     // Collection Group Queries
     // Allow admins to query orders across all users.
     match /{path=**}/orders/{orderId} {

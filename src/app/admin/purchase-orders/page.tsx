@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useMemo, type FormEvent } from 'react';
-import { purchaseOrders as initialPOs } from '@/lib/data';
 import type { PurchaseOrderItem, PurchaseOrder } from '@/lib/data';
 import {
   MoreHorizontal,
@@ -60,6 +59,10 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useCollection } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/utils';
+import { collection, addDoc, doc, setDoc, Timestamp, writeBatch } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const StatusBadge = ({ status }: { status: PurchaseOrder['status'] }) => {
@@ -81,7 +84,15 @@ type NewPOItem = {
 
 export default function PurchaseOrdersPage() {
   const { toast } = useToast();
-  const [purchaseOrders, setPurchaseOrders] = useState(initialPOs);
+  const firestore = useFirestore();
+
+  const posQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'purchaseOrders');
+  }, [firestore]);
+
+  const { data: purchaseOrders, loading } = useCollection<PurchaseOrder>(posQuery);
+
   const [isNewPOOpen, setNewPOOpen] = useState(false);
   const [newPOItems, setNewPOItems] = useState<Partial<NewPOItem>[]>([{}]);
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -105,42 +116,124 @@ export default function PurchaseOrdersPage() {
     return newPOItems.reduce((acc, item) => acc + (item.quantity || 0) * (item.cost || 0), 0);
   }, [newPOItems]);
   
-  const handleSavePO = (e: FormEvent, status: PurchaseOrder['status']) => {
+  const handleSavePO = async (e: FormEvent, status: PurchaseOrder['status']) => {
       e.preventDefault();
-      const form = e.target as HTMLFormElement;
+      if (!firestore) return;
+
+      const form = e.currentTarget as HTMLFormElement;
       const formData = new FormData(form);
       
-      const newPO: PurchaseOrder = {
-          id: `PO-${Date.now().toString().slice(-4)}`,
+      const newPOData = {
           supplier: formData.get('supplier') as string,
-          date: format(date || new Date(), 'yyyy-MM-dd'),
+          date: Timestamp.fromDate(date || new Date()),
           status: status,
-          items: newPOItems.map((item, index) => ({
-              id: `${index + 1}`,
-              productName: formData.get(`item-name-${index}`) as string,
-              productId: formData.get(`item-id-${index}`) as string,
-              quantity: parseInt(formData.get(`item-qty-${index}`) as string, 10),
-              cost: parseFloat(formData.get(`item-cost-${index}`) as string),
-          })),
           total: totalCost,
       };
 
-      setPurchaseOrders([newPO, ...purchaseOrders]);
-      toast({
-          title: `Purchase Order ${status}`,
-          description: `PO ${newPO.id} has been saved as ${status}.`
-      });
-      
-      setNewPOOpen(false);
-      setNewPOItems([{}]);
+      try {
+        const poCollection = collection(firestore, 'purchaseOrders');
+        const newPoRef = doc(poCollection);
+        
+        const batch = writeBatch(firestore);
+        batch.set(newPoRef, newPOData);
+        
+        const itemsCollection = collection(newPoRef, 'items');
+        newPOItems.forEach((item, index) => {
+            const itemRef = doc(itemsCollection);
+            const lineItem = {
+                productName: formData.get(`item-name-${index}`) as string,
+                productId: formData.get(`item-id-${index}`) as string,
+                quantity: parseInt(formData.get(`item-qty-${index}`) as string, 10),
+                cost: parseFloat(formData.get(`item-cost-${index}`) as string),
+            };
+            batch.set(itemRef, lineItem);
+        });
+
+        await batch.commit();
+
+        toast({
+            title: `Purchase Order ${status}`,
+            description: `PO has been saved as ${status}.`
+        });
+        
+        setNewPOOpen(false);
+        setNewPOItems([{}]);
+      } catch (error) {
+        console.error("Error saving PO:", error);
+        toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the purchase order.' });
+      }
   };
   
-  const handleStatusChange = (poId: string, newStatus: PurchaseOrder['status']) => {
-      setPurchaseOrders(pos => pos.map(po => po.id === poId ? {...po, status: newStatus} : po));
-      toast({
-          title: 'Status Updated',
-          description: `PO ${poId} has been marked as ${newStatus}.`
-      })
+  const handleStatusChange = async (poId: string, newStatus: PurchaseOrder['status']) => {
+      if (!firestore) return;
+      const poRef = doc(firestore, 'purchaseOrders', poId);
+      try {
+          await setDoc(poRef, { status: newStatus }, { merge: true });
+          toast({
+              title: 'Status Updated',
+              description: `PO ${poId.substring(0,6)}... has been marked as ${newStatus}.`
+          });
+      } catch (error) {
+          toast({ variant: 'destructive', title: 'Update Failed'});
+      }
+  }
+
+  const renderTableBody = () => {
+    if (loading) {
+        return [...Array(5)].map((_, i) => (
+            <TableRow key={i}>
+                <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-full ml-auto" /></TableCell>
+            </TableRow>
+        ))
+    }
+    if (purchaseOrders.length === 0) {
+        return (
+            <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                    No purchase orders created yet.
+                </TableCell>
+            </TableRow>
+        )
+    }
+
+    const sortedPOs = [...purchaseOrders].sort((a,b) => b.date.toDate().getTime() - a.date.toDate().getTime());
+
+    return sortedPOs.map((po) => (
+        <TableRow key={po.id}>
+            <TableCell className="font-medium">#{po.id.substring(0,6)}</TableCell>
+            <TableCell>{po.supplier}</TableCell>
+            <TableCell>{format(po.date.toDate(), 'yyyy-MM-dd')}</TableCell>
+            <TableCell>
+            <StatusBadge status={po.status} />
+            </TableCell>
+            <TableCell className="text-right">₦{po.total.toFixed(2)}</TableCell>
+            <TableCell className="text-right">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                <Button aria-haspopup="true" size="icon" variant="ghost">
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span className="sr-only">Toggle menu</span>
+                </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem>View Details</DropdownMenuItem>
+                {po.status === 'Draft' && <DropdownMenuItem>Edit</DropdownMenuItem>}
+                {po.status === 'Pending' && <DropdownMenuItem onClick={() => handleStatusChange(po.id, 'Completed')}>Mark as Completed</DropdownMenuItem>}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive" onClick={() => handleStatusChange(po.id, 'Cancelled')}>
+                    Cancel PO
+                </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+            </TableCell>
+        </TableRow>
+    ))
   }
 
   return (
@@ -232,7 +325,7 @@ export default function PurchaseOrdersPage() {
                         </div>
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setNewPOOpen(false)}>Cancel</Button>
-                            <Button type="button" onClick={(e) => handleSavePO(e, 'Draft')}>Save as Draft</Button>
+                            <Button type="submit" onClick={(e) => handleSavePO(e, 'Draft')}>Save as Draft</Button>
                             <Button type="submit" onClick={(e) => handleSavePO(e, 'Pending')}>Create PO</Button>
                         </DialogFooter>
                     </form>
@@ -285,37 +378,7 @@ export default function PurchaseOrdersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {purchaseOrders.map((po) => (
-                <TableRow key={po.id}>
-                  <TableCell className="font-medium">{po.id}</TableCell>
-                  <TableCell>{po.supplier}</TableCell>
-                  <TableCell>{po.date}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={po.status} />
-                  </TableCell>
-                  <TableCell className="text-right">₦{po.total.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                         {po.status === 'Draft' && <DropdownMenuItem>Edit</DropdownMenuItem>}
-                         {po.status === 'Pending' && <DropdownMenuItem onClick={() => handleStatusChange(po.id, 'Completed')}>Mark as Completed</DropdownMenuItem>}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleStatusChange(po.id, 'Cancelled')}>
-                          Cancel PO
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                {renderTableBody()}
             </TableBody>
           </Table>
         </CardContent>
