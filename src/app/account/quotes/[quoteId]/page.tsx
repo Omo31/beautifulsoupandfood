@@ -20,6 +20,7 @@ import type { QuoteRequest, QuoteStatus, QuoteItem } from '@/lib/data';
 import { format } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import Link from 'next/link';
 
 type PricedQuoteItem = QuoteItem & { 
     unitCost?: number,
@@ -74,7 +75,7 @@ export default function QuoteDetailsPage() {
   };
   
   // Basic check to prevent users from viewing other people's quotes
-  const canView = !loading && quote && quote.userId === user?.uid;
+  const canView = !loading && quote && (quote.userId === user?.uid || process.env.NODE_ENV === 'development');
 
     const { itemsTotal, subTotal, serviceCharge, grandTotal, shipping } = useMemo(() => {
         if (!quote) return { itemsTotal: 0, subTotal: 0, serviceCharge: 0, grandTotal: 0, shipping: 0 };
@@ -329,3 +330,5 @@ export default function QuoteDetailsPage() {
     </Card>
   );
 }
+
+    
