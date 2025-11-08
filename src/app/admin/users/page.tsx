@@ -8,18 +8,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import { collection, doc, setDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -92,7 +92,7 @@ export default function UsersPage() {
 
     const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
 
-    const handleOpenModal = (user: UserWithStatus | null = null) => {
+    const handleOpenModal = (user: UserWithStatus) => {
         setEditingUser(user);
         setModalOpen(true);
     };
@@ -104,59 +104,34 @@ export default function UsersPage() {
 
     const handleSaveUser = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!firestore) return;
+        if (!firestore || !editingUser) return;
         
         const formData = new FormData(e.currentTarget);
         const firstName = formData.get('firstName') as string;
         const lastName = formData.get('lastName') as string;
         const role = formData.get('role') as UserProfile['role'];
-        const email = formData.get('email') as string;
 
         try {
-            if (editingUser) {
-                const userDocRef = doc(firestore, 'users', editingUser.id);
-                const updateData = { firstName, lastName, role };
-                setDoc(userDocRef, updateData, { merge: true })
-                  .catch(async (serverError) => {
-                    const permissionError = new FirestorePermissionError({
-                        path: userDocRef.path,
-                        operation: 'update',
-                        requestResourceData: updateData,
-                    });
-                    errorEmitter.emit('permission-error', permissionError);
-                });
-                toast({ title: "User Updated", description: `${firstName} ${lastName}'s role has been updated.` });
+            const userDocRef = doc(firestore, 'users', editingUser.id);
+            const updateData = { firstName, lastName, role };
+            await setDoc(userDocRef, updateData, { merge: true });
 
-                // In a real app, you would now call a Cloud Function to set the custom claim.
-                // For example: await setRole({ userId: editingUser.id, role: role });
-                toast({ title: 'Important Note', description: 'User role saved to database. A backend function is needed to apply security rules.', duration: 6000 });
+            toast({ title: "User Updated", description: `${firstName} ${lastName}'s role has been updated in the database.` });
 
-            } else {
-                // This only creates the profile, not the Auth user. This flow is for demonstration.
-                const usersCollection = collection(firestore, 'users');
-                const profileData = { 
-                    firstName, 
-                    lastName, 
-                    role, 
-                    phone: '', 
-                    shippingAddress: '', 
-                    createdAt: serverTimestamp(),
-                    wishlist: [],
-                };
-                addDoc(usersCollection, profileData).catch(async (serverError) => {
-                     const permissionError = new FirestorePermissionError({
-                        path: usersCollection.path,
-                        operation: 'create',
-                        requestResourceData: profileData,
-                    });
-                    errorEmitter.emit('permission-error', permissionError);
-                });
+            // In a real app, you would now call a Cloud Function to set the custom claim.
+            toast({ 
+                title: 'Next Step: Apply Permissions', 
+                description: 'To grant admin access, a backend function must set a "custom claim" on the user\'s auth token. This UI cannot do that.',
+                duration: 8000 
+            });
 
-                toast({ title: "User Profile Created", description: `A new profile for ${firstName} ${lastName} has been created.` });
-            }
             handleCloseModal();
         } catch (error) {
-            toast({ variant: 'destructive', title: "Save failed", description: "Could not save user profile."});
+            if (error instanceof FirestorePermissionError) {
+                 errorEmitter.emit('permission-error', error);
+            } else {
+                 toast({ variant: 'destructive', title: "Save failed", description: "Could not save user profile."});
+            }
         }
     };
 
@@ -178,7 +153,7 @@ export default function UsersPage() {
         // This is a UI-only toggle as we don't have a status field in Firestore.
         const userToToggle = users.find(u => u.id === userId);
         if (userToToggle) {
-            toast({ title: "Status Updated", description: `This is a mock action. In a real app, this would disable the user's Auth account.`});
+            toast({ title: "Status Update Mock", description: `This is a mock action. In a real app, this would disable the user's Firebase Auth account.`});
         }
     };
     
@@ -191,16 +166,10 @@ export default function UsersPage() {
             <div className="flex items-center">
                 <div className="flex-1">
                     <h1 className="text-3xl font-bold font-headline">User Management</h1>
-                    <p className="text-muted-foreground">Manage users, roles, and permissions.</p>
+                    <p className="text-muted-foreground">Manage users and their roles. New users must sign up through the main site.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm">Download CSV</Button>
-                    <Button size="sm" className="gap-1" onClick={() => handleOpenModal()}>
-                        <PlusCircle className="h-3.5 w-3.5" />
-                        <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                            Add User
-                        </span>
-                    </Button>
                 </div>
             </div>
             <Card>
@@ -325,14 +294,14 @@ export default function UsersPage() {
                 </CardFooter>
             </Card>
 
-             {isModalOpen && (
+             {isModalOpen && editingUser && (
                  <Dialog open={isModalOpen} onOpenChange={setModalOpen}>
                     <DialogContent>
                         <form onSubmit={handleSaveUser}>
                             <DialogHeader>
-                                <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
+                                <DialogTitle>Edit User</DialogTitle>
                                 <DialogDescription>
-                                    {editingUser ? "Update the user's details and role." : 'Create a new user account and assign a role.'}
+                                    Update the user's details and role.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
@@ -346,7 +315,7 @@ export default function UsersPage() {
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="email" className="text-right">Email</Label>
-                                    <Input id="email" name="email" type="email" defaultValue={editingUser?.email} placeholder="user@example.com" className="col-span-3" required disabled={!!editingUser}/>
+                                    <Input id="email" name="email" type="email" defaultValue={editingUser?.email} className="col-span-3" disabled/>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="role" className="text-right">Role</Label>
@@ -364,7 +333,7 @@ export default function UsersPage() {
                             </div>
                             <DialogFooter>
                                 <Button type="button" variant="outline" onClick={handleCloseModal}>Cancel</Button>
-                                <Button type="submit">{editingUser ? 'Save Changes' : 'Create User'}</Button>
+                                <Button type="submit">Save Changes</Button>
                             </DialogFooter>
                         </form>
                     </DialogContent>
@@ -373,5 +342,3 @@ export default function UsersPage() {
         </div>
     );
 }
-
-    
