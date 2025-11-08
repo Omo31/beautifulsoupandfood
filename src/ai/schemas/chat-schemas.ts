@@ -1,18 +1,20 @@
 import { z } from 'zod';
 
-export const ChatInputSchema = z.object({
-  history: z.array(z.object({
+// --- Input and Output Schemas ---
+const ChatHistorySchema = z.array(
+  z.object({
     role: z.enum(['user', 'model']),
     content: z.array(z.object({ text: z.string() })),
-  })).describe('The conversation history.'),
-  products: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    description: z.string(),
-    price: z.number(),
-    category: z.string(),
-    stock: z.number(),
-  })).describe('List of available products in the store.'),
-});
+  })
+);
 
+export const ChatInputSchema = z.object({
+  userId: z.string().describe('The unique ID of the user who is chatting.'),
+  history: ChatHistorySchema.describe('The conversation history.'),
+});
 export type ChatInput = z.infer<typeof ChatInputSchema>;
+
+export const ChatOutputSchema = z.object({
+  response: z.string().describe('The AI-generated response to the user.'),
+});
+export type ChatOutput = z.infer<typeof ChatOutputSchema>;

@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { chat } from '@/ai/flows/chat-flow';
-import type { ChatInput } from '@/ai/schemas/chat-schemas';
+import type { ChatInput, ChatOutput } from '@/ai/schemas/chat-schemas';
 
 type Message = {
     role: 'user' | 'model';
@@ -24,7 +24,6 @@ type Message = {
 export function ChatWidget() {
     const { user } = useUser();
     const firestore = useFirestore();
-    const { products } = useProducts();
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -53,9 +52,9 @@ export function ChatWidget() {
                 role: msg.role,
                 content: [{ text: msg.text }],
             }));
-
-            const aiResponseText = await chat({ history: chatHistory, products });
-            const aiMessage: Message = { role: 'model', text: aiResponseText };
+            
+            const aiResponse: ChatOutput = await chat({ userId: user.uid, history: chatHistory });
+            const aiMessage: Message = { role: 'model', text: aiResponse.response };
             setMessages(prev => [...prev, aiMessage]);
 
         } catch (error) {
