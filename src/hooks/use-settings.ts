@@ -14,6 +14,7 @@ export type AppSettings = {
     homepage: {
         heroTitle: string;
         heroSubtitle: string;
+        heroImageId: string;
         videoTitle: string;
         videoId: string;
         videoDescription: string;

@@ -35,7 +35,8 @@ export default function HomePage() {
 
   const { data: testimonials, loading: testimonialsLoading } = useCollection<Testimonial>(testimonialsQuery);
 
-  const heroImage = PlaceHolderImages.find((img) => img.id === 'hero');
+  const heroImageId = settings?.homepage?.heroImageId || "hero";
+  const heroImage = PlaceHolderImages.find((img) => img.id === heroImageId);
   const featuredProducts = products.slice(0, 4);
 
   const heroTitle = settings?.homepage?.heroTitle || "Authentic Nigerian Flavors, Delivered.";

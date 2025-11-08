@@ -95,6 +95,7 @@ export default function SettingsPage() {
   // States for local form management
   const [heroTitle, setHeroTitle] = useState('');
   const [heroSubtitle, setHeroSubtitle] = useState('');
+  const [heroImageId, setHeroImageId] = useState('');
   const [videoId, setVideoId] = useState('');
   const [videoTitle, setVideoTitle] = useState('');
   const [videoDescription, setVideoDescription] = useState('');
@@ -121,6 +122,7 @@ export default function SettingsPage() {
     if (settings) {
       setHeroTitle(settings.homepage?.heroTitle || "Authentic Nigerian Flavors, Delivered.");
       setHeroSubtitle(settings.homepage?.heroSubtitle || "From our kitchen to yours, experience the rich taste of Nigeria with our fresh ingredients and ready-to-eat soups.");
+      setHeroImageId(settings.homepage?.heroImageId || 'hero');
       setVideoId(settings.homepage?.videoId || 'dQw4w9WgXcQ');
       setVideoTitle(settings.homepage?.videoTitle || 'Our Story');
       setVideoDescription(settings.homepage?.videoDescription || 'A short description of the video.');
@@ -137,7 +139,7 @@ export default function SettingsPage() {
 
   const handleSaveHomepage = () => {
     updateSettings({
-      homepage: { heroTitle, heroSubtitle, videoId, videoTitle, videoDescription }
+      homepage: { heroTitle, heroSubtitle, heroImageId, videoId, videoTitle, videoDescription }
     });
   };
   
@@ -264,6 +266,15 @@ export default function SettingsPage() {
                     id="hero-subtitle"
                     value={heroSubtitle}
                     onChange={e => setHeroSubtitle(e.target.value)}
+                  />
+                </div>
+                 <div className="grid gap-2">
+                  <Label htmlFor="hero-image-id">Hero Image ID</Label>
+                  <Input
+                    id="hero-image-id"
+                    value={heroImageId}
+                    onChange={e => setHeroImageId(e.target.value)}
+                    placeholder="e.g., hero or jollof-rice"
                   />
                 </div>
               </div>

@@ -337,6 +337,7 @@
           "properties": {
             "heroTitle": { "type": "string" },
             "heroSubtitle": { "type": "string" },
+            "heroImageId": { "type": "string" },
             "videoTitle": { "type": "string" },
             "videoId": { "type": "string" },
             "videoDescription": { "type": "string" }
