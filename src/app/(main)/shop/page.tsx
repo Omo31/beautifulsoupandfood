@@ -17,11 +17,14 @@ import { useProducts } from '@/hooks/use-products';
 
 const ITEMS_PER_PAGE = 9;
 
+type SortOption = 'popularity' | 'price-asc' | 'price-desc' | 'newest';
+
 export default function ShopPage() {
     const { products } = useProducts();
     const searchParams = useSearchParams();
     const searchTerm = searchParams.get('q') || '';
     const [currentPage, setCurrentPage] = useState(1);
+    const [sortOption, setSortOption] = useState<SortOption>('popularity');
 
     const [filters, setFilters] = useState({
         categories: [] as string[],
@@ -64,12 +67,11 @@ export default function ShopPage() {
     };
 
     const filteredProducts = useMemo(() => {
-        return products.filter(product => {
+        let filtered = products.filter(product => {
             const searchMatch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
             
             const categoryMatch = appliedFilters.categories.length === 0 || appliedFilters.categories.includes(product.category);
 
-            // Correctly check price against the lowest variant price
             const lowestPrice = product.variants.length > 0 ? Math.min(...product.variants.map(v => v.price)) : 0;
             const priceMatch = lowestPrice >= appliedFilters.priceRange[0] && lowestPrice <= appliedFilters.priceRange[1];
 
@@ -78,7 +80,34 @@ export default function ShopPage() {
 
             return searchMatch && categoryMatch && priceMatch && stockMatch;
         });
-    }, [searchTerm, products, appliedFilters]);
+
+        // Apply sorting
+        switch (sortOption) {
+            case 'popularity':
+                filtered.sort((a, b) => b.reviewCount - a.reviewCount);
+                break;
+            case 'price-asc':
+                filtered.sort((a, b) => {
+                    const priceA = a.variants.length > 0 ? Math.min(...a.variants.map(v => v.price)) : 0;
+                    const priceB = b.variants.length > 0 ? Math.min(...b.variants.map(v => v.price)) : 0;
+                    return priceA - priceB;
+                });
+                break;
+            case 'price-desc':
+                 filtered.sort((a, b) => {
+                    const priceA = a.variants.length > 0 ? Math.min(...a.variants.map(v => v.price)) : 0;
+                    const priceB = b.variants.length > 0 ? Math.min(...b.variants.map(v => v.price)) : 0;
+                    return priceB - priceA;
+                });
+                break;
+            case 'newest':
+                // Assuming default order is newest, or sorting by name as a proxy
+                filtered.sort((a, b) => b.name.localeCompare(a.name));
+                break;
+        }
+
+        return filtered;
+    }, [searchTerm, products, appliedFilters, sortOption]);
 
     const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
 
@@ -156,10 +185,10 @@ export default function ShopPage() {
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Sort by</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>Popularity</DropdownMenuItem>
-                                <DropdownMenuItem>Price: Low to High</DropdownMenuItem>
-                                <DropdownMenuItem>Price: High to Low</DropdownMenuItem>
-                                <DropdownMenuItem>Newest</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setSortOption('popularity')}>Popularity</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setSortOption('price-asc')}>Price: Low to High</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setSortOption('price-desc')}>Price: High to Low</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setSortOption('newest')}>Newest</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
