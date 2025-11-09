@@ -11,12 +11,16 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 export type CartItem = {
-    id: string;
+    id: string; // This is now a composite key: `${productId}-${variantName}`
+    productId: string;
+    variantName: string;
     quantity: number;
 };
 
 export type EnrichedCartItem = {
-    id: string;
+    id: string; // Composite key
+    productId: string;
+    variantName: string;
     quantity: number;
     name: string;
     price: number;
@@ -40,20 +44,24 @@ export function useCart() {
     const enrichedCart = useMemo(() => {
         return cartItems
             .map(item => {
-                const product = findById(item.id);
+                const product = findById(item.productId);
                 if (!product) return null;
+
+                const variant = product.variants.find(v => v.name === item.variantName);
+                if (!variant) return null;
+
                 return {
                     ...item,
                     name: product.name,
-                    price: product.price,
-                    imageId: product.imageId,
-                    stock: product.stock,
+                    price: variant.price,
+                    imageId: product.imageUrl,
+                    stock: variant.stock,
                 };
             })
             .filter((item): item is EnrichedCartItem => item !== null);
-    }, [cartItems, findById]);
+    }, [cartItems, findById, products]);
 
-    const addToCart = async (productId: string, quantity: number = 1) => {
+    const addToCart = async (productId: string, quantity: number = 1, variantName: string) => {
         if (!firestore || !user) {
             toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to add items to your cart.' });
             return;
@@ -64,21 +72,32 @@ export function useCart() {
             toast({ variant: 'destructive', title: 'Product not found' });
             return;
         }
-        
-        if (product.stock === 0) {
-            toast({ variant: 'destructive', title: 'Out of Stock', description: `${product.name} is currently out of stock.`});
+
+        const variant = product.variants.find(v => v.name === variantName);
+        if (!variant) {
+            toast({ variant: 'destructive', title: 'Variant not found' });
             return;
         }
         
-        const cartDocRef = doc(firestore, 'users', user.uid, 'cart', productId);
+        if (variant.stock < quantity) {
+            toast({ variant: 'destructive', title: 'Not enough stock', description: `Only ${variant.stock} of ${product.name} (${variant.name}) available.`});
+            return;
+        }
+        
+        // Use a composite ID for the cart document to uniquely identify a product-variant pair
+        const cartItemId = `${productId}-${variantName}`;
+        const cartDocRef = doc(firestore, 'users', user.uid, 'cart', cartItemId);
+        
         const cartData = {
-            quantity,
+            productId: productId,
+            variantName: variantName,
+            quantity: quantity,
             addedAt: serverTimestamp(),
         };
 
         setDoc(cartDocRef, cartData, { merge: true })
             .then(() => {
-                toast({ title: 'Added to Cart', description: `${product.name} has been added to your cart.` });
+                toast({ title: 'Added to Cart', description: `${product.name} (${variant.name}) has been added to your cart.` });
             })
             .catch(async (serverError) => {
                  const permissionError = new FirestorePermissionError({
@@ -90,10 +109,10 @@ export function useCart() {
             });
     };
 
-    const updateQuantity = async (productId: string, newQuantity: number) => {
+    const updateQuantity = async (cartItemId: string, newQuantity: number) => {
         if (!firestore || !user || newQuantity < 1) return;
         
-        const cartDocRef = doc(firestore, 'users', user.uid, 'cart', productId);
+        const cartDocRef = doc(firestore, 'users', user.uid, 'cart', cartItemId);
         const updateData = { quantity: newQuantity };
 
         setDoc(cartDocRef, updateData, { merge: true })
@@ -107,10 +126,10 @@ export function useCart() {
             });
     };
 
-    const removeFromCart = async (productId: string) => {
+    const removeFromCart = async (cartItemId: string) => {
         if (!firestore || !user) return;
         
-        const cartDocRef = doc(firestore, 'users', user.uid, 'cart', productId);
+        const cartDocRef = doc(firestore, 'users', user.uid, 'cart', cartItemId);
         
         deleteDoc(cartDocRef)
             .then(() => {

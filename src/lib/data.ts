@@ -75,9 +75,8 @@ export type PurchaseOrderItem = {
 export type PurchaseOrder = {
   id: string;
   supplier: string;
-  date: string;
+  date: any; // Timestamp
   status: 'Draft' | 'Pending' | 'Completed' | 'Cancelled';
-  items: PurchaseOrderItem[];
   total: number;
 };
 
@@ -155,7 +154,8 @@ export type Quote = {
 export const homepageServices: HomepageService[] = [
     { id: '1', name: 'Custom Sourcing', description: 'Looking for a rare ingredient? We can find it for you.', iconName: 'PackageSearch'},
     { id: '2', name: 'Gift Wrapping', description: 'Send a taste of home as a beautifully wrapped gift.', iconName: 'Gift'},
-    { id: '3', name: 'Bulk Orders', description: 'Catering for an event? We handle bulk orders with ease.', iconName: 'Boxes'},
+    { id: '3'
+, name: 'Bulk Orders', description: 'Catering for an event? We handle bulk orders with ease.', iconName: 'Boxes'},
 ];
 
 // Mock data below this line is now DEPRECATED and will be removed.

@@ -20,11 +20,12 @@ import { useUser, useFirestore, useCollection } from '@/firebase';
 import { cn } from '@/lib/utils';
 import { collection, doc, addDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/utils';
-import type { Review } from '@/lib/data';
+import type { Review, ProductVariant } from '@/lib/data';
 import { formatDistanceToNow } from 'date-fns';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Skeleton } from '@/components/ui/skeleton';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 export default function ProductDetailPage() {
   const { products, findById, loading: productsLoading } = useProducts();
@@ -34,6 +35,8 @@ export default function ProductDetailPage() {
   const firestore = useFirestore();
   const { productId } = params;
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [newReviewText, setNewReviewText] = useState('');
   
@@ -42,6 +45,12 @@ export default function ProductDetailPage() {
   const { isWishlisted, toggleWishlist } = useWishlist();
 
   const product = findById(productId as string);
+
+  useEffect(() => {
+    if (product && product.variants.length > 0 && !selectedVariant) {
+      setSelectedVariant(product.variants[0]);
+    }
+  }, [product, selectedVariant]);
   
   // Redirect if product is not found after loading has finished
   useEffect(() => {
@@ -50,14 +59,14 @@ export default function ProductDetailPage() {
     }
   }, [productsLoading, product, router, productId]);
 
-  const image = product?.imageId;
+  const image = product?.imageUrl;
   
   const reviewsQuery = useMemoFirebase(() => {
       if (!firestore || !productId) return null;
       return collection(firestore, `products/${productId}/reviews`);
   }, [firestore, productId]);
 
-  const { data: reviews, loading: reviewsLoading, error: reviewsError } = useCollection<Review>(reviewsQuery);
+  const { data: reviews, loading: reviewsLoading } = useCollection<Review>(reviewsQuery);
   
   const relatedProducts = products.filter(p => p.category === product?.category && p.id !== product?.id).slice(0, 4);
 
@@ -87,10 +96,12 @@ export default function ProductDetailPage() {
   }
   
   const inWishlist = isWishlisted(product.id);
+  const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
 
   const handleQuantityChange = (change: 'increase' | 'decrease') => {
     if (change === 'increase') {
-      setQuantity(q => q + 1);
+      const maxQuantity = selectedVariant?.stock || totalStock;
+      setQuantity(q => Math.min(q + 1, maxQuantity));
     } else {
       setQuantity(q => Math.max(1, q - 1));
     }
@@ -101,7 +112,15 @@ export default function ProductDetailPage() {
       router.push('/login?redirect=/shop/' + product.id);
       return;
     }
-    addToCart(product.id, quantity);
+    if (!selectedVariant) {
+        toast({
+            variant: 'destructive',
+            title: 'Please select an option',
+            description: 'You must choose a variant before adding to cart.'
+        });
+        return;
+    }
+    addToCart(product.id, quantity, selectedVariant.name);
   };
   
   const handleWishlistToggle = () => {
@@ -201,25 +220,49 @@ export default function ProductDetailPage() {
                 <Separator orientation="vertical" className="h-4" />
                 <span className="text-sm text-muted-foreground">{product.reviewCount} Reviews</span>
             </div>
-            <p className="mt-4 text-muted-foreground flex-1">{product.description}</p>
+            <p className="mt-4 text-muted-foreground">{product.description}</p>
             
-            <p className="text-4xl font-bold mt-4">₦{product.price.toFixed(2)}</p>
+            {product.variants.length > 1 && (
+                <div className="mt-6">
+                    <Label className="font-medium">Select Option</Label>
+                    <RadioGroup 
+                        value={selectedVariant?.name}
+                        onValueChange={(name) => {
+                            const variant = product.variants.find(v => v.name === name) || null;
+                            setSelectedVariant(variant);
+                            setQuantity(1); // Reset quantity when variant changes
+                        }}
+                        className="flex flex-wrap gap-2 mt-2"
+                    >
+                        {product.variants.map(variant => (
+                             <Label key={variant.name} htmlFor={variant.name} className={cn("flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer", variant.stock === 0 && "cursor-not-allowed opacity-50")}>
+                                <RadioGroupItem value={variant.name} id={variant.name} className="sr-only" disabled={variant.stock === 0} />
+                                <span className="font-semibold text-sm">{variant.name}</span>
+                                <span className="text-xs text-muted-foreground">₦{variant.price.toFixed(2)}</span>
+                                {variant.stock === 0 && <span className="text-xs text-destructive">Out of Stock</span>}
+                            </Label>
+                        ))}
+                    </RadioGroup>
+                </div>
+            )}
+            
+            <p className="text-4xl font-bold mt-4">₦{(selectedVariant?.price || 0).toFixed(2)}</p>
 
             <div className="mt-6 flex items-center gap-4">
                 <div className="flex items-center gap-2 border rounded-md p-1">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange('decrease')} disabled={quantity <= 1}><Minus className="h-4 w-4"/></Button>
                     <span className="font-bold text-lg w-8 text-center">{quantity}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange('increase')}><Plus className="h-4 w-4"/></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange('increase')} disabled={quantity >= (selectedVariant?.stock || 0)}><Plus className="h-4 w-4"/></Button>
                 </div>
-                <Button size="lg" className="flex-1" disabled={product.stock === 0} onClick={handleAddToCart}>
+                <Button size="lg" className="flex-1" disabled={totalStock === 0 || (selectedVariant && selectedVariant.stock === 0)} onClick={handleAddToCart}>
                     <Plus className="mr-2 h-5 w-5" /> Add to Cart
                 </Button>
                 <Button variant="outline" size="icon" onClick={handleWishlistToggle} aria-label="Add to wishlist">
                   <Heart className={cn("h-5 w-5", inWishlist && "fill-destructive text-destructive")} />
                 </Button>
             </div>
-             {product.stock <= 20 && product.stock > 0 && <p className="text-yellow-600 text-sm mt-2">Low stock! Only {product.stock} left.</p>}
-             {product.stock === 0 && <p className="text-destructive text-sm mt-2">This product is out of stock.</p>}
+             {selectedVariant && selectedVariant.stock <= 20 && selectedVariant.stock > 0 && <p className="text-yellow-600 text-sm mt-2">Low stock! Only {selectedVariant.stock} left.</p>}
+             {totalStock === 0 && <p className="text-destructive text-sm mt-2">This product is out of stock.</p>}
 
             <Separator className="my-6" />
 

@@ -44,15 +44,20 @@ export async function POST(req: Request) {
             // 2. Create order items in a sub-collection
             const itemsCollectionRef = collection(newOrderRef, 'items');
             for (const item of parsedItems) {
-                const itemRef = doc(itemsCollectionRef, item.id || item.name); // Use name as fallback ID
+                // The item ID from a cart order payload is the base product ID.
+                // We create a new unique ID for the order item document.
+                const orderItemRef = doc(itemsCollectionRef); 
+                const [productName, variantName] = item.name.split(' (');
+                
                 const orderItemData = {
-                    productId: item.id || item.name,
-                    name: item.name,
+                    productId: item.id,
+                    name: productName,
+                    variantName: variantName ? variantName.slice(0, -1) : 'Standard',
                     quantity: item.quantity,
                     price: item.price,
                     imageId: item.imageId || 'custom-order'
                 };
-                batch.set(itemRef, orderItemData);
+                batch.set(orderItemRef, orderItemData);
             }
             
             // 3. Create a transaction record
@@ -69,10 +74,12 @@ export async function POST(req: Request) {
             // 4. Clear the user's cart IF it was a cart order
             if (order_type === 'cart') {
                 const cartCollectionRef = collection(firestore, 'users', user_id, 'cart');
-                for (const item of parsedItems) {
-                    const cartItemRef = doc(cartCollectionRef, item.id);
-                    batch.delete(cartItemRef);
-                }
+                // Since we don't have the composite cart item IDs here, we have to fetch them.
+                // This is a tradeoff for simplicity in the webhook.
+                const cartSnapshot = await getDocs(cartCollectionRef);
+                cartSnapshot.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
             } else if (order_type === 'quote' && order_ref) {
                  // 5. Update the quote status to 'Paid' if it was a quote order
                 const quoteRef = doc(firestore, 'quotes', order_ref);

@@ -45,17 +45,17 @@ export default function CartPage() {
     }, [settings, settingsLoading]);
 
 
-    const handleQuantityChange = (productId: string, change: 'increase' | 'decrease') => {
-        const item = cartItems.find(i => i.id === productId);
+    const handleQuantityChange = (cartItemId: string, change: 'increase' | 'decrease') => {
+        const item = cartItems.find(i => i.id === cartItemId);
         if (!item) return;
         const newQuantity = change === 'increase' ? item.quantity + 1 : item.quantity - 1;
         if (newQuantity > 0) {
-            updateQuantity(productId, newQuantity);
+            updateQuantity(cartItemId, newQuantity);
         }
     };
     
-    const handleRemoveItem = (productId: string) => {
-        removeFromCart(productId);
+    const handleRemoveItem = (cartItemId: string) => {
+        removeFromCart(cartItemId);
     };
 
     const serviceCharge = subtotal * 0.06;
@@ -96,7 +96,13 @@ export default function CartPage() {
                     userId: user.uid,
                     email: user.email,
                     amount: total,
-                    cartItems: cartItems.map(item => ({ id: item.id, name: item.name, quantity: item.quantity, price: item.price, imageId: item.imageId })),
+                    cartItems: cartItems.map(item => ({ 
+                        id: item.productId, // Use the base product ID for the payload
+                        name: `${item.name} (${item.variantName})`, 
+                        quantity: item.quantity, 
+                        price: item.price, 
+                        imageId: item.imageId 
+                    })),
                 }),
             });
 
@@ -150,12 +156,13 @@ export default function CartPage() {
                                                         </div>
                                                         <div className="flex-1">
                                                             <h3 className="font-semibold">{item.name}</h3>
+                                                            <p className="text-sm text-muted-foreground">Variant: {item.variantName}</p>
                                                             <p className="text-sm text-muted-foreground">₦{item.price.toFixed(2)}</p>
                                                         </div>
                                                         <div className="flex items-center gap-2 border rounded-md p-1">
                                                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleQuantityChange(item.id, 'decrease')} disabled={item.quantity <= 1}><Minus className="h-3 w-3"/></Button>
                                                             <span>{item.quantity}</span>
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleQuantityChange(item.id, 'increase')}><Plus className="h-3 w-3"/></Button>
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleQuantityChange(item.id, 'increase')} disabled={item.quantity >= item.stock}><Plus className="h-3 w-3"/></Button>
                                                         </div>
                                                         <p className="font-semibold w-20 text-right">₦{(item.price * item.quantity).toFixed(2)}</p>
                                                         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => handleRemoveItem(item.id)}><Trash2 className="h-4 w-4" /></Button>

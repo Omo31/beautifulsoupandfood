@@ -15,10 +15,13 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { SearchInput } from '@/components/SearchInput';
 import { useProducts } from '@/hooks/use-products';
 
+const ITEMS_PER_PAGE = 9;
+
 export default function ShopPage() {
     const { products } = useProducts();
     const searchParams = useSearchParams();
     const searchTerm = searchParams.get('q') || '';
+    const [currentPage, setCurrentPage] = useState(1);
 
     const [filters, setFilters] = useState({
         categories: [] as string[],
@@ -30,7 +33,8 @@ export default function ShopPage() {
 
     useEffect(() => {
         setAppliedFilters(filters);
-    }, [products]);
+        setCurrentPage(1); // Reset to first page on filter change
+    }, [products, filters]);
 
 
     const handleCategoryChange = (category: string, checked: boolean | 'indeterminate') => {
@@ -56,6 +60,7 @@ export default function ShopPage() {
     
     const applyFilters = () => {
         setAppliedFilters(filters);
+        setCurrentPage(1); // Reset to first page when applying new filters
     };
 
     const filteredProducts = useMemo(() => {
@@ -64,13 +69,29 @@ export default function ShopPage() {
             
             const categoryMatch = appliedFilters.categories.length === 0 || appliedFilters.categories.includes(product.category);
 
-            const priceMatch = product.price >= appliedFilters.priceRange[0] && product.price <= appliedFilters.priceRange[1];
+            // Correctly check price against the lowest variant price
+            const lowestPrice = product.variants.length > 0 ? Math.min(...product.variants.map(v => v.price)) : 0;
+            const priceMatch = lowestPrice >= appliedFilters.priceRange[0] && lowestPrice <= appliedFilters.priceRange[1];
 
-            const stockMatch = !appliedFilters.inStock || product.stock > 0;
+            const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
+            const stockMatch = !appliedFilters.inStock || totalStock > 0;
 
             return searchMatch && categoryMatch && priceMatch && stockMatch;
         });
     }, [searchTerm, products, appliedFilters]);
+
+    const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+
+    const paginatedProducts = useMemo(() => {
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredProducts, currentPage]);
+    
+    const handlePageChange = (page: number) => {
+      if (page >= 1 && page <= totalPages) {
+        setCurrentPage(page);
+      }
+    };
 
 
     return (
@@ -143,32 +164,32 @@ export default function ShopPage() {
                         </DropdownMenu>
                     </div>
                 </div>
-                {filteredProducts.length > 0 ? (
+                {paginatedProducts.length > 0 ? (
                     <>
                         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-                            {filteredProducts.map((product) => (
+                            {paginatedProducts.map((product) => (
                                 <ProductCard key={product.id} product={product} />
                             ))}
                         </div>
-                        <Pagination className="mt-8">
-                            <PaginationContent>
-                                <PaginationItem>
-                                    <PaginationPrevious href="#" />
-                                </PaginationItem>
-                                <PaginationItem>
-                                    <PaginationLink href="#">1</PaginationLink>
-                                </PaginationItem>
-                                <PaginationItem>
-                                    <PaginationLink href="#" isActive>2</PaginationLink>
-                                </PaginationItem>
-                                <PaginationItem>
-                                    <PaginationLink href="#">3</PaginationLink>
-                                </PaginationItem>
-                                <PaginationItem>
-                                    <PaginationNext href="#" />
-                                </PaginationItem>
-                            </PaginationContent>
-                        </Pagination>
+                        {totalPages > 1 && (
+                            <Pagination className="mt-8">
+                                <PaginationContent>
+                                    <PaginationItem>
+                                        <PaginationPrevious href="#" onClick={(e) => {e.preventDefault(); handlePageChange(currentPage - 1);}} className={currentPage === 1 ? 'pointer-events-none opacity-50' : undefined} />
+                                    </PaginationItem>
+                                    {[...Array(totalPages)].map((_, i) => (
+                                        <PaginationItem key={i}>
+                                            <PaginationLink href="#" isActive={currentPage === i + 1} onClick={(e) => {e.preventDefault(); handlePageChange(i + 1);}}>
+                                                {i + 1}
+                                            </PaginationLink>
+                                        </PaginationItem>
+                                    ))}
+                                    <PaginationItem>
+                                        <PaginationNext href="#" onClick={(e) => {e.preventDefault(); handlePageChange(currentPage + 1);}} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : undefined}/>
+                                    </PaginationItem>
+                                </PaginationContent>
+                            </Pagination>
+                        )}
                     </>
                 ) : (
                     <div className="text-center py-12">

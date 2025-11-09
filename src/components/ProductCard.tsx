@@ -45,7 +45,7 @@ export function ProductCard({ product }: ProductCardProps) {
     // For card, add the first variant by default
     const defaultVariant = product.variants[0];
     if (defaultVariant) {
-        addToCart(product.id, defaultVariant.name);
+        addToCart(product.id, 1, defaultVariant.name);
     }
   };
   
