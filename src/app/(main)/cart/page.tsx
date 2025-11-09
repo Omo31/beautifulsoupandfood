@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Minus, Plus, Trash2, Info, ArrowLeft, Truck } from "lucide-react";
-import { lagosLgas as defaultLgas } from "@/lib/shipping";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -36,12 +35,9 @@ export default function CartPage() {
     const router = useRouter();
 
     const lagosLgas = useMemo(() => {
-        // Prioritize settings from the database. Only use default if settings are loaded but empty.
-        if (settingsLoading) return []; // Return empty array while loading
-        if (settings?.shipping?.lagosLgas && settings.shipping.lagosLgas.length > 0) {
-            return settings.shipping.lagosLgas;
-        }
-        return defaultLgas; // Fallback only if settings are loaded but have no LGAs defined
+        // Only use shipping settings from the database.
+        if (settingsLoading) return []; // Return empty array while loading to show skeleton
+        return settings?.shipping?.lagosLgas || []; // Use settings or an empty array if not defined
     }, [settings, settingsLoading]);
 
 
@@ -219,18 +215,22 @@ export default function CartPage() {
                                     <div className="grid gap-2">
                                         <Label htmlFor="lga-select">Select Location (LGA)</Label>
                                         {settingsLoading ? <Skeleton className="h-10 w-full" /> : (
-                                            <Select onValueChange={setSelectedLga}>
-                                                <SelectTrigger id="lga-select">
-                                                    <SelectValue placeholder="Choose your Local Government Area" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {lagosLgas.map(lga => (
-                                                        <SelectItem key={lga.id} value={lga.id}>
-                                                            {lga.name} - ₦{lga.price.toFixed(2)}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            lagosLgas.length > 0 ? (
+                                                <Select onValueChange={setSelectedLga}>
+                                                    <SelectTrigger id="lga-select">
+                                                        <SelectValue placeholder="Choose your Local Government Area" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {lagosLgas.map(lga => (
+                                                            <SelectItem key={lga.id} value={lga.id}>
+                                                                {lga.name} - ₦{lga.price.toFixed(2)}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground p-3 bg-muted rounded-md">No Lagos delivery locations have been configured by the store owner.</p>
+                                            )
                                         )}
                                         <Textarea placeholder="Full shipping address..." className="mt-2" />
                                     </div>

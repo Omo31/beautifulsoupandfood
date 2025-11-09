@@ -4,6 +4,8 @@ export type LgaShippingZone = {
   price: number;
 };
 
+// This data is now only a fallback for the Custom Order page.
+// The cart page will only use data from Firestore settings.
 export const lagosLgas: LgaShippingZone[] = [
   { id: 'agege', name: 'Agege', price: 1500 },
   { id: 'ajeromi-ifelodun', name: 'Ajeromi-Ifelodun', price: 2000 },
