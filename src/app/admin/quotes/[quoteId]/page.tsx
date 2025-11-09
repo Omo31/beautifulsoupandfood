@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { QuoteStatus, QuoteRequest, QuoteItem } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import notificationStore from '@/lib/notifications';
+import { createNotification } from '@/lib/notifications';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
 import { doc, setDoc } from 'firebase/firestore';
@@ -83,6 +83,7 @@ export default function AdminQuoteDetailsPage() {
 
   const handleSendQuote = async () => {
     if (!quoteRef || !initialQuote) return;
+    if(!firestore) return;
 
     try {
         await setDoc(quoteRef, { 
@@ -91,12 +92,13 @@ export default function AdminQuoteDetailsPage() {
             shippingCost: shippingCost,
         }, { merge: true });
 
-        notificationStore.addNotification({
+        createNotification(firestore, {
             recipient: 'user',
-            title: 'Quote Ready!',
+            userId: initialQuote.userId,
+            title: 'Your Quote is Ready!',
             description: `Your quote #${initialQuote.id?.substring(0,6)} is now ready for your review.`,
             href: `/account/quotes/${initialQuote.id}`,
-            icon: FileText,
+            icon: 'FileText',
         });
 
         toast({

@@ -124,6 +124,15 @@ service cloud.firestore {
         allow write: if isAdmin();
     }
 
+    // Notifications: Admins can create. Users can read/update their own.
+    match /notifications/{notificationId} {
+      allow create: if isAdmin(); // Only allow backend/admins to create notifications
+      // Users can see their own notifications, or admins can see all admin notifications
+      allow read, update: if (resource.data.recipient == 'user' && isOwner(resource.data.userId)) || (resource.data.recipient == 'admin' && isAdmin());
+      // Admins can query their own notifications
+      allow list: if isAdmin();
+    }
+
     // Collection Group Queries
     // Allow admins to query orders across all users.
     match /{path=**}/orders/{orderId} {

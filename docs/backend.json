@@ -427,6 +427,22 @@
             }
         }
       }
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Represents a notification for a user or admin.",
+      "type": "object",
+      "properties": {
+        "recipient": { "type": "string", "enum": ["user", "admin"] },
+        "userId": { "type": "string", "description": "The UID of the user this notification is for (if recipient is 'user')." },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "href": { "type": "string" },
+        "icon": { "type": "string", "description": "Lucide icon name." },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["recipient", "title", "description", "href", "icon", "timestamp", "read"]
     }
   },
   "auth": {
@@ -508,8 +524,10 @@
     "/settings/app": {
         "schema": { "$ref": "#/entities/AppSettings" },
         "description": "A single document to hold all dynamic application settings."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Collection for all user and admin notifications."
     }
   }
 }
-
-    

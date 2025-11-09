@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { Bell, ShoppingCart } from 'lucide-react';
+import { Bell, ShoppingCart, FileText, PackageCheck, Truck, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -19,11 +20,20 @@ type NotificationBellProps = {
     recipient: 'user' | 'admin';
 }
 
+const iconMap = {
+    FileText,
+    ShoppingBag: ShoppingCart,
+    Truck,
+    PackageCheck,
+    MessageSquare,
+    Bell
+};
+
 export function NotificationBell({ recipient }: NotificationBellProps) {
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(recipient);
     
     const sortedNotifications = useMemo(() => {
-        return [...notifications].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        return [...notifications].sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime());
     }, [notifications]);
 
     const handleItemClick = (id: string) => {
@@ -53,20 +63,23 @@ export function NotificationBell({ recipient }: NotificationBellProps) {
                 </div>
             ): (
                 <>
-                    {sortedNotifications.slice(0, 5).map(notification => (
-                        <DropdownMenuItem key={notification.id} asChild className="h-auto" onSelect={() => handleItemClick(notification.id)}>
-                            <Link href={notification.href} className="flex gap-3 items-start p-2 rounded-md hover:bg-muted/50 cursor-pointer">
-                                {!notification.read && <span className="mt-1 block h-2 w-2 rounded-full bg-primary" />}
-                                {notification.read && <span className="mt-1 block h-2 w-2" />}
-                                <notification.icon className="h-4 w-4 mt-1 text-muted-foreground" />
-                                <div className="flex-1 space-y-1">
-                                    <p className="font-semibold text-sm">{notification.title}</p>
-                                    <p className="text-xs text-muted-foreground">{notification.description}</p>
-                                    <p className="text-xs text-muted-foreground">{formatDistanceToNow(notification.timestamp, { addSuffix: true })}</p>
-                                </div>
-                            </Link>
-                        </DropdownMenuItem>
-                    ))}
+                    {sortedNotifications.slice(0, 5).map(notification => {
+                        const Icon = iconMap[notification.icon as keyof typeof iconMap] || Bell;
+                        return (
+                            <DropdownMenuItem key={notification.id} asChild className="h-auto" onSelect={() => handleItemClick(notification.id)}>
+                                <Link href={notification.href} className="flex gap-3 items-start p-2 rounded-md hover:bg-muted/50 cursor-pointer">
+                                    {!notification.read && <span className="mt-1 block h-2 w-2 rounded-full bg-primary" />}
+                                    {notification.read && <span className="mt-1 block h-2 w-2" />}
+                                    <Icon className="h-4 w-4 mt-1 text-muted-foreground" />
+                                    <div className="flex-1 space-y-1">
+                                        <p className="font-semibold text-sm">{notification.title}</p>
+                                        <p className="text-xs text-muted-foreground">{notification.description}</p>
+                                        <p className="text-xs text-muted-foreground">{formatDistanceToNow(notification.timestamp.toDate(), { addSuffix: true })}</p>
+                                    </div>
+                                </Link>
+                            </DropdownMenuItem>
+                        )
+                    })}
                      <DropdownMenuSeparator />
                      <DropdownMenuItem asChild>
                         <Link href={recipient === 'admin' ? '/admin/notifications' : '/account/notifications'} className="justify-center">View All Notifications</Link>

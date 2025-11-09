@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Truck, PackageCheck, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import notificationStore from '@/lib/notifications';
+import { createNotification } from '@/lib/notifications';
 import { useFirestore, useDoc, useCollection } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
 import { doc, getDocs, query, collectionGroup, where, limit, setDoc, collection } from 'firebase/firestore';
@@ -86,7 +86,7 @@ export default function AdminOrderDetailsPage() {
 
 
   const handleStatusChange = async (newStatus: Order['status']) => {
-      if (order && orderRef) {
+      if (order && orderRef && customerId && firestore) {
           try {
             await setDoc(orderRef, { status: newStatus }, { merge: true });
             toast({
@@ -95,21 +95,23 @@ export default function AdminOrderDetailsPage() {
             });
             
             if (newStatus === 'Shipped') {
-               notificationStore.addNotification({
+               createNotification(firestore, {
                   recipient: 'user',
+                  userId: customerId,
                   title: 'Your Order has Shipped!',
                   description: `Your order #${order.id.substring(0, 6)} is on its way.`,
                   href: `/account/orders/${order.id}`,
-                  icon: Truck,
+                  icon: 'Truck',
               });
             }
              if (newStatus === 'Delivered') {
-               notificationStore.addNotification({
+               createNotification(firestore, {
                   recipient: 'user',
+                  userId: customerId,
                   title: 'Your Order has been Delivered!',
                   description: `We hope you enjoy your items from order #${order.id.substring(0, 6)}.`,
                   href: `/account/orders/${order.id}`,
-                  icon: PackageCheck,
+                  icon: 'PackageCheck',
               });
             }
           } catch (error) {

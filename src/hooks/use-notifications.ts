@@ -1,26 +1,58 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import notificationStore from '@/lib/notifications';
+import { useMemo } from 'react';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, query, where, doc, updateDoc, writeBatch, getDocs, orderBy } from 'firebase/firestore';
+import { useMemoFirebase } from '@/firebase/utils';
 import type { Notification } from '@/lib/notifications';
 
 export function useNotifications(recipient: 'user' | 'admin') {
-    const [notifications, setNotifications] = useState(notificationStore.getSnapshot());
+    const { user } = useUser();
+    const firestore = useFirestore();
 
-    useEffect(() => {
-        const unsubscribe = notificationStore.subscribe(() => {
-            setNotifications(notificationStore.getSnapshot());
-        });
-        return () => unsubscribe();
-    }, []);
+    const notificationsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        const notificationsRef = collection(firestore, 'notifications');
+        if (recipient === 'user') {
+            if (!user) return null;
+            return query(notificationsRef, where('recipient', '==', 'user'), where('userId', '==', user.uid), orderBy('timestamp', 'desc'));
+        }
+        // For admin
+        return query(notificationsRef, where('recipient', '==', 'admin'), orderBy('timestamp', 'desc'));
+    }, [firestore, user, recipient]);
 
-    const recipientNotifications = notifications.filter(n => n.recipient === recipient);
+    const { data: notifications, loading } = useCollection<Notification>(notificationsQuery);
+
+    const markAsRead = async (id: string) => {
+        if (!firestore) return;
+        const notifRef = doc(firestore, 'notifications', id);
+        try {
+            await updateDoc(notifRef, { read: true });
+        } catch (error) {
+            console.error("Error marking notification as read:", error);
+        }
+    };
+
+    const markAllAsRead = async () => {
+        if (!firestore || !notificationsQuery) return;
+        try {
+            const batch = writeBatch(firestore);
+            const unreadSnapshot = await getDocs(query(notificationsQuery, where('read', '==', false)));
+            unreadSnapshot.forEach(doc => {
+                batch.update(doc.ref, { read: true });
+            });
+            await batch.commit();
+        } catch (error) {
+            console.error("Error marking all as read:", error);
+        }
+    };
 
     return {
-        notifications: recipientNotifications,
-        unreadCount: recipientNotifications.filter(n => !n.read).length,
-        markAsRead: notificationStore.markAsRead,
-        markAllAsRead: () => notificationStore.markAllAsRead(recipient),
+        notifications,
+        loading,
+        unreadCount: notifications.filter(n => !n.read).length,
+        markAsRead,
+        markAllAsRead,
     };
 }
