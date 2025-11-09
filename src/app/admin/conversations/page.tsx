@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect, type FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -36,7 +37,10 @@ type Message = {
 
 export default function ConversationsPage() {
   const firestore = useFirestore();
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const initialUserId = searchParams.get('userId');
+
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(initialUserId);
   const [newMessage, setNewMessage] = useState('');
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -59,6 +63,22 @@ export default function ConversationsPage() {
         chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // If initialUserId is provided, mark as read on component mount
+  useEffect(() => {
+    if(initialUserId && firestore) {
+        const convoRef = doc(firestore, 'conversations', initialUserId);
+        const updateData = { isReadByAdmin: true };
+        setDoc(convoRef, updateData, { merge: true }).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: convoRef.path,
+                operation: 'update',
+                requestResourceData: updateData
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
+    }
+  }, [initialUserId, firestore]);
 
   const handleSelectConversation = async (conversationId: string) => {
     setSelectedConversationId(conversationId);
