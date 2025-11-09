@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -175,7 +176,7 @@ export default function AdminQuoteDetailsPage() {
                                 <div className="grid grid-cols-[1fr_auto_auto] items-end gap-4">
                                     <div className="flex-1">
                                         <p className="font-medium">{item.name}</p>
-                                        <p className="text-sm text-muted-foreground">Quantity: {item.quantity} {item.measure === 'custom' ? item.customMeasure : item.measure}</p>
+                                        <p className="text-sm text-muted-foreground">Quantity: {item.quantity} {item.measure === 'Custom...' ? item.customMeasure : item.measure}</p>
                                     </div>
                                     <div className="grid gap-1.5">
                                         <Label htmlFor={`unit-cost-${index}`} className="text-xs">Unit Cost (₦)</Label>
@@ -306,3 +307,5 @@ export default function AdminQuoteDetailsPage() {
     </Card>
   );
 }
+
+    

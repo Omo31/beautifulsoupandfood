@@ -34,7 +34,7 @@ const customItemSchema = z.object({
     measure: z.string().min(1, "Please select a unit"),
     customMeasure: z.string().optional(),
 }).refine(data => {
-    return data.measure !== 'custom' || (data.measure === 'custom' && data.customMeasure && data.customMeasure.length > 0);
+    return data.measure !== 'Custom...' || (data.measure === 'Custom...' && data.customMeasure && data.customMeasure.length > 0);
 }, {
     message: "Custom unit is required",
     path: ["customMeasure"],
@@ -494,3 +494,6 @@ export default function CustomOrderPage() {
 
     
 
+
+
+    
