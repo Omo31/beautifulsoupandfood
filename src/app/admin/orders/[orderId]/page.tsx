@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import type { Order, OrderItem } from '@/lib/data';
+import type { Order, OrderItem, UserProfile } from '@/lib/data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -74,6 +74,16 @@ export default function AdminOrderDetailsPage() {
 
   const { data: orderItems, loading: itemsLoading } = useCollection<OrderItem>(itemsRef);
 
+  const customerId = orderRef?.parent.parent.id;
+  
+  const userDocRef = useMemoFirebase(() => {
+      if (!firestore || !customerId) return null;
+      return doc(firestore, 'users', customerId);
+  }, [firestore, customerId]);
+
+  const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userDocRef);
+
+
   const handleStatusChange = async (newStatus: Order['status']) => {
       if (order && orderRef) {
           try {
@@ -108,19 +118,30 @@ export default function AdminOrderDetailsPage() {
   };
 
 
-  if (orderLoading || itemsLoading || !orderRef) {
+  if (orderLoading || itemsLoading || !orderRef || userProfileLoading) {
     return (
         <Card>
-            <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+            <CardHeader>
+              <Skeleton className="h-8 w-1/2" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </CardHeader>
             <CardContent className="space-y-6">
-                <Skeleton className="h-4 w-3/4" />
                 <Separator />
                 <div className="space-y-4">
                     <Skeleton className="h-16 w-full" />
                     <Skeleton className="h-16 w-full" />
                 </div>
                 <Separator />
-                <Skeleton className="h-24 w-full" />
+                <div className="grid md:grid-cols-2 gap-8 my-6">
+                  <div>
+                    <Skeleton className="h-6 w-32 mb-2" />
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-4 w-40 mt-1" />
+                    <Skeleton className="h-4 w-32 mt-1" />
+                  </div>
+                   <Skeleton className="h-24 w-full" />
+                </div>
             </CardContent>
             <CardFooter>
                  <Skeleton className="h-10 w-32" />
@@ -141,7 +162,6 @@ export default function AdminOrderDetailsPage() {
 
   const serviceCharge = order.total * 0.06;
   const subtotal = order.total - serviceCharge; // Simplified for this example
-  const customerId = orderRef.parent.parent.id;
 
   return (
     <Card>
@@ -191,10 +211,12 @@ export default function AdminOrderDetailsPage() {
             <div className="space-y-2">
                 <h3 className="font-semibold">Customer & Shipping</h3>
                 <p className="text-muted-foreground">
-                    Customer Name<br />
-                    123 Main Street<br />
-                    Lagos, 100242<br />
-                    Nigeria
+                    {userProfile ? (
+                      <>
+                        {userProfile.firstName} {userProfile.lastName}<br />
+                        {userProfile.shippingAddress.split('\n').map((line, i) => <span key={i}>{line}<br/></span>) || 'No shipping address provided'}
+                      </>
+                    ) : 'Customer details not available.'}
                 </p>
             </div>
              <div className="space-y-2">
