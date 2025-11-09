@@ -33,6 +33,7 @@ export type AppSettings = {
         legalLinks: {
             terms: string;
             privacy: string;
+            cookies: string;
         };
         openingHours: string;
     };
@@ -87,3 +88,5 @@ export function useSettings() {
         updateSettings,
     };
 }
+
+    

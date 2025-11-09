@@ -390,7 +390,8 @@
                     "type": "object",
                     "properties": {
                         "terms": { "type": "string" },
-                        "privacy": { "type": "string" }
+                        "privacy": { "type": "string" },
+                        "cookies": { "type": "string" }
                     }
                 },
                 "openingHours": { "type": "string" }

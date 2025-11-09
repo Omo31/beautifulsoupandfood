@@ -98,7 +98,7 @@ export default function SettingsPage() {
   const [newTestimonial, setNewTestimonial] = useState({ name: '', location: '', comment: '', imageId: '' });
   
   const [socialLinks, setSocialLinks] = useState({ facebook: '', instagram: '', twitter: '' });
-  const [legalLinks, setLegalLinks] = useState({ terms: '', privacy: '' });
+  const [legalLinks, setLegalLinks] = useState({ terms: '', privacy: '', cookies: '' });
   const [openingHours, setOpeningHours] = useState('');
 
   const [measures, setMeasures] = useState<string[]>([]);
@@ -133,7 +133,7 @@ export default function SettingsPage() {
 
 
       setSocialLinks(settings.footer?.socialLinks || { facebook: '', instagram: '', twitter: '' });
-      setLegalLinks(settings.footer?.legalLinks || { terms: '/terms-of-service', privacy: '/privacy-policy' });
+      setLegalLinks(settings.footer?.legalLinks || { terms: '/terms-of-service', privacy: '/privacy-policy', cookies: '/cookies-policy' });
       setOpeningHours(settings.footer?.openingHours || 'Mon - Fri: 9am - 6pm');
       
       setMeasures(settings.customOrder?.measures || ['Grams (g)', 'Kilograms (kg)', 'Pieces', 'Bunches', 'Wraps']);
@@ -476,7 +476,7 @@ export default function SettingsPage() {
               </div>
                <div className="space-y-4">
                 <h3 className="font-medium">Legal Pages</h3>
-                 <div className="grid md:grid-cols-2 gap-4">
+                 <div className="grid md:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                         <Label htmlFor="terms-url">Terms of Service URL</Label>
                         <Input id="terms-url" placeholder="/terms-of-service" value={legalLinks.terms} onChange={e => setLegalLinks({...legalLinks, terms: e.target.value})} />
@@ -484,6 +484,10 @@ export default function SettingsPage() {
                     <div className="grid gap-2">
                         <Label htmlFor="privacy-url">Privacy Policy URL</Label>
                         <Input id="privacy-url" placeholder="/privacy-policy" value={legalLinks.privacy} onChange={e => setLegalLinks({...legalLinks, privacy: e.target.value})} />
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="cookies-url">Cookies Policy URL</Label>
+                        <Input id="cookies-url" placeholder="/cookies-policy" value={legalLinks.cookies} onChange={e => setLegalLinks({...legalLinks, cookies: e.target.value})} />
                     </div>
                  </div>
               </div>
@@ -714,3 +718,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

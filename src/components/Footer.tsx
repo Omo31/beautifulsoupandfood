@@ -10,7 +10,7 @@ export function Footer() {
     const { settings } = useSettings();
 
     const socialLinks = settings?.footer?.socialLinks || { facebook: '#', instagram: '#', twitter: '#' };
-    const legalLinks = settings?.footer?.legalLinks || { terms: '#', privacy: '#' };
+    const legalLinks = settings?.footer?.legalLinks || { terms: '#', privacy: '#', cookies: '#' };
     const openingHours = settings?.footer?.openingHours || 'Mon - Fri: 9am - 6pm';
 
     return (
@@ -48,6 +48,7 @@ export function Footer() {
                         <ul className="space-y-2 mt-4 text-sm">
                             <li><Link href={legalLinks.privacy} className="hover:text-primary">Privacy Policy</Link></li>
                             <li><Link href={legalLinks.terms} className="hover:text-primary">Terms of Service</Link></li>
+                            <li><Link href={legalLinks.cookies} className="hover:text-primary">Cookies Policy</Link></li>
                         </ul>
                     </div>
                 </div>
@@ -59,3 +60,5 @@ export function Footer() {
         </footer>
     );
 }
+
+    
