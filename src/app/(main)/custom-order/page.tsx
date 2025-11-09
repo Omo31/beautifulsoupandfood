@@ -14,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { lagosLgas as defaultLgas } from '@/lib/shipping';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFieldArray, useForm } from 'react-hook-form';
@@ -26,6 +25,7 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useSettings } from '@/hooks/use-settings';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const customItemSchema = z.object({
@@ -71,11 +71,11 @@ export default function CustomOrderPage() {
     const { toast } = useToast();
     const { user } = useUser();
     const firestore = useFirestore();
-    const { settings } = useSettings();
+    const { settings, loading: settingsLoading } = useSettings();
     
-    const measures = settings?.customOrder?.measures || ['Grams (g)', 'Kilograms (kg)', 'Pieces', 'Bunches', 'Wraps', 'Custom...'];
-    const addonServices = settings?.customOrder?.services || ['Gift Wrapping', 'Special Packaging'];
-    const lagosLgas = settings?.shipping?.lagosLgas || defaultLgas;
+    const measures = useMemo(() => settings?.customOrder?.measures || ['Grams (g)', 'Kilograms (kg)', 'Pieces', 'Bunches', 'Wraps', 'Custom...'], [settings]);
+    const addonServices = useMemo(() => settings?.customOrder?.services || ['Gift Wrapping', 'Special Packaging'], [settings]);
+    const lagosLgas = useMemo(() => settings?.shipping?.lagosLgas || [], [settings]);
 
     const form = useForm<CustomOrderFormValues>({
         resolver: zodResolver(customOrderSchema),
@@ -383,20 +383,26 @@ export default function CustomOrderPage() {
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Select Location (LGA)</FormLabel>
-                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                            <FormControl>
-                                                                <SelectTrigger>
-                                                                    <SelectValue placeholder="Choose your Local Government Area" />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent>
-                                                                {lagosLgas.map(lga => (
-                                                                    <SelectItem key={lga.id} value={lga.id}>
-                                                                        {lga.name} - ₦{lga.price.toFixed(2)}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
+                                                        {settingsLoading ? <Skeleton className="h-10 w-full" /> : (
+                                                            lagosLgas.length > 0 ? (
+                                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                                    <FormControl>
+                                                                        <SelectTrigger>
+                                                                            <SelectValue placeholder="Choose your Local Government Area" />
+                                                                        </SelectTrigger>
+                                                                    </FormControl>
+                                                                    <SelectContent>
+                                                                        {lagosLgas.map(lga => (
+                                                                            <SelectItem key={lga.id} value={lga.id}>
+                                                                                {lga.name} - ₦{lga.price.toFixed(2)}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            ) : (
+                                                                <p className="text-sm text-muted-foreground p-3 bg-muted rounded-md">No Lagos delivery locations have been configured by the store owner.</p>
+                                                            )
+                                                        )}
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
@@ -502,9 +508,3 @@ export default function CustomOrderPage() {
         </TooltipProvider>
     )
 }
-
-    
-
-
-
-    
