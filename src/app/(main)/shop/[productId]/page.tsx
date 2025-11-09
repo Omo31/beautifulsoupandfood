@@ -3,7 +3,6 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -51,7 +50,7 @@ export default function ProductDetailPage() {
     }
   }, [productsLoading, product, router, productId]);
 
-  const image = product ? PlaceHolderImages.find(p => p.id === product.imageId) : null;
+  const image = product?.imageId;
   
   const reviewsQuery = useMemoFirebase(() => {
       if (!firestore || !productId) return null;
@@ -184,11 +183,10 @@ export default function ProductDetailPage() {
             <div className="relative aspect-square rounded-lg overflow-hidden border">
               {image && (
                 <Image
-                  src={image.imageUrl}
+                  src={image}
                   alt={product.name}
                   fill
                   className="object-cover"
-                  data-ai-hint={image.imageHint}
                 />
               )}
             </div>

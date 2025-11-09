@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -7,7 +8,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
@@ -72,8 +72,6 @@ export default function UsersPage() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
 
-    const avatar = PlaceHolderImages.find(p => p.id === 'avatar-1');
-
     const filteredUsers = useMemo(() => {
         return users
             .filter(u => 
@@ -111,42 +109,42 @@ export default function UsersPage() {
         const lastName = formData.get('lastName') as string;
         const role = formData.get('role') as UserProfile['role'];
 
-        try {
-            const userDocRef = doc(firestore, 'users', editingUser.id);
-            const updateData = { firstName, lastName, role };
-            await setDoc(userDocRef, updateData, { merge: true });
+        const userDocRef = doc(firestore, 'users', editingUser.id);
+        const updateData = { firstName, lastName, role };
 
+        setDoc(userDocRef, updateData, { merge: true }).then(() => {
             toast({ title: "User Updated", description: `${firstName} ${lastName}'s role has been updated in the database.` });
-
-            // In a real app, you would now call a Cloud Function to set the custom claim.
-            toast({ 
-                title: 'Next Step: Apply Permissions', 
-                description: 'To grant admin access, a backend function must set a "custom claim" on the user\'s auth token. This UI cannot do that.',
-                duration: 8000 
-            });
-
-            handleCloseModal();
-        } catch (error) {
-            if (error instanceof FirestorePermissionError) {
-                 errorEmitter.emit('permission-error', error);
-            } else {
-                 toast({ variant: 'destructive', title: "Save failed", description: "Could not save user profile."});
+             // In a real app, you would now call a Cloud Function to set the custom claim.
+            if (role !== 'Customer') {
+                toast({ 
+                    title: 'Next Step: Apply Permissions', 
+                    description: 'To grant admin access, a backend function must set a "custom claim" on the user\'s auth token. This UI cannot do that.',
+                    duration: 8000 
+                });
             }
-        }
+            handleCloseModal();
+        }).catch((error) => {
+            const permissionError = new FirestorePermissionError({
+                path: userDocRef.path,
+                operation: 'update',
+                requestResourceData: updateData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
     };
 
     const handleDeleteUser = async (userId: string) => {
         if (!firestore) return;
-        try {
-            await deleteDoc(doc(firestore, 'users', userId));
+        const userDocRef = doc(firestore, 'users', userId);
+        deleteDoc(userDocRef).then(() => {
             toast({ variant: 'destructive', title: "User Deleted", description: "The user profile has been deleted."});
-        } catch (error) {
+        }).catch((error) => {
             const permissionError = new FirestorePermissionError({
-                path: `/users/${userId}`,
+                path: userDocRef.path,
                 operation: 'delete',
             });
             errorEmitter.emit('permission-error', permissionError);
-        }
+        });
     };
     
     const handleToggleStatus = (userId: string) => {
@@ -233,7 +231,6 @@ export default function UsersPage() {
                             <TableCell>
                                 <div className="flex items-center gap-3">
                                     <Avatar>
-                                    {avatar && <AvatarImage src={avatar.imageUrl} alt={user.firstName} />}
                                         <AvatarFallback>{user.firstName.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                     <div>

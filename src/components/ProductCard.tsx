@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Star, Plus, Heart } from 'lucide-react';
 import type { Product } from '@/lib/data';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from './ui/badge';
@@ -20,7 +19,7 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ product }: ProductCardProps) {
-  const image = PlaceHolderImages.find((img) => img.id === product.imageId);
+  const image = product.imageId;
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
   const { user } = useUser();
@@ -52,11 +51,10 @@ export function ProductCard({ product }: ProductCardProps) {
         <Link href={`/shop/${product.id}`} className="block relative aspect-[4/3] overflow-hidden">
           {image && (
             <Image
-              src={image.imageUrl}
+              src={image}
               alt={product.name}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
-              data-ai-hint={image.imageHint}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
           )}

@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Minus, Plus, Trash2, Info, ArrowLeft, Truck } from "lucide-react";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { lagosLgas as defaultLgas } from "@/lib/shipping";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -142,12 +141,12 @@ export default function CartPage() {
                                 ) : cartItems.length > 0 ? (
                                     <div className="flex flex-col">
                                         {cartItems.map((item, index) => {
-                                            const image = PlaceHolderImages.find(p => p.id === item.imageId);
+                                            const image = item.imageId;
                                             return (
                                                 <div key={item.id}>
                                                     <div className="flex items-center gap-4 p-4">
                                                         <div className="relative h-24 w-24 rounded-md overflow-hidden">
-                                                            {image && <Image src={image.imageUrl} alt={item.name} fill className="object-cover" data-ai-hint={image.imageHint} />}
+                                                            {image && <Image src={image} alt={item.name} fill className="object-cover" />}
                                                         </div>
                                                         <div className="flex-1">
                                                             <h3 className="font-semibold">{item.name}</h3>

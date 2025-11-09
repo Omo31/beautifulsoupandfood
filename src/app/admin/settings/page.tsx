@@ -122,14 +122,14 @@ export default function SettingsPage() {
     if (settings) {
       setHeroTitle(settings.homepage?.heroTitle || "Authentic Nigerian Flavors, Delivered.");
       setHeroSubtitle(settings.homepage?.heroSubtitle || "From our kitchen to yours, experience the rich taste of Nigeria with our fresh ingredients and ready-to-eat soups.");
-      setHeroImageId(settings.homepage?.heroImageId || 'hero');
+      setHeroImageId(settings.homepage?.heroImageId || 'https://picsum.photos/seed/hero/1200/800');
       setVideoId(settings.homepage?.videoId || 'dQw4w9WgXcQ');
       setVideoTitle(settings.homepage?.videoTitle || 'Our Story');
       setVideoDescription(settings.homepage?.videoDescription || 'A short description of the video.');
       setAboutTitle(settings.homepage?.aboutTitle || 'About BeautifulSoup&Food');
       setAboutDescription1(settings.homepage?.aboutDescription1 || 'Founded with a passion for preserving the authentic tastes of Nigerian cuisine...');
       setAboutDescription2(settings.homepage?.aboutDescription2 || 'Our commitment is to quality, freshness, and customer satisfaction...');
-      setAboutImageId(settings.homepage?.aboutImageId || 'about');
+      setAboutImageId(settings.homepage?.aboutImageId || 'https://picsum.photos/seed/about/600/400');
 
 
       setSocialLinks(settings.footer?.socialLinks || { facebook: '', instagram: '', twitter: '' });
@@ -342,12 +342,12 @@ export default function SettingsPage() {
                   />
                 </div>
                  <div className="grid gap-2">
-                  <Label htmlFor="hero-image-id">Hero Image ID</Label>
+                  <Label htmlFor="hero-image-id">Hero Image URL</Label>
                   <Input
                     id="hero-image-id"
                     value={heroImageId}
                     onChange={e => setHeroImageId(e.target.value)}
-                    placeholder="e.g., hero or jollof-rice"
+                    placeholder="e.g., https://example.com/hero.jpg"
                   />
                 </div>
               </div>
@@ -367,7 +367,7 @@ export default function SettingsPage() {
                       <Textarea id="about-desc-2" value={aboutDescription2} onChange={e => setAboutDescription2(e.target.value)} />
                   </div>
                   <div className="grid gap-2">
-                      <Label htmlFor="about-image-id">Image ID</Label>
+                      <Label htmlFor="about-image-id">Image URL</Label>
                       <Input id="about-image-id" value={aboutImageId} onChange={e => setAboutImageId(e.target.value)} />
                   </div>
               </div>
@@ -413,8 +413,8 @@ export default function SettingsPage() {
                             <Input value={newTestimonial.location} onChange={e => setNewTestimonial({...newTestimonial, location: e.target.value})} placeholder="Lagos, NG"/>
                         </div>
                         <div className="grid gap-2">
-                            <Label>Image ID</Label>
-                            <Input value={newTestimonial.imageId} onChange={e => setNewTestimonial({...newTestimonial, imageId: e.target.value})} placeholder="testimonial-1"/>
+                            <Label>Image URL</Label>
+                            <Input value={newTestimonial.imageId} onChange={e => setNewTestimonial({...newTestimonial, imageId: e.target.value})} placeholder="https://..."/>
                         </div>
                          <div className="grid gap-2">
                             <Label>Comment</Label>

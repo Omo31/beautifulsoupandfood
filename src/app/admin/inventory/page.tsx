@@ -58,7 +58,6 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
 import type { Product } from '@/lib/data';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -93,6 +92,8 @@ export default function InventoryPage() {
 
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+
 
   const filteredProducts = useMemo(() => {
     return products
@@ -117,6 +118,7 @@ export default function InventoryPage() {
   const handleOpenModal = (product: Product | null = null) => {
     setEditingProduct(product);
     setDescription(product?.description || '');
+    setImageUrl(product?.imageId || '');
     setModalOpen(true);
   };
   
@@ -124,6 +126,7 @@ export default function InventoryPage() {
     setModalOpen(false);
     setEditingProduct(null);
     setDescription('');
+    setImageUrl('');
   }
 
   const handleSaveProduct = async (formData: FormData) => {
@@ -135,7 +138,7 @@ export default function InventoryPage() {
           price: parseFloat(formData.get('price') as string),
           stock: parseInt(formData.get('stock') as string, 10),
           category: formData.get('category') as 'foodstuff' | 'soup',
-          imageId: formData.get('image-id') as string || 'jollof-rice',
+          imageId: formData.get('image-url') as string,
           rating: parseFloat(formData.get('rating') as string) || 0,
           reviewCount: parseInt(formData.get('reviewCount') as string, 10) || 0,
       };
@@ -280,18 +283,17 @@ export default function InventoryPage() {
               {loading ? (
                 <TableRow><TableCell colSpan={7} className="text-center">Loading inventory...</TableCell></TableRow>
               ) : paginatedProducts.map((product) => {
-                const image = PlaceHolderImages.find((p) => p.id === product.imageId);
+                const image = product.imageId;
                 return (
                   <TableRow key={product.id}>
                     <TableCell className="hidden sm:table-cell">
                       <div className="relative h-16 w-16 rounded-md overflow-hidden">
                         {image ? (
                            <Image
-                            src={image.imageUrl}
+                            src={image}
                             alt={product.name}
                             fill
                             className="object-cover"
-                            data-ai-hint={image.imageHint}
                             sizes="64px"
                           />
                         ) : <div className="h-16 w-16 bg-muted rounded-md" />}
@@ -386,41 +388,21 @@ export default function InventoryPage() {
                               <Input id="stock" name="stock" type="number" placeholder="0" defaultValue={editingProduct?.stock} required/>
                           </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                          <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
-                              <Label htmlFor="category" className="text-right">Category</Label>
-                              <Select name="category" defaultValue={editingProduct?.category} required>
-                                  <SelectTrigger>
-                                      <SelectValue placeholder="Select a category" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      <SelectItem value="foodstuff">Foodstuff</SelectItem>
-                                      <SelectItem value="soup">Soup</SelectItem>
-                                  </SelectContent>
-                              </Select>
-                          </div>
-                          <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
-                            <Label htmlFor="image-id" className="text-right">Image ID</Label>
-                            <Input id="image-id" name="image-id" placeholder="e.g. jollof-rice" defaultValue={editingProduct?.imageId} required />
-                          </div>
+                       <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="category" className="text-right">Category</Label>
+                        <Select name="category" defaultValue={editingProduct?.category} required>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="foodstuff">Foodstuff</SelectItem>
+                                <SelectItem value="soup">Soup</SelectItem>
+                            </SelectContent>
+                        </Select>
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label className="text-right">Image</Label>
-                        <div className="col-span-3">
-                          <div className="flex items-center justify-center w-full">
-                              <Label
-                                  htmlFor="dropzone-file"
-                                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted hover:bg-muted/50"
-                              >
-                                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                      <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
-                                      <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                      <p className="text-xs text-muted-foreground">This is for show, use Image ID field.</p>
-                                  </div>
-                                  <Input id="dropzone-file" type="file" className="hidden" />
-                              </Label>
-                          </div>
-                        </div>
+                        <Label htmlFor="image-url" className="text-right">Image URL</Label>
+                        <Input id="image-url" name="image-url" className="col-span-3" placeholder="https://example.com/image.jpg" value={imageUrl} onChange={e => setImageUrl(e.target.value)} required />
                       </div>
                     </div>
                   </ScrollArea>

@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { ArrowRight, Star, PackageSearch, Gift, Boxes } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { homepageServices as defaultHomepageServices, HomepageService, Testimonial } from '@/lib/data';
 import { ProductCard } from '@/components/ProductCard';
 import { useProducts } from '@/hooks/use-products';
@@ -36,8 +35,7 @@ export default function HomePage() {
 
   const { data: testimonials, loading: testimonialsLoading } = useCollection<Testimonial>(testimonialsQuery);
 
-  const heroImageId = settings?.homepage?.heroImageId || "hero";
-  const heroImage = PlaceHolderImages.find((img) => img.id === heroImageId);
+  const heroImageId = settings?.homepage?.heroImageId || "https://picsum.photos/seed/hero/1200/800";
   const featuredProducts = products.slice(0, 4);
 
   const heroTitle = settings?.homepage?.heroTitle || "Authentic Nigerian Flavors, Delivered.";
@@ -50,8 +48,7 @@ export default function HomePage() {
   const aboutTitle = settings?.homepage?.aboutTitle || "About BeautifulSoup&Food";
   const aboutDescription1 = settings?.homepage?.aboutDescription1 || "Founded with a passion for preserving the authentic tastes of Nigerian cuisine, BeautifulSoup&Food is your trusted source for high-quality, fresh foodstuffs and lovingly prepared traditional soups. We bridge the distance, bringing the vibrant flavors of home to your doorstep, no matter where you are.";
   const aboutDescription2 = settings?.homepage?.aboutDescription2 || "Our commitment is to quality, freshness, and customer satisfaction. We meticulously source our ingredients and prepare our meals with the same care and attention you would find in a Nigerian family kitchen.";
-  const aboutImageId = settings?.homepage?.aboutImageId || "about";
-  const aboutImage = PlaceHolderImages.find((img) => img.id === aboutImageId) || { imageUrl: "https://picsum.photos/seed/about/600/400", imageHint: 'nigerian market' };
+  const aboutImageId = settings?.homepage?.aboutImageId || "https://picsum.photos/seed/about/600/400";
 
 
   return (
@@ -59,13 +56,12 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="relative -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8">
         <div className="relative h-[60vh] min-h-[400px] w-full">
-          {heroImage && (
+          {heroImageId && (
             <Image
-              src={heroImage.imageUrl}
-              alt={heroImage.description}
+              src={heroImageId}
+              alt="Hero image"
               fill
               className="object-cover"
-              data-ai-hint={heroImage.imageHint}
               priority
             />
           )}
@@ -148,7 +144,7 @@ export default function HomePage() {
                  </p>
             </div>
             <div className="relative h-64 rounded-lg overflow-hidden">
-                <Image src={aboutImage.imageUrl} alt="Nigerian market stall" fill className="object-cover" data-ai-hint={aboutImage.imageHint}/>
+                <Image src={aboutImageId} alt="Nigerian market stall" fill className="object-cover"/>
             </div>
         </div>
       </section>
@@ -172,7 +168,7 @@ export default function HomePage() {
             ))
           ) : (
             testimonials.map(testimonial => {
-              const image = PlaceHolderImages.find(p => p.id === testimonial.imageId);
+              const image = testimonial.imageId;
               return (
                 <Card key={testimonial.id} className="flex flex-col">
                   <CardContent className="pt-6 flex-1">
@@ -180,7 +176,7 @@ export default function HomePage() {
                   </CardContent>
                   <CardHeader className="flex-row items-center gap-4">
                      <Avatar>
-                      {image && <AvatarImage src={image.imageUrl} alt={testimonial.name} />}
+                      {image && <AvatarImage src={image} alt={testimonial.name} />}
                       <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>

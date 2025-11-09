@@ -1,5 +1,6 @@
-import data from './placeholder-images.json';
 
+// This file is DEPRECATED and will be removed in a future update.
+// The app now uses direct image URLs instead of a placeholder system.
 export type ImagePlaceholder = {
   id: string;
   description: string;
@@ -7,4 +8,4 @@ export type ImagePlaceholder = {
   imageHint: string;
 };
 
-export const PlaceHolderImages: ImagePlaceholder[] = data.placeholderImages;
+export const PlaceHolderImages: ImagePlaceholder[] = [];

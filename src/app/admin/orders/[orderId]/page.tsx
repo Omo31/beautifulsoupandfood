@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import type { Order, OrderItem } from '@/lib/data';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -171,11 +170,11 @@ export default function AdminOrderDetailsPage() {
             <div className="space-y-4">
                 {orderItems.map(item => {
                     // @ts-ignore - imageId isn't on OrderItem, but should be.
-                    const image = PlaceHolderImages.find(p => p.id === item.imageId);
+                    const image = item.imageId;
                     return (
                         <div key={item.id} className="flex items-center gap-4">
                             <div className="relative h-16 w-16 rounded-md overflow-hidden border">
-                                {image && <Image src={image.imageUrl} alt={item.name} fill className="object-cover" />}
+                                {image && <Image src={image} alt={item.name} fill className="object-cover" />}
                             </div>
                             <div className="flex-1">
                                 <h4 className="font-medium">{item.name}</h4>
