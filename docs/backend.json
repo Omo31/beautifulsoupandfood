@@ -14,22 +14,14 @@
           "type": "string",
           "description": "A detailed description of the product."
         },
-        "price": {
-          "type": "number",
-          "description": "The price of the product."
-        },
         "category": {
           "type": "string",
           "description": "The category the product belongs to.",
           "enum": ["foodstuff", "soup"]
         },
-        "stock": {
-          "type": "number",
-          "description": "The current stock level of the product."
-        },
-        "imageId": {
+        "imageUrl": {
           "type": "string",
-          "description": "The ID for the placeholder image of the product."
+          "description": "The URL for the product's image."
         },
         "rating": {
           "type": "number",
@@ -38,9 +30,36 @@
         "reviewCount": {
           "type": "number",
           "description": "The total number of reviews for the product."
+        },
+        "variants": {
+          "type": "array",
+          "description": "A list of product variants, e.g., different sizes or types.",
+          "items": {
+            "$ref": "#/entities/ProductVariant"
+          }
         }
       },
-      "required": ["name", "price", "category", "stock"]
+      "required": ["name", "category", "variants"]
+    },
+    "ProductVariant": {
+      "title": "Product Variant",
+      "description": "Represents a specific version of a product, e.g., size or color.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the variant, e.g., '500g' or 'Large Bowl'."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of this specific variant."
+        },
+        "stock": {
+          "type": "number",
+          "description": "The stock level for this specific variant."
+        }
+      },
+      "required": ["name", "price", "stock"]
     },
     "UserProfile": {
       "title": "User Profile",
@@ -89,6 +108,14 @@
       "description": "Represents a product that a user has added to their shopping cart.",
       "type": "object",
       "properties": {
+        "productId": {
+          "type": "string",
+          "description": "The ID of the base product."
+        },
+        "variantName": {
+            "type": "string",
+            "description": "The name of the selected product variant."
+        },
         "quantity": {
           "type": "number",
           "description": "The quantity of the product in the cart."
@@ -99,7 +126,7 @@
           "description": "The timestamp when the item was added to the cart."
         }
       },
-      "required": ["quantity", "addedAt"]
+      "required": ["productId", "variantName", "quantity", "addedAt"]
     },
     "Order": {
       "title": "Order",
@@ -123,10 +150,11 @@
       "properties": {
         "productId": { "type": "string" },
         "name": { "type": "string" },
+        "variantName": { "type": "string" },
         "quantity": { "type": "number" },
         "price": { "type": "number" }
       },
-      "required": ["productId", "name", "quantity", "price"]
+      "required": ["productId", "name", "variantName", "quantity", "price"]
     },
     "QuoteRequest": {
       "title": "Quote Request",
@@ -423,11 +451,11 @@
       },
       "description": "Collection where each document represents a user's profile, keyed by their Firebase Auth UID."
     },
-    "/users/{userId}/cart/{productId}": {
+    "/users/{userId}/cart/{cartItemId}": {
       "schema": {
         "$ref": "#/entities/CartItem"
       },
-      "description": "A sub-collection within each user's document storing items in their shopping cart. The document ID is the product ID."
+      "description": "A sub-collection within each user's document storing items in their shopping cart. Document ID is a unique auto-ID."
     },
      "/users/{userId}/orders/{orderId}": {
       "schema": {
@@ -483,3 +511,5 @@
     }
   }
 }
+
+    

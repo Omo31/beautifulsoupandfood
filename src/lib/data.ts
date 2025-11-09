@@ -1,15 +1,20 @@
 
 
+export type ProductVariant = {
+  name: string;
+  price: number;
+  stock: number;
+};
+
 export type Product = {
   id: string;
   name: string;
   description: string;
-  price: number;
   category: 'foodstuff' | 'soup';
-  stock: number;
-  imageId: string;
+  imageUrl: string;
   rating: number;
   reviewCount: number;
+  variants: ProductVariant[];
 };
 
 export type UserProfile = {
@@ -52,10 +57,11 @@ export type Order = {
 
 export type OrderItem = {
     id: string;
+    productId: string;
     name: string;
+    variantName: string;
     quantity: number;
     price: number;
-    productId: string;
 };
 
 export type PurchaseOrderItem = {
@@ -155,3 +161,5 @@ export const homepageServices: HomepageService[] = [
 // Mock data below this line is now DEPRECATED and will be removed.
 export const purchaseOrders: PurchaseOrder[] = [];
 export const conversations: Conversation[] = [];
+
+    
