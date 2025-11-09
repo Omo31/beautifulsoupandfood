@@ -51,6 +51,7 @@ import { useMemoFirebase } from '@/firebase/utils';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import type { Transaction } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { convertToCSV, downloadCSV } from '@/lib/csv';
 
 export default function AccountingPage() {
   const { toast } = useToast();
@@ -115,6 +116,15 @@ export default function AccountingPage() {
     }
   }
 
+  const handleExport = () => {
+    const dataToExport = transactions.map(t => ({
+        ...t,
+        date: format(t.date.toDate(), 'yyyy-MM-dd'),
+    }));
+    const csv = convertToCSV(dataToExport);
+    downloadCSV(csv, `accounting-report-${new Date().toISOString().split('T')[0]}.csv`);
+  };
+  
   const renderTableBody = () => {
     if (loading) {
         return (
@@ -206,7 +216,7 @@ export default function AccountingPage() {
               <CardDescription>A list of all financial activities.</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1">
+                <Button variant="outline" size="sm" className="gap-1" onClick={handleExport}>
                     <File className="h-3.5 w-3.5" />
                     <span>Export Report</span>
                 </Button>
@@ -296,5 +306,3 @@ export default function AccountingPage() {
     </div>
   );
 }
-
-    

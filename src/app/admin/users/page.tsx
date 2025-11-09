@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, File } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Input } from '@/components/ui/input';
@@ -24,6 +23,7 @@ import type { UserProfile } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { convertToCSV, downloadCSV } from '@/lib/csv';
 
 type UserWithStatus = UserProfile & { 
     status: 'Active' | 'Disabled'; 
@@ -54,7 +54,6 @@ export default function UsersPage() {
 
     const { data: userProfiles, loading } = useCollection<UserProfile>(usersQuery);
     
-    // In a real app, you'd fetch Auth data to get email/joinDate. We'll mock it for now.
     const users: UserWithStatus[] = useMemo(() => {
         return userProfiles.map((profile, i) => ({
             ...profile,
@@ -114,7 +113,6 @@ export default function UsersPage() {
 
         setDoc(userDocRef, updateData, { merge: true }).then(() => {
             toast({ title: "User Updated", description: `${firstName} ${lastName}'s role has been updated in the database.` });
-             // In a real app, you would now call a Cloud Function to set the custom claim.
             if (role !== 'Customer') {
                 toast({ 
                     title: 'Next Step: Apply Permissions', 
@@ -148,7 +146,6 @@ export default function UsersPage() {
     };
     
     const handleToggleStatus = (userId: string) => {
-        // This is a UI-only toggle as we don't have a status field in Firestore.
         const userToToggle = users.find(u => u.id === userId);
         if (userToToggle) {
             toast({ title: "Status Update Mock", description: `This is a mock action. In a real app, this would disable the user's Firebase Auth account.`});
@@ -159,6 +156,20 @@ export default function UsersPage() {
         setCurrentPage(page);
     };
 
+    const handleExport = () => {
+        const dataToExport = filteredUsers.map(u => ({
+            UserID: u.id,
+            FirstName: u.firstName,
+            LastName: u.lastName,
+            Email: u.email,
+            Role: u.role,
+            Status: u.status,
+            JoinDate: u.createdAt ? format(u.createdAt.toDate(), 'yyyy-MM-dd') : 'N/A',
+        }));
+        const csv = convertToCSV(dataToExport);
+        downloadCSV(csv, `users-export-${new Date().toISOString().split('T')[0]}.csv`);
+    };
+
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center">
@@ -167,7 +178,10 @@ export default function UsersPage() {
                     <p className="text-muted-foreground">Manage users and their roles. New users must sign up through the main site.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">Download CSV</Button>
+                    <Button variant="outline" size="sm" onClick={handleExport} className="gap-1">
+                        <File className="h-3.5 w-3.5" />
+                        <span>Download CSV</span>
+                    </Button>
                 </div>
             </div>
             <Card>

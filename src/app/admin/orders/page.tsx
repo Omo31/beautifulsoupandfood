@@ -12,8 +12,10 @@ import { useFirestore } from '@/firebase';
 import type { Order } from "@/lib/data";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { File } from 'lucide-react';
+import { convertToCSV, downloadCSV } from '@/lib/csv';
 
-type AggregatedOrder = Order & { customerName: string };
+type AggregatedOrder = Order & { customerName: string; userId: string };
 
 const getBadgeVariant = (status: Order['status']) => {
     switch (status) {
@@ -37,14 +39,16 @@ export default function OrdersPage() {
             const ordersQuery = query(collectionGroup(firestore, 'orders'), orderBy('createdAt', 'desc'));
             const querySnapshot = await getDocs(ordersQuery);
             const fetchedOrders: AggregatedOrder[] = [];
+            
             // In a real app with many users, you might fetch user data separately.
             // For simplicity, we'll assume user data is somehow available or part of the order.
             querySnapshot.forEach(doc => {
+                const userId = doc.ref.parent.parent?.id || 'unknown';
                 fetchedOrders.push({
                     ...doc.data(),
                     id: doc.id,
-                    // This is a simplification. Ideally, you'd look up the user's name from their ID.
-                    customerName: `User ${doc.ref.parent.parent?.id.substring(0, 5)}...` 
+                    userId: userId,
+                    customerName: `User ${userId.substring(0, 5)}...` 
                 } as AggregatedOrder);
             });
             setOrders(fetchedOrders);
@@ -56,14 +60,34 @@ export default function OrdersPage() {
     }
     fetchOrders();
   }, [firestore]);
+
+  const handleExport = () => {
+      const dataToExport = orders.map(o => ({
+          OrderID: o.id,
+          CustomerID: o.userId,
+          CustomerName: o.customerName,
+          Date: format(o.createdAt.toDate(), 'yyyy-MM-dd'),
+          Status: o.status,
+          ItemCount: o.itemCount,
+          Total: o.total,
+      }));
+      const csv = convertToCSV(dataToExport);
+      downloadCSV(csv, `orders-export-${new Date().toISOString().split('T')[0]}.csv`);
+  };
   
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Orders</CardTitle>
-        <CardDescription>
-          Manage customer orders.
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Orders</CardTitle>
+          <CardDescription>
+            Manage customer orders.
+          </CardDescription>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleExport} className="gap-1">
+            <File className="h-3.5 w-3.5" />
+            <span>Export</span>
+        </Button>
       </CardHeader>
       <CardContent>
         <Table>

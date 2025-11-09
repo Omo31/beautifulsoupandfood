@@ -7,7 +7,6 @@ import {
   ListFilter,
   PlusCircle,
   MoreHorizontal,
-  Upload,
   Search,
   Sparkles,
 } from 'lucide-react';
@@ -57,7 +56,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import Image from 'next/image';
-import type { Product } from '@/lib/data';
+import type { Product, ProductVariant } from '@/lib/data';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -65,8 +64,10 @@ import { useProducts } from '@/hooks/use-products';
 import { useFirestore } from '@/firebase';
 import { collection, doc, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { generateProductDescription } from '@/ai/flows/generate-product-description';
+import { convertToCSV, downloadCSV } from '@/lib/csv';
 
-const StockBadge = ({ stock, threshold = 20 }: { stock: number, threshold?: number }) => {
+const StockBadge = ({ stock }: { stock: number }) => {
+  const threshold = 20; // Example threshold
   if (stock === 0) {
     return <Badge variant="destructive">Out of Stock</Badge>;
   }
@@ -93,16 +94,17 @@ export default function InventoryPage() {
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
-
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
 
   const filteredProducts = useMemo(() => {
     return products
       .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
       .filter(p => {
+        const totalStock = p.variants?.reduce((sum, v) => sum + v.stock, 0) || 0;
         if (statusFilter === 'all') return true;
-        if (statusFilter === 'in-stock') return p.stock > 20;
-        if (statusFilter === 'low-stock') return p.stock > 0 && p.stock <= 20;
-        if (statusFilter === 'out-of-stock') return p.stock === 0;
+        if (statusFilter === 'in-stock') return totalStock > 20;
+        if (statusFilter === 'low-stock') return totalStock > 0 && totalStock <= 20;
+        if (statusFilter === 'out-of-stock') return totalStock === 0;
         return true;
       })
       .filter(p => categoryFilter === 'all' || p.category === categoryFilter);
@@ -118,7 +120,8 @@ export default function InventoryPage() {
   const handleOpenModal = (product: Product | null = null) => {
     setEditingProduct(product);
     setDescription(product?.description || '');
-    setImageUrl(product?.imageId || '');
+    setImageUrl(product?.imageUrl || '');
+    setVariants(product?.variants ? JSON.parse(JSON.stringify(product.variants)) : [{ name: '', price: 0, stock: 0 }]);
     setModalOpen(true);
   };
   
@@ -127,6 +130,7 @@ export default function InventoryPage() {
     setEditingProduct(null);
     setDescription('');
     setImageUrl('');
+    setVariants([]);
   }
 
   const handleSaveProduct = async (formData: FormData) => {
@@ -135,12 +139,12 @@ export default function InventoryPage() {
       const productData = {
           name: formData.get('name') as string,
           description: formData.get('description') as string,
-          price: parseFloat(formData.get('price') as string),
-          stock: parseInt(formData.get('stock') as string, 10),
           category: formData.get('category') as 'foodstuff' | 'soup',
-          imageId: formData.get('image-url') as string,
-          rating: parseFloat(formData.get('rating') as string) || 0,
-          reviewCount: parseInt(formData.get('reviewCount') as string, 10) || 0,
+          imageUrl: imageUrl,
+          variants: variants,
+          // These are not editable in the form but need to be preserved
+          rating: editingProduct?.rating || 0,
+          reviewCount: editingProduct?.reviewCount || 0,
       };
 
       try {
@@ -196,6 +200,23 @@ export default function InventoryPage() {
     }
   };
 
+  const handleExport = () => {
+    const dataToExport = filteredProducts.map(p => ({
+        ID: p.id,
+        Name: p.name,
+        Category: p.category,
+        Description: p.description,
+        Rating: p.rating,
+        ReviewCount: p.reviewCount,
+        Variants: JSON.stringify(p.variants),
+        TotalStock: p.variants?.reduce((sum, v) => sum + v.stock, 0) || 0,
+        LowestPrice: p.variants?.length > 0 ? Math.min(...p.variants.map(v => v.price)) : 0,
+    }));
+
+    const csv = convertToCSV(dataToExport);
+    downloadCSV(csv, `inventory-export-${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
   return (
     <>
       <div className="flex items-center">
@@ -206,7 +227,7 @@ export default function InventoryPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1">
+          <Button variant="outline" size="sm" className="gap-1" onClick={handleExport}>
             <File className="h-3.5 w-3.5" />
             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
               Export
@@ -283,14 +304,20 @@ export default function InventoryPage() {
               {loading ? (
                 <TableRow><TableCell colSpan={7} className="text-center">Loading inventory...</TableCell></TableRow>
               ) : paginatedProducts.map((product) => {
-                const image = product.imageId;
+                const totalStock = product.variants?.reduce((sum, v) => sum + v.stock, 0) || 0;
+                const priceRange = product.variants?.length > 0 
+                  ? product.variants.length > 1
+                    ? `₦${Math.min(...product.variants.map(v => v.price))} - ₦${Math.max(...product.variants.map(v => v.price))}`
+                    : `₦${product.variants[0].price}`
+                  : 'N/A';
+                  
                 return (
                   <TableRow key={product.id}>
                     <TableCell className="hidden sm:table-cell">
                       <div className="relative h-16 w-16 rounded-md overflow-hidden">
-                        {image ? (
+                        {product.imageUrl ? (
                            <Image
-                            src={image}
+                            src={product.imageUrl}
                             alt={product.name}
                             fill
                             className="object-cover"
@@ -301,10 +328,10 @@ export default function InventoryPage() {
                     </TableCell>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>
-                      <StockBadge stock={product.stock} />
+                      <StockBadge stock={totalStock} />
                     </TableCell>
-                    <TableCell>₦{product.price.toFixed(2)}</TableCell>
-                    <TableCell>{product.stock}</TableCell>
+                    <TableCell>{priceRange}</TableCell>
+                    <TableCell>{totalStock}</TableCell>
                     <TableCell className="hidden md:table-cell">
                         <Badge variant="outline">{product.category}</Badge>
                     </TableCell>
@@ -378,16 +405,6 @@ export default function InventoryPage() {
                           </Button>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                          <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
-                              <Label htmlFor="price" className="text-right">Price (₦)</Label>
-                              <Input id="price" name="price" type="number" step="0.01" placeholder="0.00" defaultValue={editingProduct?.price} required/>
-                          </div>
-                          <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2">
-                              <Label htmlFor="stock" className="text-right">Stock</Label>
-                              <Input id="stock" name="stock" type="number" placeholder="0" defaultValue={editingProduct?.stock} required/>
-                          </div>
-                      </div>
                        <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="category" className="text-right">Category</Label>
                         <Select name="category" defaultValue={editingProduct?.category} required>
@@ -403,6 +420,45 @@ export default function InventoryPage() {
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="image-url" className="text-right">Image URL</Label>
                         <Input id="image-url" name="image-url" className="col-span-3" placeholder="https://example.com/image.jpg" value={imageUrl} onChange={e => setImageUrl(e.target.value)} required />
+                      </div>
+                      <div className="grid grid-cols-4 items-start gap-4">
+                        <Label className="text-right pt-2">Variants</Label>
+                        <div className="col-span-3 space-y-2">
+                          {variants.map((variant, index) => (
+                            <div key={index} className="flex items-end gap-2">
+                              <div className="grid gap-1.5 flex-1">
+                                <Label htmlFor={`variant-name-${index}`}>Name</Label>
+                                <Input id={`variant-name-${index}`} value={variant.name} onChange={(e) => {
+                                  const newVariants = [...variants];
+                                  newVariants[index].name = e.target.value;
+                                  setVariants(newVariants);
+                                }} placeholder="e.g., Small Bowl"/>
+                              </div>
+                              <div className="grid gap-1.5 w-24">
+                                <Label htmlFor={`variant-price-${index}`}>Price</Label>
+                                <Input id={`variant-price-${index}`} type="number" value={variant.price} onChange={(e) => {
+                                  const newVariants = [...variants];
+                                  newVariants[index].price = parseFloat(e.target.value);
+                                  setVariants(newVariants);
+                                }} placeholder="0"/>
+                              </div>
+                              <div className="grid gap-1.5 w-20">
+                                <Label htmlFor={`variant-stock-${index}`}>Stock</Label>
+                                <Input id={`variant-stock-${index}`} type="number" value={variant.stock} onChange={(e) => {
+                                  const newVariants = [...variants];
+                                  newVariants[index].stock = parseInt(e.target.value, 10);
+                                  setVariants(newVariants);
+                                }} placeholder="0"/>
+                              </div>
+                               <Button type="button" variant="ghost" size="icon" onClick={() => setVariants(variants.filter((_, i) => i !== index))} disabled={variants.length === 1}>
+                                <PlusCircle className="h-4 w-4 rotate-45" />
+                              </Button>
+                            </div>
+                          ))}
+                          <Button type="button" variant="outline" size="sm" onClick={() => setVariants([...variants, { name: '', price: 0, stock: 0 }])}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Add Variant
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </ScrollArea>
