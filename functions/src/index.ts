@@ -68,3 +68,36 @@ export const setUserRole = onCall(async (request) => {
         throw new HttpsError('internal', 'An error occurred while setting the user role.');
     }
 });
+
+
+/**
+ * A callable Cloud Function to allow an 'Owner' to disable or enable another user's account.
+ */
+export const toggleUserStatus = onCall(async (request) => {
+    // 1. Authentication and Authorization Check
+    if (request.auth?.token.role !== 'Owner') {
+        throw new HttpsError('permission-denied', 'You must be an Owner to perform this action.');
+    }
+
+    const { userId, disabled } = request.data;
+
+    // 2. Data Validation
+    if (!userId || typeof disabled !== 'boolean') {
+        throw new HttpsError('invalid-argument', 'The function must be called with "userId" and a boolean "disabled" status.');
+    }
+    
+    if (request.auth.uid === userId) {
+        throw new HttpsError('invalid-argument', 'You cannot disable your own account.');
+    }
+
+    try {
+        // 3. Update the user's disabled status in Firebase Auth
+        await admin.auth().updateUser(userId, { disabled: disabled });
+        const status = disabled ? 'disabled' : 'enabled';
+        log(`Successfully ${status} user ${userId} by ${request.auth.uid}`);
+        return { success: true, message: `User account has been ${status}.` };
+    } catch (error) {
+        log('Error updating user status:', error);
+        throw new HttpsError('internal', 'An error occurred while updating the user status.');
+    }
+});

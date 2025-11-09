@@ -55,11 +55,13 @@ export default function UsersPage() {
 
     const { data: userProfiles, loading } = useCollection<UserProfile>(usersQuery);
     
+    // NOTE: The 'status' field is a mock. The client SDK cannot get a user's disabled status.
+    // This is a limitation that requires a more complex backend setup to resolve fully.
     const users: UserWithStatus[] = useMemo(() => {
         return userProfiles.map((profile, i) => ({
             ...profile,
             email: `${profile.firstName.toLowerCase()}.${profile.lastName.toLowerCase()}@example.com`,
-            status: 'Active'
+            status: 'Active' 
         }));
     }, [userProfiles]);
     
@@ -112,8 +114,6 @@ export default function UsersPage() {
             const setUserRole = httpsCallable(functions, 'setUserRole');
             await setUserRole({ userId: editingUser.id, newRole: newRole });
             
-            // Also update the local Firestore profile document for immediate UI feedback if needed
-            // This is optional as the primary source of truth for roles should be the auth token
             const userDocRef = doc(firestore, 'users', editingUser.id);
             await setDoc(userDocRef, { role: newRole }, { merge: true });
 
@@ -142,10 +142,26 @@ export default function UsersPage() {
         });
     };
     
-    const handleToggleStatus = (userId: string) => {
-        const userToToggle = users.find(u => u.id === userId);
-        if (userToToggle) {
-            toast({ title: "Status Update Mock", description: `This is a mock action. In a real app, this would disable the user's Firebase Auth account.`});
+    const handleToggleStatus = async (user: UserWithStatus) => {
+        if (!firestore) return;
+
+        const newDisabledStatus = user.status === 'Active'; // Toggle the status
+
+        try {
+            const functions = getFunctions();
+            const toggleUserStatus = httpsCallable(functions, 'toggleUserStatus');
+            await toggleUserStatus({ userId: user.id, disabled: newDisabledStatus });
+
+            toast({
+                title: `User Account ${newDisabledStatus ? 'Disabled' : 'Enabled'}`,
+                description: `${user.firstName}'s account has been ${newDisabledStatus ? 'disabled' : 'enabled'}. They will not be able to log in.`,
+            });
+        } catch (error: any) {
+             toast({
+                variant: 'destructive',
+                title: 'Action Failed',
+                description: error.message || 'Could not update the user status.',
+            });
         }
     };
     
@@ -268,7 +284,7 @@ export default function UsersPage() {
                                     <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                     <DropdownMenuItem onClick={() => handleOpenModal(user)}>Edit Role</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleToggleStatus(user.id)}>
+                                    <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
                                         {user.status === 'Active' ? 'Disable' : 'Enable'}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user.id)}>Delete</DropdownMenuItem>
