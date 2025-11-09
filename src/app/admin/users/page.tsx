@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { convertToCSV, downloadCSV } from '@/lib/csv';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 type UserWithStatus = UserProfile & { 
     status: 'Active' | 'Disabled'; 
@@ -104,31 +105,27 @@ export default function UsersPage() {
         if (!firestore || !editingUser) return;
         
         const formData = new FormData(e.currentTarget);
-        const firstName = formData.get('firstName') as string;
-        const lastName = formData.get('lastName') as string;
-        const role = formData.get('role') as UserProfile['role'];
+        const newRole = formData.get('role') as UserProfile['role'];
 
-        const userDocRef = doc(firestore, 'users', editingUser.id);
-        const updateData = { firstName, lastName, role };
+        try {
+            const functions = getFunctions();
+            const setUserRole = httpsCallable(functions, 'setUserRole');
+            await setUserRole({ userId: editingUser.id, newRole: newRole });
+            
+            // Also update the local Firestore profile document for immediate UI feedback if needed
+            // This is optional as the primary source of truth for roles should be the auth token
+            const userDocRef = doc(firestore, 'users', editingUser.id);
+            await setDoc(userDocRef, { role: newRole }, { merge: true });
 
-        setDoc(userDocRef, updateData, { merge: true }).then(() => {
-            toast({ title: "User Updated", description: `${firstName} ${lastName}'s role has been updated in the database.` });
-            if (role !== 'Customer') {
-                toast({ 
-                    title: 'Next Step: Apply Permissions', 
-                    description: 'To grant admin access, a backend function must set a "custom claim" on the user\'s auth token. This UI cannot do that.',
-                    duration: 8000 
-                });
-            }
+            toast({ title: "User Role Updated", description: `${editingUser.firstName}'s role has been set to ${newRole}.` });
             handleCloseModal();
-        }).catch((error) => {
-            const permissionError = new FirestorePermissionError({
-                path: userDocRef.path,
-                operation: 'update',
-                requestResourceData: updateData,
+        } catch (error: any) {
+             toast({
+                variant: 'destructive',
+                title: 'Update Failed',
+                description: error.message || 'You do not have permission to perform this action.'
             });
-            errorEmitter.emit('permission-error', permissionError);
-        });
+        }
     };
 
     const handleDeleteUser = async (userId: string) => {
@@ -270,7 +267,7 @@ export default function UsersPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => handleOpenModal(user)}>Edit</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenModal(user)}>Edit Role</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleToggleStatus(user.id)}>
                                         {user.status === 'Active' ? 'Disable' : 'Enable'}
                                     </DropdownMenuItem>
@@ -310,20 +307,12 @@ export default function UsersPage() {
                     <DialogContent>
                         <form onSubmit={handleSaveUser}>
                             <DialogHeader>
-                                <DialogTitle>Edit User</DialogTitle>
+                                <DialogTitle>Edit User Role</DialogTitle>
                                 <DialogDescription>
-                                    Update the user's details and role.
+                                    Change the permission level for {editingUser.firstName} {editingUser.lastName}.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="firstName" className="text-right">First Name</Label>
-                                    <Input id="firstName" name="firstName" defaultValue={editingUser?.firstName} placeholder="First Name" className="col-span-3" required />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="lastName" className="text-right">Last Name</Label>
-                                    <Input id="lastName" name="lastName" defaultValue={editingUser?.lastName} placeholder="Last Name" className="col-span-3" required />
-                                </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="email" className="text-right">Email</Label>
                                     <Input id="email" name="email" type="email" defaultValue={editingUser?.email} className="col-span-3" disabled/>

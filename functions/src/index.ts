@@ -1,3 +1,4 @@
+
 /**
  * Import function triggers from their respective submodules:
  *
@@ -7,12 +8,13 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 
-import {onCall} from "firebase-functions/v2/https";
-import {log} from "firebase-functions/logger";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { log } from "firebase-functions/logger";
 import { auth } from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
 admin.initializeApp();
+
 /**
  * This Cloud Function is triggered whenever a new user is created in Firebase Authentication.
  * It checks if the new user's email matches the designated owner's email address.
@@ -31,5 +33,38 @@ exports.setOwnerRoleOnCreate = auth.user().onCreate(async (user) => {
         } catch (error) {
             log(`Error setting custom claim for ${user.email}:`, error);
         }
+    }
+});
+
+
+/**
+ * A callable Cloud Function to allow an 'Owner' to set the role of another user.
+ */
+export const setUserRole = onCall(async (request) => {
+    // 1. Authentication and Authorization Check
+    // Check if the user making the request is authenticated and has the 'Owner' role.
+    if (request.auth?.token.role !== 'Owner') {
+        throw new HttpsError('permission-denied', 'You must be an Owner to perform this action.');
+    }
+
+    const { userId, newRole } = request.data;
+
+    // 2. Data Validation
+    if (!userId || !newRole) {
+        throw new HttpsError('invalid-argument', 'The function must be called with "userId" and "newRole" arguments.');
+    }
+    const allowedRoles = ['Owner', 'Content Manager', 'Customer'];
+    if (!allowedRoles.includes(newRole)) {
+         throw new HttpsError('invalid-argument', `Invalid role. Must be one of: ${allowedRoles.join(', ')}.`);
+    }
+
+    try {
+        // 3. Set the custom claim on the target user
+        await admin.auth().setCustomUserClaims(userId, { role: newRole });
+        log(`Successfully set role '${newRole}' for user ${userId} by ${request.auth.uid}`);
+        return { success: true, message: `Role '${newRole}' has been set for user ${userId}.` };
+    } catch (error) {
+        log('Error setting custom claims:', error);
+        throw new HttpsError('internal', 'An error occurred while setting the user role.');
     }
 });
