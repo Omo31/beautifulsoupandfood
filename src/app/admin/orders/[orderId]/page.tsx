@@ -18,6 +18,7 @@ import { useMemoFirebase } from '@/firebase/utils';
 import { doc, getDocs, query, collectionGroup, where, limit, setDoc, collection } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 const getBadgeVariant = (status: Order['status']) => {
     switch (status) {
@@ -247,9 +248,11 @@ export default function AdminOrderDetailsPage() {
             Back to Orders
          </Button>
          <div className="flex items-center gap-2">
-            <Button variant="outline">
-                <FileText className="mr-2 h-4 w-4"/>
-                Print Invoice
+            <Button variant="outline" asChild>
+                <Link href={`/admin/orders/${orderId}/invoice`} target="_blank">
+                    <FileText className="mr-2 h-4 w-4"/>
+                    Print Invoice
+                </Link>
             </Button>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
