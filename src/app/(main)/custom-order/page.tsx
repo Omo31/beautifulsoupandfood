@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -84,6 +84,9 @@ export default function CustomOrderPage() {
             shippingMethod: 'pickup',
             services: [],
             notes: '',
+            name: '',
+            email: '',
+            phone: '',
         }
     });
 
@@ -91,6 +94,14 @@ export default function CustomOrderPage() {
         control: form.control,
         name: "items"
     });
+    
+    useEffect(() => {
+        if (user) {
+            form.setValue('name', user.displayName || '');
+            form.setValue('email', user.email || '');
+            // You might want to pre-fill phone from user profile if available
+        }
+    }, [user, form]);
     
     const shippingMethod = form.watch('shippingMethod');
     const selectedLga = form.watch('lga');
