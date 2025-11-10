@@ -60,6 +60,8 @@ const ensureUserProfile = async (firestore: any, user: User) => {
     }
 };
 
+const provider = new GoogleAuthProvider();
+
 export default function SignupPage() {
     const router = useRouter();
     const { toast } = useToast();
@@ -142,7 +144,6 @@ export default function SignupPage() {
             return;
         }
         try {
-            const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
             await ensureUserProfile(firestore, result.user);
             
