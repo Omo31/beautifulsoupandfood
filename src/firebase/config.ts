@@ -2,10 +2,10 @@
 import type { FirebaseOptions } from 'firebase/app';
 
 export const firebaseConfig: FirebaseOptions = {
-  "projectId": "studio-5696680782-558b6",
-  "appId": "1:844060417221:web:19af7a31beb902afd424ac",
   "apiKey": "AIzaSyCOeglxSgbHFN65OsMPif-nz0AM_ZKcvFo",
   "authDomain": "studio-5696680782-558b6.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "844060417221"
+  "projectId": "studio-5696680782-558b6",
+  "storageBucket": "studio-5696680782-558b6.appspot.com",
+  "messagingSenderId": "844060417221",
+  "appId": "1:844060417221:web:19af7a31beb902afd424ac"
 };
