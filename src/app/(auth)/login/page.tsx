@@ -11,11 +11,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth, useFirestore } from "@/firebase";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
+import { initializeFirebase, useAuth, useFirestore } from "@/firebase";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User, getAuth } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
+import { useMemo } from "react";
 
 const loginSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address." }),
@@ -23,6 +24,9 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+
+// This ensures the provider is a stable instance
+const googleProvider = new GoogleAuthProvider();
 
 // Shared function to handle user profile creation on first sign-in
 const ensureUserProfile = async (firestore: any, user: User) => {
@@ -53,13 +57,18 @@ const ensureUserProfile = async (firestore: any, user: User) => {
     }
 };
 
-const provider = new GoogleAuthProvider();
-
 export default function LoginPage() {
     const router = useRouter();
     const { toast } = useToast();
-    const auth = useAuth();
-    const firestore = useFirestore();
+    
+    // Explicitly initialize Firebase here to ensure stability
+    const { auth, firestore } = useMemo(() => {
+        const app = initializeFirebase();
+        return {
+            auth: getAuth(app),
+            firestore: getFirestore(app)
+        };
+    }, []);
 
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -82,6 +91,9 @@ export default function LoginPage() {
              case 'auth/popup-closed-by-user':
                 description = "The sign-in popup was closed before completing. Please try again.";
                 break;
+            case 'auth/internal-error':
+                 description = "An internal error occurred. This might be due to a configuration issue. Please try again later.";
+                 break;
         }
         toast({
             variant: "destructive",
@@ -91,10 +103,6 @@ export default function LoginPage() {
     }
 
     const onSubmit = async (data: LoginFormValues) => {
-        if (!auth) {
-            toast({ variant: "destructive", title: "Firebase not initialized" });
-            return;
-        }
         try {
             await signInWithEmailAndPassword(auth, data.email, data.password);
             toast({
@@ -108,12 +116,8 @@ export default function LoginPage() {
     };
     
     const handleGoogleSignIn = async () => {
-        if (!auth || !firestore) {
-            toast({ variant: "destructive", title: "Firebase not initialized" });
-            return;
-        }
         try {
-            const result = await signInWithPopup(auth, provider);
+            const result = await signInWithPopup(auth, googleProvider);
             await ensureUserProfile(firestore, result.user);
 
             toast({

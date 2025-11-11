@@ -12,12 +12,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth, useFirestore } from "@/firebase";
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
+import { initializeFirebase, useAuth, useFirestore } from "@/firebase";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, GoogleAuthProvider, signInWithPopup, User, getAuth } from "firebase/auth";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { Label } from "@/components/ui/label";
+import { useMemo } from "react";
 
 const signupSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -30,6 +31,9 @@ const signupSchema = z.object({
 });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
+
+// This ensures the provider is a stable instance
+const googleProvider = new GoogleAuthProvider();
 
 // Shared function to handle user profile creation on first sign-in
 const ensureUserProfile = async (firestore: any, user: User) => {
@@ -60,13 +64,18 @@ const ensureUserProfile = async (firestore: any, user: User) => {
     }
 };
 
-const provider = new GoogleAuthProvider();
-
 export default function SignupPage() {
     const router = useRouter();
     const { toast } = useToast();
-    const auth = useAuth();
-    const firestore = useFirestore();
+    
+    // Explicitly initialize Firebase here to ensure stability
+    const { auth, firestore } = useMemo(() => {
+        const app = initializeFirebase();
+        return {
+            auth: getAuth(app),
+            firestore: getFirestore(app)
+        };
+    }, []);
 
     const form = useForm<SignupFormValues>({
         resolver: zodResolver(signupSchema),
@@ -80,11 +89,6 @@ export default function SignupPage() {
     });
 
     async function onSubmit(data: SignupFormValues) {
-        if (!auth || !firestore) {
-            toast({ variant: "destructive", title: "Firebase not initialized" });
-            return;
-        }
-
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
             const user = userCredential.user;
@@ -139,12 +143,8 @@ export default function SignupPage() {
     }
     
     const handleGoogleSignUp = async () => {
-        if (!auth || !firestore) {
-            toast({ variant: "destructive", title: "Firebase not initialized" });
-            return;
-        }
         try {
-            const result = await signInWithPopup(auth, provider);
+            const result = await signInWithPopup(auth, googleProvider);
             await ensureUserProfile(firestore, result.user);
             
             toast({
@@ -158,6 +158,8 @@ export default function SignupPage() {
                 description = "The sign-up popup was closed before completing. Please try again.";
             } else if (error.code === 'auth/email-already-in-use') {
                  description = "This email is already associated with an account. Please log in instead.";
+            } else if (error.code === 'auth/internal-error') {
+                 description = "An internal error occurred. This might be due to a configuration issue. Please try again later.";
             }
              toast({
                 variant: "destructive",
