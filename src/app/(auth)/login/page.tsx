@@ -12,10 +12,7 @@ import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { initializeFirebase } from "@/firebase";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User, getAuth } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp, getFirestore } from "firebase/firestore";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
+import { signInWithEmailAndPassword, getAuth } from "firebase/auth";
 import { useMemo } from "react";
 
 const loginSchema = z.object({
@@ -25,48 +22,15 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-// This ensures the provider is a stable instance
-const googleProvider = new GoogleAuthProvider();
-
-// Shared function to handle user profile creation on first sign-in
-const ensureUserProfile = async (firestore: any, user: User) => {
-    const userDocRef = doc(firestore, "users", user.uid);
-    const userDoc = await getDoc(userDocRef);
-
-    if (!userDoc.exists()) {
-        const [firstName, ...lastNameParts] = user.displayName?.split(' ') || ["", ""];
-        const lastName = lastNameParts.join(' ');
-        
-        const userProfile = {
-            firstName: firstName,
-            lastName: lastName,
-            phone: user.phoneNumber || "",
-            shippingAddress: "",
-            role: "Customer",
-            createdAt: serverTimestamp(),
-            wishlist: []
-        };
-        setDoc(userDocRef, userProfile).catch(async (serverError) => {
-            const permissionError = new FirestorePermissionError({
-                path: userDocRef.path,
-                operation: 'create',
-                requestResourceData: userProfile,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-        });
-    }
-};
 
 export default function LoginPage() {
     const router = useRouter();
     const { toast } = useToast();
     
-    // Explicitly initialize Firebase here to ensure stability
-    const { auth, firestore } = useMemo(() => {
+    const { auth } = useMemo(() => {
         const app = initializeFirebase();
         return {
             auth: getAuth(app),
-            firestore: getFirestore(app)
         };
     }, []);
 
@@ -83,6 +47,7 @@ export default function LoginPage() {
         switch (errorCode) {
             case 'auth/user-not-found':
             case 'auth/wrong-password':
+            case 'auth/invalid-credential':
                 description = "Invalid email or password. Please try again.";
                 break;
             case 'auth/too-many-requests':
@@ -115,22 +80,6 @@ export default function LoginPage() {
         }
     };
     
-    const handleGoogleSignIn = async () => {
-        try {
-            const result = await signInWithPopup(auth, googleProvider);
-            await ensureUserProfile(firestore, result.user);
-
-            toast({
-                title: "Logged In!",
-                description: "Welcome back.",
-            });
-            router.push('/');
-        } catch (error: any) {
-            handleAuthError(error.code);
-        }
-    }
-
-
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -172,17 +121,6 @@ export default function LoginPage() {
                     />
                     <Button type="submit" className="w-full mt-4" disabled={form.formState.isSubmitting}>
                        {form.formState.isSubmitting ? "Logging in..." : "Login"}
-                    </Button>
-                    <div className="relative my-2">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                        </div>
-                    </div>
-                    <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn}>
-                        Login with Google
                     </Button>
                 </CardContent>
                 <CardFooter className="flex-col gap-3 text-sm">

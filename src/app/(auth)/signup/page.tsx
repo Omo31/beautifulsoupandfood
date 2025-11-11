@@ -13,8 +13,8 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { initializeFirebase } from "@/firebase";
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, GoogleAuthProvider, signInWithPopup, User, getAuth } from "firebase/auth";
-import { doc, setDoc, serverTimestamp, getDoc, getFirestore } from "firebase/firestore";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, getAuth } from "firebase/auth";
+import { doc, setDoc, serverTimestamp, getFirestore } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { Label } from "@/components/ui/label";
@@ -32,43 +32,11 @@ const signupSchema = z.object({
 
 type SignupFormValues = z.infer<typeof signupSchema>;
 
-// This ensures the provider is a stable instance
-const googleProvider = new GoogleAuthProvider();
-
-// Shared function to handle user profile creation on first sign-in
-const ensureUserProfile = async (firestore: any, user: User) => {
-    const userDocRef = doc(firestore, "users", user.uid);
-    const userDoc = await getDoc(userDocRef);
-
-    if (!userDoc.exists()) {
-        const [firstName, ...lastNameParts] = user.displayName?.split(' ') || ["", ""];
-        const lastName = lastNameParts.join(' ');
-        
-        const userProfile = {
-            firstName: firstName,
-            lastName: lastName,
-            phone: user.phoneNumber || "",
-            shippingAddress: "",
-            role: "Customer",
-            createdAt: serverTimestamp(),
-            wishlist: []
-        };
-        setDoc(userDocRef, userProfile).catch(async (serverError) => {
-            const permissionError = new FirestorePermissionError({
-                path: userDocRef.path,
-                operation: 'create',
-                requestResourceData: userProfile,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-        });
-    }
-};
 
 export default function SignupPage() {
     const router = useRouter();
     const { toast } = useToast();
     
-    // Explicitly initialize Firebase here to ensure stability
     const { auth, firestore } = useMemo(() => {
         const app = initializeFirebase();
         return {
@@ -137,33 +105,6 @@ export default function SignupPage() {
             toast({
                 variant: "destructive",
                 title: "Signup Failed",
-                description,
-            });
-        }
-    }
-    
-    const handleGoogleSignUp = async () => {
-        try {
-            const result = await signInWithPopup(auth, googleProvider);
-            await ensureUserProfile(firestore, result.user);
-            
-            toast({
-                title: "Account Created!",
-                description: "Welcome! Your account has been successfully created.",
-            });
-            router.push('/');
-        } catch (error: any) {
-            let description = "An unexpected error occurred. Please try again.";
-            if (error.code === 'auth/popup-closed-by-user') {
-                description = "The sign-up popup was closed before completing. Please try again.";
-            } else if (error.code === 'auth/email-already-in-use') {
-                 description = "This email is already associated with an account. Please log in instead.";
-            } else if (error.code === 'auth/internal-error') {
-                 description = "An internal error occurred. This might be due to a configuration issue. Please try again later.";
-            }
-             toast({
-                variant: "destructive",
-                title: "Sign-up Failed",
                 description,
             });
         }
@@ -250,17 +191,6 @@ export default function SignupPage() {
                     />
                     <Button type="submit" className="w-full mt-4" disabled={form.formState.isSubmitting}>
                         {form.formState.isSubmitting ? "Creating Account..." : "Create an account"}
-                    </Button>
-                     <div className="relative my-2">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                        </div>
-                    </div>
-                    <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignUp}>
-                        Sign up with Google
                     </Button>
                 </CardContent>
                 <CardFooter className="flex-col gap-3 text-sm">
