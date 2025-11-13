@@ -36,7 +36,8 @@ export default function OrdersPage() {
         if (!firestore) return;
         setLoading(true);
         try {
-            const ordersQuery = query(collectionGroup(firestore, 'orders'), orderBy('createdAt', 'desc'));
+            // The query is now simpler, without the orderBy clause.
+            const ordersQuery = query(collectionGroup(firestore, 'orders'));
             const querySnapshot = await getDocs(ordersQuery);
             const fetchedOrders: AggregatedOrder[] = [];
             
@@ -51,6 +52,10 @@ export default function OrdersPage() {
                     customerName: `User ${userId.substring(0, 5)}...` 
                 } as AggregatedOrder);
             });
+            
+            // Sort the orders in the code after fetching.
+            fetchedOrders.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
+            
             setOrders(fetchedOrders);
         } catch (error) {
             console.error("Error fetching all orders:", error);
