@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMemo, useEffect, useState } from 'react';
-import { collectionGroup, getDocs, query, orderBy } from 'firebase/firestore';
+import { collectionGroup, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import type { Order } from "@/lib/data";
 import { format } from "date-fns";
@@ -36,13 +36,17 @@ export default function OrdersPage() {
         if (!firestore) return;
         setLoading(true);
         try {
-            // The query is now simpler, without the orderBy clause.
-            const ordersQuery = query(collectionGroup(firestore, 'orders'));
+            // This query now requires a composite index on `status` and `createdAt`.
+            // The error message in the browser console will provide a direct link to create it.
+            const ordersQuery = query(
+                collectionGroup(firestore, 'orders'), 
+                where('status', '!=', 'Cancelled'),
+                orderBy('status'), // Firestore requires ordering by the inequality field first
+                orderBy('createdAt', 'desc')
+            );
             const querySnapshot = await getDocs(ordersQuery);
             const fetchedOrders: AggregatedOrder[] = [];
             
-            // In a real app with many users, you might fetch user data separately.
-            // For simplicity, we'll assume user data is somehow available or part of the order.
             querySnapshot.forEach(doc => {
                 const userId = doc.ref.parent.parent?.id || 'unknown';
                 fetchedOrders.push({
@@ -52,9 +56,6 @@ export default function OrdersPage() {
                     customerName: `User ${userId.substring(0, 5)}...` 
                 } as AggregatedOrder);
             });
-            
-            // Sort the orders in the code after fetching.
-            fetchedOrders.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
             
             setOrders(fetchedOrders);
         } catch (error) {
