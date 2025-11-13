@@ -13,6 +13,12 @@ export function useQuotes() {
   const quotesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     const quotesRef = collection(firestore, 'quotes');
+    
+    // This query requires a composite index in Firestore.
+    // The error message in the developer console will provide a link to create it.
+    // The required index is on the 'quotes' collection with:
+    // 1. `userId` (Ascending)
+    // 2. `createdAt` (Descending)
     return query(quotesRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
   }, [firestore, user]);
 
