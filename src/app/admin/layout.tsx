@@ -91,3 +91,4 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <ProtectedAdminLayout>{children}</ProtectedAdminLayout>
   );
 }
+
