@@ -6,7 +6,7 @@ import AppHeader from "@/components/AppHeader";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ChatWidget } from "@/components/ChatWidget";
 import { Footer } from "@/components/Footer";
-import { FirebaseClientProvider, useUser } from "@/firebase";
+import { useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,8 +53,6 @@ function ProtectedMainLayout({ children }: { children: ReactNode }) {
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   return (
-    <FirebaseClientProvider>
       <ProtectedMainLayout>{children}</ProtectedMainLayout>
-    </FirebaseClientProvider>
   );
 }
