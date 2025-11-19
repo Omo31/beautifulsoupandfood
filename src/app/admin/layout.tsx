@@ -50,7 +50,6 @@ function ProtectedAdminLayout({ children }: { children: ReactNode }) {
         return;
       }
       const isOwner = userProfile?.role === 'Owner';
-      // @ts-ignore
       const hasGranularRoles = userProfile?.roles && userProfile.roles.length > 0;
       if (!isOwner && !hasGranularRoles) {
          router.replace('/');
@@ -59,7 +58,6 @@ function ProtectedAdminLayout({ children }: { children: ReactNode }) {
   }, [user, userProfile, loading, router]);
   
   const isOwner = userProfile?.role === 'Owner';
-  // @ts-ignore
   const hasGranularRoles = userProfile?.roles && userProfile.roles.length > 0;
   const isAdmin = isOwner || hasGranularRoles;
 

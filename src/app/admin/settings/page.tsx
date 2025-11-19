@@ -229,7 +229,7 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold font-headline">Settings</h1>
-      <Tabs defaultValue="homepage" className="w-full">
+      <Tabs defaultValue="store" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto">
             <TabsTrigger value="store">Store</TabsTrigger>
             <TabsTrigger value="homepage">Homepage</TabsTrigger>

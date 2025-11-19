@@ -66,7 +66,6 @@ export function AdminSidebar() {
   };
   
   const isOwner = userProfile?.role === 'Owner';
-  // @ts-ignore
   const userRoles = userProfile?.roles || [];
 
   const visibleMenuItems = adminMenuItems.filter(item => {
