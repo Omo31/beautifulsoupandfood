@@ -84,9 +84,16 @@
         },
         "role": {
           "type": "string",
-          "description": "The user's role in the application.",
-          "enum": ["Customer", "Content Manager", "Owner"],
+          "description": "The user's primary role in the application.",
+          "enum": ["Customer", "Owner"],
           "default": "Customer"
+        },
+        "roles": {
+            "type": "array",
+            "description": "A list of granular roles corresponding to admin sections the user can access.",
+            "items": {
+                "type": "string"
+            }
         },
         "wishlist": {
           "type": "array",
@@ -532,5 +539,3 @@
     }
   }
 }
-
-    

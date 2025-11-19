@@ -53,7 +53,7 @@ export const setUserRole = onCall(async (request) => {
     if (!userId || !newRole) {
         throw new HttpsError('invalid-argument', 'The function must be called with "userId" and "newRole" arguments.');
     }
-    const allowedRoles = ['Owner', 'Content Manager', 'Customer'];
+    const allowedRoles = ['Owner', 'Customer'];
     if (!allowedRoles.includes(newRole)) {
          throw new HttpsError('invalid-argument', `Invalid role. Must be one of: ${allowedRoles.join(', ')}.`);
     }

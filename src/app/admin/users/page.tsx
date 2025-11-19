@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection } from '@/firebase';
@@ -31,8 +33,20 @@ type UserWithStatus = UserProfile & {
     email: string; // Assuming email is available on the user object, not profile
 };
 
+const adminRoles = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'orders', label: 'Orders' },
+  { id: 'quotes', label: 'Quotes' },
+  { id: 'inventory', label: 'Inventory' },
+  { id: 'conversations', label: 'Conversations' },
+  { id: 'purchase-orders', label: 'Purchase Orders' },
+  { id: 'accounting', label: 'Accounting' },
+  { id: 'analytics', label: 'Analytics' },
+  { id: 'settings', label: 'Settings' },
+];
+
 const RoleBadge = ({ role }: { role: UserProfile['role'] }) => {
-    const variant = role === 'Owner' ? 'destructive' : role === 'Content Manager' ? 'secondary' : 'outline';
+    const variant = role === 'Owner' ? 'destructive' : 'outline';
     return <Badge variant={variant}>{role}</Badge>;
 };
 
@@ -55,8 +69,6 @@ export default function UsersPage() {
 
     const { data: userProfiles, loading } = useCollection<UserProfile>(usersQuery);
     
-    // NOTE: The 'status' field is a mock. The client SDK cannot get a user's disabled status.
-    // This is a limitation that requires a more complex backend setup to resolve fully.
     const users: UserWithStatus[] = useMemo(() => {
         return userProfiles.map((profile, i) => ({
             ...profile,
@@ -68,6 +80,7 @@ export default function UsersPage() {
 
     const [isModalOpen, setModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<UserWithStatus | null>(null);
+    const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
@@ -94,38 +107,46 @@ export default function UsersPage() {
 
     const handleOpenModal = (user: UserWithStatus) => {
         setEditingUser(user);
+        setSelectedRoles(user.roles || []);
         setModalOpen(true);
     };
 
     const handleCloseModal = () => {
         setModalOpen(false);
         setEditingUser(null);
+        setSelectedRoles([]);
+    };
+    
+    const handleRoleChange = (roleId: string, checked: boolean | 'indeterminate') => {
+        if (checked) {
+            setSelectedRoles(prev => [...prev, roleId]);
+        } else {
+            setSelectedRoles(prev => prev.filter(r => r !== roleId));
+        }
     };
 
     const handleSaveUser = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!firestore || !editingUser) return;
         
-        const formData = new FormData(e.currentTarget);
-        const newRole = formData.get('role') as UserProfile['role'];
+        const userDocRef = doc(firestore, 'users', editingUser.id);
+        const updateData = {
+            roles: selectedRoles
+        };
 
-        try {
-            const functions = getFunctions();
-            const setUserRole = httpsCallable(functions, 'setUserRole');
-            await setUserRole({ userId: editingUser.id, newRole: newRole });
-            
-            const userDocRef = doc(firestore, 'users', editingUser.id);
-            await setDoc(userDocRef, { role: newRole }, { merge: true });
-
-            toast({ title: "User Role Updated", description: `${editingUser.firstName}'s role has been set to ${newRole}.` });
-            handleCloseModal();
-        } catch (error: any) {
-             toast({
-                variant: 'destructive',
-                title: 'Update Failed',
-                description: error.message || 'You do not have permission to perform this action.'
+        setDoc(userDocRef, updateData, { merge: true })
+            .then(() => {
+                toast({ title: "User Roles Updated", description: `${editingUser.firstName}'s roles have been updated.` });
+                handleCloseModal();
+            })
+            .catch(async (serverError) => {
+                 const permissionError = new FirestorePermissionError({
+                    path: userDocRef.path,
+                    operation: 'update',
+                    requestResourceData: updateData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
             });
-        }
     };
 
     const handleDeleteUser = async (userId: string) => {
@@ -145,7 +166,7 @@ export default function UsersPage() {
     const handleToggleStatus = async (user: UserWithStatus) => {
         if (!firestore) return;
 
-        const newDisabledStatus = user.status === 'Active'; // Toggle the status
+        const newDisabledStatus = user.status === 'Active';
 
         try {
             const functions = getFunctions();
@@ -214,7 +235,6 @@ export default function UsersPage() {
                                 <SelectContent>
                                     <SelectItem value="all">All Roles</SelectItem>
                                     <SelectItem value="Owner">Owner</SelectItem>
-                                    <SelectItem value="Content Manager">Content Manager</SelectItem>
                                     <SelectItem value="Customer">Customer</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -283,7 +303,7 @@ export default function UsersPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => handleOpenModal(user)}>Edit Role</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenModal(user)}>Edit Roles</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
                                         {user.status === 'Active' ? 'Disable' : 'Enable'}
                                     </DropdownMenuItem>
@@ -323,29 +343,28 @@ export default function UsersPage() {
                     <DialogContent>
                         <form onSubmit={handleSaveUser}>
                             <DialogHeader>
-                                <DialogTitle>Edit User Role</DialogTitle>
+                                <DialogTitle>Edit User Roles</DialogTitle>
                                 <DialogDescription>
-                                    Change the permission level for {editingUser.firstName} {editingUser.lastName}.
+                                    Grant granular permissions for {editingUser.firstName} {editingUser.lastName}.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="email" className="text-right">Email</Label>
-                                    <Input id="email" name="email" type="email" defaultValue={editingUser?.email} className="col-span-3" disabled/>
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="role" className="text-right">Role</Label>
-                                    <Select name="role" defaultValue={editingUser?.role || 'Customer'} required>
-                                        <SelectTrigger className="col-span-3">
-                                            <SelectValue placeholder="Select a role" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Customer">Customer</SelectItem>
-                                            <SelectItem value="Content Manager">Content Manager</SelectItem>
-                                            <SelectItem value="Owner">Owner</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                               <p className="text-sm font-medium">This user's primary role is <Badge variant="outline">{editingUser.role}</Badge>. Only an Owner can change this.</p>
+                               <div>
+                                   <Label className="font-semibold">Admin Section Access</Label>
+                                   <div className="grid grid-cols-2 gap-2 rounded-lg border p-4 mt-2">
+                                        {adminRoles.map(role => (
+                                            <div key={role.id} className="flex items-center space-x-2">
+                                                <Checkbox 
+                                                    id={`role-${role.id}`} 
+                                                    checked={selectedRoles.includes(role.id)}
+                                                    onCheckedChange={(checked) => handleRoleChange(role.id, checked)}
+                                                />
+                                                <Label htmlFor={`role-${role.id}`} className="font-normal">{role.label}</Label>
+                                            </div>
+                                        ))}
+                                   </div>
+                               </div>
                             </div>
                             <DialogFooter>
                                 <Button type="button" variant="outline" onClick={handleCloseModal}>Cancel</Button>
