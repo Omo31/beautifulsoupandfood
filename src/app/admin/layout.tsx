@@ -45,13 +45,23 @@ function ProtectedAdminLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!loading) {
-      if (!user || (userProfile && userProfile.role === 'Customer')) {
+      if (!user) {
         router.replace('/');
+        return;
+      }
+      const isOwner = userProfile?.role === 'Owner';
+      // @ts-ignore
+      const hasGranularRoles = userProfile?.roles && userProfile.roles.length > 0;
+      if (!isOwner && !hasGranularRoles) {
+         router.replace('/');
       }
     }
   }, [user, userProfile, loading, router]);
   
-  const isAdmin = userProfile?.role === 'Owner' || userProfile?.role === 'Content Manager';
+  const isOwner = userProfile?.role === 'Owner';
+  // @ts-ignore
+  const hasGranularRoles = userProfile?.roles && userProfile.roles.length > 0;
+  const isAdmin = isOwner || hasGranularRoles;
 
   if (loading || !isAdmin) {
     return (

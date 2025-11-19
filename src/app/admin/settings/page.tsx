@@ -48,30 +48,6 @@ import type { LgaShippingZone } from '@/lib/shipping';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
-const initialRoles = [
-  {
-    name: 'Owner',
-    permissions: {}, // In this mock, empty means all permissions
-  },
-  {
-    name: 'Content Manager',
-    permissions: {
-      dashboard: ['view'],
-      orders: ['view', 'edit'],
-      inventory: ['view', 'create', 'edit'],
-      conversations: ['view', 'create'],
-    },
-  },
-  {
-    name: 'Customer',
-    permissions: {}, // No admin permissions
-  },
-];
-
-const permissionModules = ['Dashboard', 'Orders', 'Users', 'Inventory', 'Conversations', 'Purchase Orders', 'Accounting', 'Analytics', 'Settings'];
-const permissionActions = ['View', 'Create', 'Edit', 'Delete'];
-
-
 export default function SettingsPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -110,11 +86,6 @@ export default function SettingsPage() {
   const [newLgaName, setNewLgaName] = useState('');
   const [newLgaPrice, setNewLgaPrice] = useState(0);
 
-  // Roles are now managed in state
-  const [roles, setRoles] = useState(initialRoles);
-  const [isNewRoleOpen, setNewRoleOpen] = useState(false);
-  const [newRoleName, setNewRoleName] = useState('');
-  
   const [monthlyRevenueGoal, setMonthlyRevenueGoal] = useState(0);
 
   // Populate local state when settings are loaded from Firestore
@@ -243,20 +214,7 @@ export default function SettingsPage() {
   const handleSaveStore = () => {
     updateSettings({ store: { monthlyRevenueGoal }});
   };
-
-  const handleCreateRole = () => {
-      if (newRoleName.trim()) {
-          setRoles([...roles, { name: newRoleName.trim(), permissions: {} }]);
-          setNewRoleName('');
-          setNewRoleOpen(false);
-          toast({ title: 'Role Created', description: `The role "${newRoleName.trim()}" has been successfully created. (This is a demo and is not saved)`});
-      }
-  };
   
-  const handleDeleteRole = (roleName: string) => {
-    setRoles(roles.filter(role => role.name !== roleName));
-    toast({ title: 'Role Deleted', description: `The role "${roleName}" has been removed. (This is a demo and is not saved)`, variant: 'destructive'});
-  }
 
   if (settingsLoading) {
     return (
@@ -272,13 +230,12 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold font-headline">Settings</h1>
       <Tabs defaultValue="homepage" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto">
             <TabsTrigger value="store">Store</TabsTrigger>
             <TabsTrigger value="homepage">Homepage</TabsTrigger>
             <TabsTrigger value="footer">Footer</TabsTrigger>
             <TabsTrigger value="custom-order">Custom Order</TabsTrigger>
             <TabsTrigger value="shipping">Shipping</TabsTrigger>
-            <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
         </TabsList>
         
         {/* Store Settings */}
@@ -618,105 +575,7 @@ export default function SettingsPage() {
             </Card>
         </TabsContent>
 
-        {/* Roles & Permissions */}
-        <TabsContent value="roles">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                    <CardTitle>Roles & Permissions</CardTitle>
-                    <CardDescription>
-                        Define user roles and their access levels across the application.
-                    </CardDescription>
-                </div>
-                <Dialog open={isNewRoleOpen} onOpenChange={setNewRoleOpen}>
-                    <DialogTrigger asChild>
-                        <Button><PlusCircle className="mr-2 h-4 w-4"/> Create New Role</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Create New Role</DialogTitle>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="new-role-name">Role Name</Label>
-                                <Input id="new-role-name" value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} placeholder="e.g., Shipper" />
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setNewRoleOpen(false)}>Cancel</Button>
-                            <Button onClick={handleCreateRole}>Create Role</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="font-bold w-[200px]">Role</TableHead>
-                      {permissionModules.map(module => (
-                        <TableHead key={module} className="text-center">{module}</TableHead>
-                      ))}
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {roles.map((role) => (
-                      <TableRow key={role.name}>
-                        <TableCell className="font-medium">{role.name}</TableCell>
-                        {permissionModules.map(module => {
-                           const moduleKey = module.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
-                           return (
-                               <TableCell key={module} className="text-center">
-                                   {role.name !== 'Customer' ? (
-                                    <div className="flex justify-center gap-2">
-                                        {permissionActions.map(action => {
-                                            const hasPermission = role.name === 'Owner' || (role.permissions[moduleKey as keyof typeof role.permissions] as string[])?.includes(action.toLowerCase());
-                                            const isActionDisabled = (module === 'Dashboard' || module === 'Analytics') && action !== 'View';
-
-                                            return (
-                                                <Checkbox
-                                                    key={action}
-                                                    id={`${role.name}-${module}-${action}`}
-                                                    aria-label={`${action} permission for ${module} in ${role.name} role`}
-                                                    checked={hasPermission}
-                                                    disabled={true}
-                                                />
-                                            )
-                                        })}
-                                    </div>
-                                   ) : '-'}
-                               </TableCell>
-                           )
-                        })}
-                         <TableCell className="text-right">
-                           <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                disabled={role.name === 'Owner' || role.name === 'Customer'}
-                                onClick={() => handleDeleteRole(role.name)}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-             <CardFooter>
-                <p className="text-sm text-muted-foreground">Note: Role and permission changes here are for UI demonstration and are not saved to the backend.</p>
-            </CardFooter>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
 }
-
-    
