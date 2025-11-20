@@ -38,17 +38,17 @@ const adminMenuItems = [
   { id: 'dashboard', href: '/admin/dashboard', label: 'Dashboard', icon: Home },
   { id: 'orders', href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { id: 'quotes', href: '/admin/quotes', label: 'Quotes', icon: ClipboardList },
-  { id: 'users', href: '/admin/users', label: 'Users', icon: Users, ownerOnly: true },
+  { id: 'users', href: '/admin/users', label: 'Users', icon: Users },
   { id: 'inventory', href: '/admin/inventory', label: 'Inventory', icon: Package },
   { id: 'conversations', href: '/admin/conversations', label: 'Conversations', icon: MessageSquare },
   { id: 'purchase-orders', href: '/admin/purchase-orders', label: 'Purchase Orders', icon: FileText },
   { id: 'accounting', href: '/admin/accounting', label: 'Accounting', icon: DollarSign },
   { id: 'analytics', href: '/admin/analytics', label: 'Analytics', icon: BarChart },
   { id: 'notifications', href: '/admin/notifications', label: 'Notifications', icon: Bell },
-  { id: 'settings', href: '/admin/settings', label: 'Settings', icon: Settings, ownerOnly: true },
+  { id: 'settings', href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ isTemporaryAdmin = false }: { isTemporaryAdmin?: boolean }) {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
   const { user } = useUser();
@@ -69,8 +69,7 @@ export function AdminSidebar() {
   const userRoles = userProfile?.roles || [];
 
   const visibleMenuItems = adminMenuItems.filter(item => {
-    if (isOwner) return true; // Owner sees everything
-    if (item.ownerOnly) return false; // Non-owners never see owner-only items
+    if (isTemporaryAdmin || isOwner) return true; // Temporary admin or Owner sees everything
     return userRoles.includes(item.id);
   });
 

@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { ReactNode } from "react";
@@ -8,7 +7,7 @@ import { AdminSidebar } from "@/components/AdminSidebar";
 import { useUser, useFirestore, useDoc } from "@/firebase";
 import { useMemoFirebase } from "@/firebase/utils";
 import { doc } from "firebase/firestore";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UserProfile } from "@/lib/data";
@@ -18,6 +17,27 @@ function ProtectedAdminLayout({ children }: { children: ReactNode }) {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // --- Development-only temporary admin access ---
+  const isDevMode = process.env.NODE_ENV === 'development' && searchParams.get('dev_mode') === 'true';
+  if (isDevMode && !user) {
+    // This block simulates an "Owner" user for development purposes only.
+    // It grants full access when using the "Temporary Admin" login button.
+    return (
+      <SidebarProvider defaultOpen>
+        <AdminSidebar isTemporaryAdmin={true} />
+        <SidebarInset>
+          <AdminHeader />
+          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            {children}
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+  // --- End of development-only logic ---
+
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -31,7 +51,7 @@ function ProtectedAdminLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        router.replace('/');
+        router.replace('/login?redirect=/admin/dashboard');
         return;
       }
       const isOwner = userProfile?.role === 'Owner';
