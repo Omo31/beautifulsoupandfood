@@ -3,29 +3,29 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useMemo } from 'react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Package } from 'lucide-react';
 import Image from 'next/image';
 import { useOrders } from '@/hooks/use-orders';
 import { useProducts } from '@/hooks/use-products';
 import { doc, collection } from 'firebase/firestore';
 import { useDoc, useCollection, useFirestore, useUser } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import type { Order } from '@/lib/data';
+import type { Order, Product } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 
 type OrderItem = {
     id: string;
     name: string;
+    variantName: string;
     quantity: number;
     price: number;
     productId: string;
-    imageId: string;
+    imageId?: string;
 }
 
 const getBadgeVariant = (status: Order['status']) => {
@@ -43,6 +43,7 @@ export default function OrderDetailsPage() {
   const { orderId } = params;
   const { user } = useUser();
   const firestore = useFirestore();
+  const { findById: findProductById } = useProducts();
 
   const orderRef = useMemoFirebase(() => {
     if (!firestore || !user || !orderId) return null;
@@ -60,10 +61,17 @@ export default function OrderDetailsPage() {
   
   const enrichedItems = useMemo(() => {
     return items.map(item => {
-        const image = PlaceHolderImages.find(p => p.id === item.imageId);
-        return { ...item, imageUrl: image?.imageUrl };
+        let imageUrl = item.imageId;
+        // For regular products, find the image from the product data
+        if (!item.productId.startsWith('custom-order-')) {
+            const product = findProductById(item.productId);
+            if (product) {
+                imageUrl = product.imageUrl;
+            }
+        }
+        return { ...item, imageUrl };
     });
-  }, [items]);
+  }, [items, findProductById]);
 
 
   if (orderLoading || itemsLoading) {
@@ -127,12 +135,21 @@ export default function OrderDetailsPage() {
             <div className="space-y-4">
                 {enrichedItems.map(item => (
                     <div key={item.id} className="flex items-center gap-4">
-                        <div className="relative h-16 w-16 rounded-md overflow-hidden border">
-                            {item.imageUrl && <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />}
+                        <div className="relative h-16 w-16 rounded-md overflow-hidden border bg-muted flex items-center justify-center">
+                            {item.imageUrl && item.imageUrl !== 'custom-order' ? (
+                                <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
+                            ) : (
+                                <Package className="h-8 w-8 text-muted-foreground" />
+                            )}
                         </div>
                         <div className="flex-1">
                             <h4 className="font-medium">{item.name}</h4>
-                            <p className="text-sm text-muted-foreground">x{item.quantity}</p>
+                            <p className="text-sm text-muted-foreground">
+                                {item.variantName} {item.productId.startsWith('custom-order-') ? '' : `(x${item.quantity})`}
+                            </p>
+                            {!item.productId.startsWith('custom-order-') && (
+                                <p className="text-sm text-muted-foreground">x{item.quantity}</p>
+                            )}
                         </div>
                         <p className="font-semibold">₦{(item.price * item.quantity).toFixed(2)}</p>
                     </div>

@@ -79,13 +79,16 @@ export async function POST(req: Request) {
                 // 3. Create order items in a sub-collection
                 const itemsCollectionRef = collection(newOrderRef, 'items');
                 for (const item of parsedItems) {
-                    const orderItemRef = doc(itemsCollectionRef); 
-                    const [productName, variantName] = item.name.split(' (');
-                    
+                    const orderItemRef = doc(itemsCollectionRef);
+                    // For cart items, the name is composite. For quote items, it's simple.
+                    const [productName, variantNamePart] = item.name.split(' (');
+                    const variantName = variantNamePart ? variantNamePart.slice(0, -1) : (item.measure || 'Standard');
+
                     const orderItemData = {
-                        productId: item.id,
+                        // For quotes, the ID is not a real product ID, so we use a placeholder
+                        productId: order_type === 'quote' ? `custom-order-${order_ref}` : item.id,
                         name: productName,
-                        variantName: variantName ? variantName.slice(0, -1) : 'Standard',
+                        variantName: variantName,
                         quantity: item.quantity,
                         price: item.price,
                         imageId: item.imageId || 'custom-order'
