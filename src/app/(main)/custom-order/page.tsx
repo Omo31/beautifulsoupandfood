@@ -26,6 +26,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useSettings } from '@/hooks/use-settings';
 import { Skeleton } from '@/components/ui/skeleton';
+import { createNotification } from '@/lib/notifications';
 
 
 const customItemSchema = z.object({
@@ -146,7 +147,16 @@ export default function CustomOrderPage() {
 
         const quotesCollection = collection(firestore, 'quotes');
         addDoc(quotesCollection, quoteRequestData)
-            .then(() => {
+            .then((docRef) => {
+                // Create admin notification
+                createNotification(firestore, {
+                    recipient: 'admin',
+                    title: 'New Quote Request',
+                    description: `${data.name} has submitted a new custom order request.`,
+                    href: `/admin/quotes/${docRef.id}`,
+                    icon: 'FileText'
+                });
+
                 toast({
                     title: 'Request Sent!',
                     description: 'Your custom order request has been submitted. We will notify you once a quote is ready.'

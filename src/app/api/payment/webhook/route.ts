@@ -1,8 +1,9 @@
 
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getFirestore, doc, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, collection, writeBatch, serverTimestamp, getDocs } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
+import { createNotification } from '@/lib/notifications';
 
 const app = initializeFirebase();
 const firestore = getFirestore(app);
@@ -85,6 +86,15 @@ export async function POST(req: Request) {
                 const quoteRef = doc(firestore, 'quotes', order_ref);
                 batch.update(quoteRef, { status: 'Paid' });
             }
+
+            // Create admin notification
+            createNotification(firestore, {
+              recipient: 'admin',
+              title: 'New Order Received!',
+              description: `A new order #${newOrderRef.id.substring(0, 6)} for ₦${(amount / 100).toFixed(2)} was placed.`,
+              href: `/admin/orders/${newOrderRef.id}`,
+              icon: 'ShoppingBag',
+            });
             
             await batch.commit();
 

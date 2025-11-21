@@ -1,3 +1,4 @@
+
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
@@ -15,6 +16,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { chat } from '@/ai/flows/chat-flow';
 import type { ChatInput, ChatOutput } from '@/ai/schemas/chat-schemas';
+import { createNotification } from '@/lib/notifications';
 
 type Message = {
     role: 'user' | 'model';
@@ -99,7 +101,16 @@ export function ChatWidget() {
             errorEmitter.emit('permission-error', permissionError);
         });
         
-        setDoc(conversationRef, conversationPayload, { merge: true }).catch(async (serverError) => {
+        setDoc(conversationRef, conversationPayload, { merge: true }).then(() => {
+             // Create admin notification
+            createNotification(firestore, {
+                recipient: 'admin',
+                title: 'New Chat Message',
+                description: `New message from ${user.displayName || 'a user'}: "${lastMessageText}"`,
+                href: `/admin/conversations?userId=${user.uid}`,
+                icon: 'MessageSquare'
+            });
+        }).catch(async (serverError) => {
              const permissionError = new FirestorePermissionError({
                 path: conversationRef.path,
                 operation: 'update',

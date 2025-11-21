@@ -19,6 +19,7 @@ import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { Label } from "@/components/ui/label";
 import { useMemo } from "react";
+import { createNotification } from "@/lib/notifications";
 
 const signupSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -60,9 +61,10 @@ export default function SignupPage() {
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
             const user = userCredential.user;
+            const fullName = `${data.firstName} ${data.lastName}`;
 
             await updateProfile(user, {
-                displayName: `${data.firstName} ${data.lastName}`,
+                displayName: fullName,
             });
 
             await sendEmailVerification(user);
@@ -85,6 +87,15 @@ export default function SignupPage() {
                     requestResourceData: userProfile,
                 });
                 errorEmitter.emit('permission-error', permissionError);
+            });
+            
+            // Create a notification for the admin
+            createNotification(firestore, {
+              recipient: 'admin',
+              title: 'New User Registered',
+              description: `${fullName} has just created an account.`,
+              href: `/admin/users?userId=${user.uid}`, // Direct link to user if needed
+              icon: 'Users',
             });
             
             toast({

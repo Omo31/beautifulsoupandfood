@@ -1,6 +1,6 @@
 
 import { addDoc, collection, serverTimestamp, Firestore } from 'firebase/firestore';
-import { Bell, FileText, ShoppingBag, MessageSquare, Truck, PackageCheck, Icon } from "lucide-react";
+import { Bell, FileText, ShoppingBag, MessageSquare, Truck, PackageCheck, Icon, Users } from "lucide-react";
 
 export type Notification = {
     id: string;
@@ -23,6 +23,7 @@ export const iconMap: { [key: string]: Icon } = {
     MessageSquare,
     Truck,
     PackageCheck,
+    Users,
 };
 
 
