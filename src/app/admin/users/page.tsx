@@ -201,8 +201,8 @@ export default function UsersPage() {
             await toggleUserStatus({ userId: user.id, disabled: newDisabledStatus });
 
             toast({
-                title: `User Account ${newDisabledStatus ? 'Disabled' : 'Enabled'}`,
-                description: `${user.firstName}'s account has been ${newDisabledStatus ? 'disabled' : 'enabled'}.`,
+                title: `User Account ${newStatus}`,
+                description: `${user.firstName}'s account has been ${newStatus.toLowerCase()}.`,
             });
             // Optimistically update local state
             setAllUsers(prev => prev.map(u => u.id === user.id ? {...u, status: newStatus} : u));
