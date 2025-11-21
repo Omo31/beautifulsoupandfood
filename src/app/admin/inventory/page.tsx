@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useMemo, type FormEvent } from 'react';
+import { useState, useMemo, type FormEvent, useEffect } from 'react';
 import {
   File,
   ListFilter,
@@ -61,9 +61,8 @@ import type { Product, ProductVariant } from '@/lib/data';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useCollection } from '@/firebase';
-import { useMemoFirebase } from '@/firebase/utils';
-import { collection, doc, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, doc, setDoc, addDoc, deleteDoc, getDocs, query, orderBy } from 'firebase/firestore';
 import { generateProductDescription } from '@/ai/flows/generate-product-description';
 import { convertToCSV, downloadCSV } from '@/lib/csv';
 
@@ -83,13 +82,8 @@ const ITEMS_PER_PAGE = 10;
 export default function InventoryPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  
-  const productsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'products');
-  }, [firestore]);
-
-  const { data: products, loading } = useCollection<Product>(productsQuery);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -103,6 +97,28 @@ export default function InventoryPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+
+  const fetchProducts = async () => {
+    if (!firestore) return;
+    setLoading(true);
+    try {
+      const productsQuery = query(collection(firestore, 'products'), orderBy('name'));
+      const snapshot = await getDocs(productsQuery);
+      const fetchedProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      setProducts(fetchedProducts);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      toast({ variant: 'destructive', title: "Error", description: "Could not fetch inventory." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firestore]);
+
 
   const filteredProducts = useMemo(() => {
     return products
@@ -165,6 +181,7 @@ export default function InventoryPage() {
             await addDoc(productsCollection, productData);
             toast({ title: "Product Added", description: `${productData.name} has been successfully added.`});
         }
+        fetchProducts(); // Re-fetch products after saving
         handleCloseModal();
       } catch (error) {
         console.error("Error saving product: ", error);
@@ -177,6 +194,7 @@ export default function InventoryPage() {
     try {
         await deleteDoc(doc(firestore, 'products', productId));
         toast({ variant: 'destructive', title: "Product Deleted", description: "The product has been removed from inventory."});
+        fetchProducts(); // Re-fetch products after deleting
     } catch (error) {
         console.error("Error deleting product: ", error);
         toast({ variant: 'destructive', title: "Delete failed", description: "Could not delete the product."});

@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { useState, useMemo, type FormEvent } from 'react';
+import { useState, useMemo, type FormEvent, useEffect } from 'react';
 import type { PurchaseOrderItem, PurchaseOrder } from '@/lib/data';
 import {
   MoreHorizontal,
@@ -59,9 +60,8 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useCollection } from '@/firebase';
-import { useMemoFirebase } from '@/firebase/utils';
-import { collection, addDoc, doc, setDoc, Timestamp, writeBatch } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, addDoc, doc, setDoc, Timestamp, writeBatch, getDocs, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -86,16 +86,33 @@ export default function PurchaseOrdersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
 
-  const posQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'purchaseOrders');
-  }, [firestore]);
-
-  const { data: purchaseOrders, loading } = useCollection<PurchaseOrder>(posQuery);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [isNewPOOpen, setNewPOOpen] = useState(false);
   const [newPOItems, setNewPOItems] = useState<Partial<NewPOItem>[]>([{}]);
   const [date, setDate] = useState<Date | undefined>(new Date());
+
+  useEffect(() => {
+    const fetchPurchaseOrders = async () => {
+        if (!firestore) return;
+        setLoading(true);
+        try {
+            const posQuery = query(collection(firestore, 'purchaseOrders'), orderBy('date', 'desc'));
+            const snapshot = await getDocs(posQuery);
+            const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
+            setPurchaseOrders(pos);
+        } catch (error) {
+            console.error("Error fetching purchase orders:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch purchase orders.' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    fetchPurchaseOrders();
+  }, [firestore, toast]);
+
 
   const handleAddItem = () => {
     setNewPOItems([...newPOItems, {}]);
@@ -156,6 +173,12 @@ export default function PurchaseOrdersPage() {
             description: `PO has been saved as ${status}.`
         });
         
+        // Refetch data
+        const posQuery = query(collection(firestore, 'purchaseOrders'), orderBy('date', 'desc'));
+        const snapshot = await getDocs(posQuery);
+        const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
+        setPurchaseOrders(pos);
+        
         setNewPOOpen(false);
         setNewPOItems([{}]);
       } catch (error) {
@@ -192,6 +215,13 @@ export default function PurchaseOrdersPage() {
               title: 'Status Updated',
               description: `PO #${po.id.substring(0,6)} has been marked as ${newStatus}.`
           });
+
+           // Refetch data
+            const posQuery = query(collection(firestore, 'purchaseOrders'), orderBy('date', 'desc'));
+            const snapshot = await getDocs(posQuery);
+            const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
+            setPurchaseOrders(pos);
+
       } catch (error) {
           console.error("Error updating PO status:", error);
           toast({ variant: 'destructive', title: 'Update Failed'});
@@ -221,9 +251,7 @@ export default function PurchaseOrdersPage() {
         )
     }
 
-    const sortedPOs = [...purchaseOrders].sort((a,b) => b.date.toDate().getTime() - a.date.toDate().getTime());
-
-    return sortedPOs.map((po) => (
+    return purchaseOrders.map((po) => (
         <TableRow key={po.id}>
             <TableCell className="font-medium">#{po.id.substring(0,6)}</TableCell>
             <TableCell>{po.supplier}</TableCell>
