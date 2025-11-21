@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -18,9 +17,8 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useCollection, useUser } from '@/firebase';
-import { useMemoFirebase } from '@/firebase/utils';
-import { collection, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { useFirestore, useUser } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -29,6 +27,7 @@ import { convertToCSV, downloadCSV } from '@/lib/csv';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 type UserWithStatus = UserProfile & { 
+    id: string;
     status: 'Active' | 'Disabled'; 
     email: string;
 };
@@ -62,14 +61,10 @@ export default function UsersPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
     const { user: currentUser } = useUser();
-
-    const usersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return collection(firestore, 'users');
-    }, [firestore]);
-
-    const { data: userProfiles, loading } = useCollection<UserWithStatus>(usersQuery);
     
+    const [allUsers, setAllUsers] = useState<UserWithStatus[]>([]);
+    const [loading, setLoading] = useState(true);
+
     const [isModalOpen, setModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<UserWithStatus | null>(null);
     const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -78,9 +73,41 @@ export default function UsersPage() {
     const [roleFilter, setRoleFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
+    
+    const functions = useMemo(() => getFunctions(), []);
+    
+    useEffect(() => {
+        const fetchUsers = async () => {
+            setLoading(true);
+            try {
+                const getUsers = httpsCallable(functions, 'getAllUsers');
+                const result = await getUsers();
+                const usersData = result.data as UserWithStatus[];
+                
+                // Convert Firestore timestamps
+                const processedUsers = usersData.map(u => ({
+                  ...u,
+                  createdAt: u.createdAt ? new Date((u.createdAt as any)._seconds * 1000) : new Date(),
+                }));
+
+                setAllUsers(processedUsers);
+            } catch (error: any) {
+                console.error("Error fetching users:", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Failed to fetch users',
+                    description: error.message || 'There was a problem retrieving the user list.'
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchUsers();
+    }, [functions, toast]);
+
 
     const filteredUsers = useMemo(() => {
-        return userProfiles
+        return allUsers
             .filter(u => 
                 u.firstName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                 u.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,7 +115,7 @@ export default function UsersPage() {
             )
             .filter(u => roleFilter === 'all' || u.role === roleFilter)
             .filter(u => statusFilter === 'all' || u.status === statusFilter);
-    }, [userProfiles, searchTerm, roleFilter, statusFilter]);
+    }, [allUsers, searchTerm, roleFilter, statusFilter]);
 
     const paginatedUsers = useMemo(() => {
         const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -129,6 +156,8 @@ export default function UsersPage() {
         setDoc(userDocRef, updateData, { merge: true })
             .then(() => {
                 toast({ title: "User Roles Updated", description: `${editingUser.firstName}'s roles have been updated.` });
+                // Optimistically update local state
+                setAllUsers(prev => prev.map(u => u.id === editingUser.id ? {...u, roles: selectedRoles} : u));
                 handleCloseModal();
             })
             .catch(async (serverError) => {
@@ -140,28 +169,34 @@ export default function UsersPage() {
                 errorEmitter.emit('permission-error', permissionError);
             });
     };
-
-    const handleDeleteUser = async (userId: string) => {
+    
+    const handleDeleteUser = async (userId: string, userName: string) => {
         if (!firestore) return;
-        const userDocRef = doc(firestore, 'users', userId);
-        deleteDoc(userDocRef).then(() => {
-            toast({ variant: 'destructive', title: "User Deleted", description: "The user profile has been deleted."});
-        }).catch((error) => {
-            const permissionError = new FirestorePermissionError({
-                path: userDocRef.path,
-                operation: 'delete',
+        
+        try {
+            const deleteUserFn = httpsCallable(functions, 'deleteUser');
+            await deleteUserFn({ userId });
+            
+            toast({ variant: 'destructive', title: "User Deleted", description: `${userName} has been removed from the system.`});
+            // Remove from local state
+            setAllUsers(prev => prev.filter(u => u.id !== userId));
+
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Deletion Failed',
+                description: error.message || 'Could not delete the user.',
             });
-            errorEmitter.emit('permission-error', permissionError);
-        });
+        }
     };
     
     const handleToggleStatus = async (user: UserWithStatus) => {
         if (!firestore) return;
 
         const newDisabledStatus = user.status === 'Active';
+        const newStatus = newDisabledStatus ? 'Disabled' : 'Active';
 
         try {
-            const functions = getFunctions();
             const toggleUserStatus = httpsCallable(functions, 'toggleUserStatus');
             await toggleUserStatus({ userId: user.id, disabled: newDisabledStatus });
 
@@ -169,6 +204,9 @@ export default function UsersPage() {
                 title: `User Account ${newDisabledStatus ? 'Disabled' : 'Enabled'}`,
                 description: `${user.firstName}'s account has been ${newDisabledStatus ? 'disabled' : 'enabled'}.`,
             });
+            // Optimistically update local state
+            setAllUsers(prev => prev.map(u => u.id === user.id ? {...u, status: newStatus} : u));
+
         } catch (error: any) {
              toast({
                 variant: 'destructive',
@@ -191,7 +229,7 @@ export default function UsersPage() {
             Role: u.role,
             Permissions: u.roles?.join(', ') || 'None',
             Status: u.status,
-            JoinDate: u.createdAt ? format(u.createdAt.toDate(), 'yyyy-MM-dd') : 'N/A',
+            JoinDate: u.createdAt ? format(u.createdAt, 'yyyy-MM-dd') : 'N/A',
         }));
         const csv = convertToCSV(dataToExport);
         downloadCSV(csv, `users-export-${new Date().toISOString().split('T')[0]}.csv`);
@@ -296,11 +334,11 @@ export default function UsersPage() {
                              <TableCell>
                                 <StatusBadge status={user.status} />
                             </TableCell>
-                            <TableCell>{user.createdAt ? format(user.createdAt.toDate(), 'yyyy-MM-dd') : 'N/A'}</TableCell>
+                            <TableCell>{user.createdAt ? format(user.createdAt, 'yyyy-MM-dd') : 'N/A'}</TableCell>
                             <TableCell className="text-right">
                                <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                    <Button aria-haspopup="true" size="icon" variant="ghost" disabled={user.role === 'Owner' && user.id !== currentUser?.uid}>
+                                    <Button aria-haspopup="true" size="icon" variant="ghost" disabled={user.role === 'Owner' && user.id === currentUser?.uid}>
                                         <MoreHorizontal className="h-4 w-4" />
                                         <span className="sr-only">Toggle menu</span>
                                     </Button>
@@ -309,9 +347,10 @@ export default function UsersPage() {
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                     <DropdownMenuItem onClick={() => handleOpenModal(user)}>Edit Roles</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
-                                        {user.status === 'Active' ? 'Disable' : 'Enable'}
+                                        {user.status === 'Active' ? 'Disable' : 'Enable'} User
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user.id)}>Delete</DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user.id, `${user.firstName} ${user.lastName}`)}>Delete User</DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </TableCell>
@@ -381,3 +420,5 @@ export default function UsersPage() {
         </div>
     );
 }
+
+    

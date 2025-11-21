@@ -101,3 +101,90 @@ export const toggleUserStatus = onCall(async (request) => {
         throw new HttpsError('internal', 'An error occurred while updating the user status.');
     }
 });
+
+/**
+ * A callable Cloud Function for an 'Owner' to get a list of all users
+ * combined with their Firestore profile data.
+ */
+export const getAllUsers = onCall(async (request) => {
+    // 1. Authentication and Authorization Check
+    if (request.auth?.token.role !== 'Owner') {
+        throw new HttpsError('permission-denied', 'You must be an Owner to perform this action.');
+    }
+
+    try {
+        const listUsersResult = await admin.auth().listUsers();
+        const firestore = admin.firestore();
+        
+        const combinedUsers = await Promise.all(
+            listUsersResult.users.map(async (userRecord) => {
+                const userDocRef = firestore.collection('users').doc(userRecord.uid);
+                const userDoc = await userDocRef.get();
+                
+                const profileData = userDoc.exists ? userDoc.data() : {};
+                
+                return {
+                    id: userRecord.uid,
+                    email: userRecord.email || '',
+                    status: userRecord.disabled ? 'Disabled' : 'Active',
+                    firstName: profileData?.firstName || 'N/A',
+                    lastName: profileData?.lastName || '',
+                    role: profileData?.role || 'Customer',
+                    roles: profileData?.roles || [],
+                    createdAt: profileData?.createdAt,
+                };
+            })
+        );
+        
+        return combinedUsers;
+
+    } catch (error) {
+        log('Error getting all users:', error);
+        throw new HttpsError('internal', 'An error occurred while fetching the user list.');
+    }
+});
+
+
+/**
+ * A callable Cloud Function for an 'Owner' to delete a user from both
+ * Firebase Authentication and Firestore.
+ */
+export const deleteUser = onCall(async (request) => {
+    // 1. Authentication and Authorization Check
+    if (request.auth?.token.role !== 'Owner') {
+        throw new HttpsError('permission-denied', 'You must be an Owner to perform this action.');
+    }
+
+    const { userId } = request.data;
+    
+    // 2. Data Validation
+    if (!userId) {
+        throw new HttpsError('invalid-argument', 'The function must be called with a "userId" argument.');
+    }
+    if (request.auth.uid === userId) {
+        throw new HttpsError('invalid-argument', 'You cannot delete your own account.');
+    }
+
+    try {
+        // 3. Delete from Firebase Auth
+        await admin.auth().deleteUser(userId);
+        log(`Successfully deleted user ${userId} from Firebase Auth.`);
+
+        // 4. Delete from Firestore
+        const userDocRef = admin.firestore().collection('users').doc(userId);
+        await userDocRef.delete();
+        log(`Successfully deleted user profile ${userId} from Firestore.`);
+
+        return { success: true, message: `User ${userId} has been completely removed.` };
+
+    } catch (error: any) {
+        log(`Error deleting user ${userId}:`, error);
+        // Provide a more specific error message if the user is not found
+        if (error.code === 'auth/user-not-found') {
+            throw new HttpsError('not-found', 'The specified user does not exist.');
+        }
+        throw new HttpsError('internal', 'An error occurred while deleting the user.');
+    }
+});
+
+    
