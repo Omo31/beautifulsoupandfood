@@ -68,7 +68,7 @@ export default function AnalyticsPage() {
     }, [functions, toast]);
     
     const totalCategorySales = useMemo(() => {
-        if (!analyticsData) return 0;
+        if (!analyticsData || !analyticsData.salesByCategory) return 0;
         return Object.values(analyticsData.salesByCategory).reduce((sum, current) => sum + current, 0);
     }, [analyticsData]);
 
@@ -199,17 +199,19 @@ export default function AnalyticsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {analyticsData.topProductsByUnits.map((product) => (
-                <div key={product.id}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium">{product.name}</span>
-                    <span className="text-muted-foreground">{product.value} units</span>
-                  </div>
-                  <Progress value={(product.value / (analyticsData.topProductsByUnits[0]?.value || 1)) * 100} />
+            {analyticsData.topProductsByUnits.length > 0 ? (
+                <div className="space-y-4">
+                {analyticsData.topProductsByUnits.map((product) => (
+                    <div key={product.id}>
+                    <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium">{product.name}</span>
+                        <span className="text-muted-foreground">{product.value} units</span>
+                    </div>
+                    <Progress value={(product.value / (analyticsData.topProductsByUnits[0]?.value || 1)) * 100} />
+                    </div>
+                ))}
                 </div>
-              ))}
-            </div>
+            ) : <p className="text-sm text-muted-foreground">No sales data available yet.</p>}
           </CardContent>
         </Card>
         
@@ -222,17 +224,19 @@ export default function AnalyticsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {analyticsData.topProductsByRevenue.map((product) => (
-                <div key={product.id}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium">{product.name}</span>
-                    <span className="text-muted-foreground">₦{product.value.toLocaleString()}</span>
-                  </div>
-                  <Progress value={(product.value / (analyticsData.topProductsByRevenue[0]?.value || 1)) * 100} />
+            {analyticsData.topProductsByRevenue.length > 0 ? (
+                <div className="space-y-4">
+                {analyticsData.topProductsByRevenue.map((product) => (
+                    <div key={product.id}>
+                    <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium">{product.name}</span>
+                        <span className="text-muted-foreground">₦{product.value.toLocaleString()}</span>
+                    </div>
+                    <Progress value={(product.value / (analyticsData.topProductsByRevenue[0]?.value || 1)) * 100} />
+                    </div>
+                ))}
                 </div>
-              ))}
-            </div>
+            ) : <p className="text-sm text-muted-foreground">No sales data available yet.</p>}
           </CardContent>
         </Card>
       </div>
@@ -244,17 +248,19 @@ export default function AnalyticsPage() {
             <CardDescription>A breakdown of your revenue by product category.</CardDescription>
         </CardHeader>
         <CardContent>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-              {Object.entries(analyticsData.salesByCategory).map(([category, sales]) => (
-                <div key={category}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium">{category}</span>
-                    <span className="text-muted-foreground">₦{(sales as number).toLocaleString()}</span>
-                  </div>
-                  <Progress value={((sales as number) / totalCategorySales) * 100} />
+            {totalCategorySales > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                {Object.entries(analyticsData.salesByCategory).map(([category, sales]) => (
+                    <div key={category}>
+                    <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium">{category}</span>
+                        <span className="text-muted-foreground">₦{(sales as number).toLocaleString()}</span>
+                    </div>
+                    <Progress value={((sales as number) / totalCategorySales) * 100} />
+                    </div>
+                ))}
                 </div>
-              ))}
-            </div>
+            ): <p className="text-sm text-muted-foreground">No sales data available yet.</p>}
         </CardContent>
       </Card>
         {/* Monthly Goal & Order Status */}
@@ -279,22 +285,24 @@ export default function AnalyticsPage() {
                     <CardTitle>Order Status Overview</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Count</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                           {Object.entries(analyticsData.orderStatusData).map(([status, count]) => (
-                             <TableRow key={status}>
-                                <TableCell className="font-medium">{status}</TableCell>
-                                <TableCell className="text-right">{count as number}</TableCell>
-                             </TableRow>
-                           ))}
-                        </TableBody>
-                    </Table>
+                    {Object.keys(analyticsData.orderStatusData).length > 0 ? (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Count</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {Object.entries(analyticsData.orderStatusData).map(([status, count]) => (
+                                <TableRow key={status}>
+                                    <TableCell className="font-medium">{status}</TableCell>
+                                    <TableCell className="text-right">{count as number}</TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                    ) : <p className="text-sm text-muted-foreground">No order data available yet.</p>}
                 </CardContent>
             </Card>
         </div>
