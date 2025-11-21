@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
+import { CookieBanner } from '@/components/CookieBanner';
 
 const APP_NAME = "BeautifulSoup&Food";
 const APP_DESCRIPTION = "Your one-stop shop for Nigerian groceries and delicacies.";
@@ -42,6 +43,7 @@ export default function RootLayout({
           {children}
         </FirebaseClientProvider>
         <Toaster />
+        <CookieBanner />
       </body>
     </html>
   );
