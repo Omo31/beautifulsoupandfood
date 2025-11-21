@@ -32,12 +32,10 @@ export default function ShopPage() {
         inStock: false
     });
 
-    const [appliedFilters, setAppliedFilters] = useState(filters);
-
+    // Reset to first page on filter change
     useEffect(() => {
-        setAppliedFilters(filters);
-        setCurrentPage(1); // Reset to first page on filter change
-    }, [products, filters]);
+        setCurrentPage(1);
+    }, [filters, searchTerm]);
 
 
     const handleCategoryChange = (category: string, checked: boolean | 'indeterminate') => {
@@ -60,23 +58,18 @@ export default function ShopPage() {
             inStock: !!checked
         }));
     };
-    
-    const applyFilters = () => {
-        setAppliedFilters(filters);
-        setCurrentPage(1); // Reset to first page when applying new filters
-    };
 
     const filteredProducts = useMemo(() => {
         let filtered = products.filter(product => {
             const searchMatch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
             
-            const categoryMatch = appliedFilters.categories.length === 0 || appliedFilters.categories.includes(product.category);
+            const categoryMatch = filters.categories.length === 0 || filters.categories.includes(product.category);
 
             const lowestPrice = product.variants.length > 0 ? Math.min(...product.variants.map(v => v.price)) : 0;
-            const priceMatch = lowestPrice >= appliedFilters.priceRange[0] && lowestPrice <= appliedFilters.priceRange[1];
+            const priceMatch = lowestPrice >= filters.priceRange[0] && lowestPrice <= filters.priceRange[1];
 
             const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
-            const stockMatch = !appliedFilters.inStock || totalStock > 0;
+            const stockMatch = !filters.inStock || totalStock > 0;
 
             return searchMatch && categoryMatch && priceMatch && stockMatch;
         });
@@ -107,7 +100,7 @@ export default function ShopPage() {
         }
 
         return filtered;
-    }, [searchTerm, products, appliedFilters, sortOption]);
+    }, [searchTerm, products, filters, sortOption]);
 
     const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
 
@@ -163,7 +156,6 @@ export default function ShopPage() {
                                     <Label htmlFor="in-stock">In Stock</Label>
                                 </div>
                             </div>
-                            <Button className="w-full" onClick={applyFilters}>Apply Filters</Button>
                         </div>
                     </CardContent>
                 </Card>
