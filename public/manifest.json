@@ -4,7 +4,7 @@
   "description": "Your one-stop shop for Nigerian groceries and delicacies.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F7FEFA",
+  "background_color": "#F8FFFB",
   "theme_color": "#4B9966",
   "icons": [
     {
