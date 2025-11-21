@@ -7,15 +7,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMemo, useEffect, useState } from 'react';
-import { collectionGroup, getDocs, query, orderBy, where, getDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
-import type { Order } from "@/lib/data";
+import { collection, getDocs, query, orderBy, getDoc, doc } from 'firebase/firestore';
+import { useFirestore, useCollection } from '@/firebase';
+import type { Order, UserProfile } from "@/lib/data";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { File } from 'lucide-react';
 import { convertToCSV, downloadCSV } from '@/lib/csv';
+import { useMemoFirebase } from "@/firebase/utils";
 
-type AggregatedOrder = Order & { customerName: string; userId: string };
+type AggregatedOrder = Order & { customerName: string; };
 
 const getBadgeVariant = (status: Order['status']) => {
     switch (status) {
@@ -31,44 +32,50 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<AggregatedOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // We are now using a one-time fetch to avoid real-time listener complexity
   useEffect(() => {
-    const fetchOrders = async () => {
+    const fetchOrdersAndUsers = async () => {
         if (!firestore) return;
         setLoading(true);
         try {
-            // This query now requires a composite index on `status` and `createdAt`.
-            // The error message in the browser console will provide a direct link to create it.
-            const ordersQuery = query(
-                collectionGroup(firestore, 'orders'), 
-                where('status', '!=', 'Cancelled'),
-                orderBy('status'), // Firestore requires ordering by the inequality field first
-                orderBy('createdAt', 'desc')
-            );
-            const querySnapshot = await getDocs(ordersQuery);
-            
-            const fetchedOrders: AggregatedOrder[] = await Promise.all(
-                querySnapshot.docs.map(async (orderDoc) => {
-                    const userId = orderDoc.ref.parent.parent?.id || 'unknown';
-                    const userDoc = await getDoc(orderDoc.ref.parent.parent!);
-                    const userName = userDoc.exists() ? `${userDoc.data().firstName} ${userDoc.data().lastName}` : `User ${userId.substring(0, 5)}...`;
+            // Fetch all orders from the top-level collection
+            const ordersQuery = query(collection(firestore, 'orders'), orderBy('createdAt', 'desc'));
+            const ordersSnapshot = await getDocs(ordersQuery);
+            const fetchedOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
 
-                    return {
-                        ...orderDoc.data(),
-                        id: orderDoc.id,
-                        userId: userId,
-                        customerName: userName,
-                    } as AggregatedOrder;
-                })
-            );
+            // Create a set of unique user IDs from the orders
+            const userIds = [...new Set(fetchedOrders.map(o => o.userId))];
             
-            setOrders(fetchedOrders);
+            // Fetch the user profiles for these IDs
+            const userProfiles: Record<string, UserProfile> = {};
+            if (userIds.length > 0) {
+                 // Firestore 'in' queries are limited to 10 items, so we'd need to batch this for > 10 users.
+                 // For now, we fetch one by one, which is less efficient but simpler.
+                await Promise.all(userIds.map(async (userId) => {
+                    const userDoc = await getDoc(doc(firestore, 'users', userId));
+                    if (userDoc.exists()) {
+                        userProfiles[userId] = userDoc.data() as UserProfile;
+                    }
+                }));
+            }
+
+            // Combine the data
+            const aggregatedOrders = fetchedOrders.map(order => ({
+                ...order,
+                customerName: userProfiles[order.userId] 
+                    ? `${userProfiles[order.userId].firstName} ${userProfiles[order.userId].lastName}`
+                    : `User ${order.userId.substring(0, 5)}...`
+            }));
+            
+            setOrders(aggregatedOrders);
+
         } catch (error) {
             console.error("Error fetching all orders:", error);
         } finally {
             setLoading(false);
         }
     }
-    fetchOrders();
+    fetchOrdersAndUsers();
   }, [firestore]);
 
   const handleExport = () => {

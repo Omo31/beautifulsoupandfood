@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
 import type { Order } from '@/lib/data';
@@ -13,8 +13,9 @@ export function useOrders() {
 
   const ordersQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    const ordersRef = collection(firestore, 'users', user.uid, 'orders');
-    return query(ordersRef, orderBy('createdAt', 'desc'));
+    const ordersRef = collection(firestore, 'orders');
+    // This query now requires a composite index on `userId` and `createdAt`.
+    return query(ordersRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
   }, [firestore, user]);
 
   const { data: orders, loading, error } = useCollection<Order>(ordersQuery);

@@ -13,7 +13,7 @@ import { useProducts } from '@/hooks/use-products';
 import { doc, collection } from 'firebase/firestore';
 import { useDoc, useCollection, useFirestore, useUser } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import type { Order, Product, UserProfile } from '@/lib/data';
+import type { Order, UserProfile } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 
@@ -45,9 +45,10 @@ export default function OrderDetailsPage() {
   const { findById: findProductById } = useProducts();
 
   const orderRef = useMemoFirebase(() => {
-    if (!firestore || !user || !orderId) return null;
-    return doc(firestore, 'users', user.uid, 'orders', orderId as string);
-  }, [firestore, user, orderId]);
+    if (!firestore || !orderId) return null;
+    // Orders are now in a top-level collection
+    return doc(firestore, 'orders', orderId as string);
+  }, [firestore, orderId]);
   
   const { data: order, loading: orderLoading } = useDoc<Order>(orderRef);
   
@@ -80,6 +81,9 @@ export default function OrderDetailsPage() {
   }, [items, findProductById]);
 
   const isLoading = orderLoading || itemsLoading || profileLoading;
+  
+  // Security check: Make sure the fetched order belongs to the current user
+  const canView = !isLoading && order && order.userId === user?.uid;
 
   if (isLoading) {
     return (
@@ -102,11 +106,11 @@ export default function OrderDetailsPage() {
     );
   }
 
-  if (!order) {
+  if (!canView) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
         <h2 className="text-2xl font-bold">Order not found</h2>
-        <p className="text-muted-foreground">The order you are looking for does not exist.</p>
+        <p className="text-muted-foreground">The order you are looking for does not exist or you don't have permission to view it.</p>
         <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
       </div>
     );
@@ -170,7 +174,7 @@ export default function OrderDetailsPage() {
                         <>
                             <p className="font-medium">{userProfile.firstName} {userProfile.lastName}</p>
                             {userProfile.shippingAddress ? (
-                                userProfile.shippingAddress.split('\n').map((line, i) => (
+                                userProfile.shippingAddress.split('\\n').map((line, i) => (
                                     <span key={i}>{line}<br /></span>
                                 ))
                             ) : (

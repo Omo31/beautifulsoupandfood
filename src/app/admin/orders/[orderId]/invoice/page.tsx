@@ -6,7 +6,7 @@ import { useMemo, useEffect, useState } from 'react';
 import type { Order, OrderItem, UserProfile } from '@/lib/data';
 import { useFirestore, useDoc, useCollection } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import { doc, getDocs, query, collectionGroup, where, limit, collection, DocumentReference } from 'firebase/firestore';
+import { doc, collection, DocumentReference } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -21,19 +21,9 @@ export default function InvoicePage() {
     const { orderId } = params;
     const firestore = useFirestore();
 
-    const [orderRef, setOrderRef] = useState<DocumentReference | null>(null);
-
-    useEffect(() => {
-        const findOrder = async () => {
-            if (!firestore || !orderId) return;
-            const q = query(collectionGroup(firestore, 'orders'), where('__name__', '==', `orders/${orderId}`), limit(1));
-            const orderSnap = await getDocs(q);
-            
-            if (!orderSnap.empty) {
-                setOrderRef(orderSnap.docs[0].ref);
-            }
-        }
-        findOrder();
+    const orderRef = useMemoFirebase(() => {
+        if (!firestore || !orderId) return null;
+        return doc(firestore, 'orders', orderId as string);
     }, [firestore, orderId]);
   
     const { data: order, loading: orderLoading } = useDoc<Order>(orderRef);
@@ -45,7 +35,7 @@ export default function InvoicePage() {
 
     const { data: orderItems, loading: itemsLoading } = useCollection<OrderItem>(itemsRef);
 
-    const customerId = orderRef?.parent.parent?.id;
+    const customerId = order?.userId;
     
     const userDocRef = useMemoFirebase(() => {
         if (!firestore || !customerId) return null;
@@ -54,7 +44,7 @@ export default function InvoicePage() {
 
     const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-    const isLoading = orderLoading || itemsLoading || userProfileLoading || !orderRef;
+    const isLoading = orderLoading || itemsLoading || userProfileLoading;
 
     if (isLoading) {
         return (

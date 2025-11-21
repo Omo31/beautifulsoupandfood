@@ -26,6 +26,7 @@ export async function POST(req: Request) {
 
         try {
             const parsedItems = JSON.parse(order_items);
+            let newOrderId = '';
 
             // Use a transaction to ensure atomicity
             await runTransaction(firestore, async (transaction) => {
@@ -60,12 +61,13 @@ export async function POST(req: Request) {
                 }
 
                 // --- The following operations are safe to perform after stock has been validated and updated ---
-                const batch = writeBatch(firestore);
-
-                // 2. Create a new order document
-                const newOrderRef = doc(collection(firestore, `users/${user_id}/orders`));
                 
+                // 2. Create a new order document in the top-level 'orders' collection
+                const newOrderRef = doc(collection(firestore, `orders`));
+                newOrderId = newOrderRef.id; // Capture the new order ID
+
                 const orderData = {
+                    userId: user_id,
                     createdAt: serverTimestamp(),
                     status: 'Awaiting Confirmation',
                     itemCount: parsedItems.reduce((sum: number, item: any) => sum + item.quantity, 0),
@@ -74,7 +76,7 @@ export async function POST(req: Request) {
                     source: order_type, // 'cart' or 'quote'
                     sourceId: order_ref || '', // The quote ID if applicable
                 };
-                batch.set(newOrderRef, orderData);
+                transaction.set(newOrderRef, orderData);
 
                 // 3. Create order items in a sub-collection
                 const itemsCollectionRef = collection(newOrderRef, 'items');
@@ -93,7 +95,7 @@ export async function POST(req: Request) {
                         price: item.price,
                         imageId: item.imageId || 'custom-order'
                     };
-                    batch.set(orderItemRef, orderItemData);
+                    transaction.set(orderItemRef, orderItemData);
                 }
                 
                 // 4. Create a transaction record
@@ -105,34 +107,32 @@ export async function POST(req: Request) {
                     type: 'Sale',
                     amount: amount / 100,
                 };
-                batch.set(transactionRef, transactionData);
+                transaction.set(transactionRef, transactionData);
 
                 // 5. Clear the user's cart IF it was a cart order
                 if (order_type === 'cart') {
                     const cartCollectionRef = collection(firestore, 'users', user_id, 'cart');
-                    const cartSnapshot = await getDocs(cartCollectionRef); // Must be getDocs, not transaction.get
+                    const cartSnapshot = await getDocs(cartCollectionRef);
                     cartSnapshot.forEach(doc => {
-                        batch.delete(doc.ref);
+                        transaction.delete(doc.ref);
                     });
                 } else if (order_type === 'quote' && order_ref) {
                     // 6. Update the quote status to 'Paid' if it was a quote order
                     const quoteRef = doc(firestore, 'quotes', order_ref);
-                    batch.update(quoteRef, { status: 'Paid' });
+                    transaction.update(quoteRef, { status: 'Paid' });
                 }
-
-                // Commit the batch operations within the transaction scope
-                await batch.commit();
             }); // End of Firestore Transaction
 
             // Create admin notification outside of the transaction
-            const orderId = (await getDocs(collection(firestore, `users/${user_id}/orders`))).docs.sort((a,b) => b.data().createdAt.toMillis() - a.data().createdAt.toMillis())[0].id;
-            createNotification(firestore, {
-              recipient: 'admin',
-              title: 'New Order Received!',
-              description: `A new order #${orderId.substring(0, 6)} for ₦${(amount / 100).toFixed(2)} was placed.`,
-              href: `/admin/orders/${orderId}`,
-              icon: 'ShoppingBag',
-            });
+            if (newOrderId) {
+                createNotification(firestore, {
+                  recipient: 'admin',
+                  title: 'New Order Received!',
+                  description: `A new order #${newOrderId.substring(0, 6)} for ₦${(amount / 100).toFixed(2)} was placed.`,
+                  href: `/admin/orders/${newOrderId}`,
+                  icon: 'ShoppingBag',
+                });
+            }
 
         } catch (error) {
             console.error("Webhook processing error:", error);

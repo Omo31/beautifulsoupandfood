@@ -50,6 +50,7 @@ export type Testimonial = {
 
 export type Order = {
     id: string;
+    userId: string;
     status: 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Awaiting Confirmation';
     total: number;
     itemCount: number;

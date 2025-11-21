@@ -140,6 +140,10 @@
       "description": "Represents a customer's order.",
       "type": "object",
       "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who placed the order."
+        },
         "status": {
           "type": "string",
           "enum": ["Pending", "Shipped", "Delivered", "Cancelled", "Awaiting Confirmation"]
@@ -148,7 +152,7 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "itemCount": { "type": "number" }
       },
-      "required": ["status", "total", "createdAt", "itemCount"]
+      "required": ["userId", "status", "total", "createdAt", "itemCount"]
     },
     "OrderItem": {
       "title": "Order Item",
@@ -481,13 +485,13 @@
       },
       "description": "A sub-collection within each user's document storing items in their shopping cart. Document ID is a unique auto-ID."
     },
-     "/users/{userId}/orders/{orderId}": {
+    "/orders/{orderId}": {
       "schema": {
         "$ref": "#/entities/Order"
       },
-      "description": "A sub-collection for a user's orders."
+      "description": "A top-level collection for all customer orders."
     },
-    "/users/{userId}/orders/{orderId}/items/{orderItemId}": {
+    "/orders/{orderId}/items/{orderItemId}": {
         "schema": {
             "$ref": "#/entities/OrderItem"
         },

@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createNotification } from '@/lib/notifications';
 import { useFirestore, useDoc, useCollection } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import { doc, getDoc, getDocs, query, collectionGroup, where, limit, setDoc, collection, DocumentReference } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, DocumentReference } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -36,26 +36,9 @@ export default function AdminOrderDetailsPage() {
   const firestore = useFirestore();
   const { orderId } = params;
 
-  const [orderRef, setOrderRef] = useState<DocumentReference | null>(null);
-  
-  // Since we don't know the userId from the orderId alone, we have to find it first.
-  // This efficient query finds the single order document from across all user sub-collections.
-  useEffect(() => {
-    const findOrder = async () => {
-        if (!firestore || !orderId) return;
-        const q = query(collectionGroup(firestore, 'orders'), where('__name__', '==', `orders/${orderId}`), limit(1));
-        const orderSnap = await getDocs(q);
-        
-        if (!orderSnap.empty) {
-          const doc = orderSnap.docs[0];
-          setOrderRef(doc.ref);
-        } else {
-            console.warn(`Order with ID ${orderId} not found in any user's subcollection.`);
-            setOrderRef(null); // Explicitly set to null if not found
-        }
-    };
-    
-    findOrder();
+  const orderRef = useMemoFirebase(() => {
+    if (!firestore || !orderId) return null;
+    return doc(firestore, 'orders', orderId as string);
   }, [firestore, orderId]);
   
   const { data: order, loading: orderLoading } = useDoc<Order>(orderRef);
@@ -67,7 +50,7 @@ export default function AdminOrderDetailsPage() {
 
   const { data: orderItems, loading: itemsLoading } = useCollection<OrderItem>(itemsRef);
 
-  const customerId = orderRef?.parent.parent?.id;
+  const customerId = order?.userId;
   
   const userDocRef = useMemoFirebase(() => {
       if (!firestore || !customerId) return null;
@@ -113,7 +96,7 @@ export default function AdminOrderDetailsPage() {
   };
 
 
-  if (orderLoading || itemsLoading || !orderRef || userProfileLoading) {
+  if (orderLoading || itemsLoading || userProfileLoading) {
     return (
         <Card>
             <CardHeader>
@@ -167,7 +150,7 @@ export default function AdminOrderDetailsPage() {
             Order ID: <span className="font-medium text-foreground">#{order.id.substring(0, 6)}</span>
           </CardDescription>
            <CardDescription>
-            Customer ID: <span className="font-medium text-foreground">#{customerId.substring(0, 6)}</span>
+            Customer ID: <span className="font-medium text-foreground">#{customerId?.substring(0, 6)}</span>
           </CardDescription>
            <CardDescription>
             Placed on: <span className="font-medium text-foreground">{format(order.createdAt.toDate(), 'MMMM d, yyyy')}</span>
