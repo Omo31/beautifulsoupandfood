@@ -48,7 +48,7 @@ const adminMenuItems = [
   { id: 'settings', href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
-export function AdminSidebar({ isTemporaryAdmin = false }: { isTemporaryAdmin?: boolean }) {
+export function AdminSidebar() {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
   const { user } = useUser();
@@ -69,7 +69,7 @@ export function AdminSidebar({ isTemporaryAdmin = false }: { isTemporaryAdmin?: 
   const userRoles = userProfile?.roles || [];
 
   const visibleMenuItems = adminMenuItems.filter(item => {
-    if (isTemporaryAdmin || isOwner) return true; // Temporary admin or Owner sees everything
+    if (isOwner) return true;
     return userRoles.includes(item.id);
   });
 

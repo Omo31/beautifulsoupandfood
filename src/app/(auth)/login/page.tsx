@@ -128,14 +128,6 @@ export default function LoginPage() {
                          Don't have an account? <Link href="/signup" className="underline ml-1">Sign up</Link>
                     </div>
                     <Link href="/" className="underline text-muted-foreground">Back to Home</Link>
-                    {process.env.NODE_ENV === 'development' && (
-                        <div className="mt-4 border-t w-full pt-4">
-                            <Button variant="destructive" className="w-full" type="button" onClick={() => router.push('/admin/dashboard?dev_mode=true')}>
-                                Log in as Temporary Admin
-                            </Button>
-                             <p className="text-xs text-muted-foreground text-center mt-2">This button is for development testing only.</p>
-                        </div>
-                    )}
                 </CardFooter>
             </form>
         </Form>
