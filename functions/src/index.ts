@@ -264,8 +264,8 @@ exports.getDashboardAnalytics = onCall({cors: true}, async (request) => {
             }
         });
 
-        // The following detailed analytics are removed for now to fix the internal error.
-        // A more robust solution would involve restructuring data or using more complex queries.
+        // The following detailed analytics are removed because they are inefficient
+        // and can cause the function to time out on larger datasets.
         const topProductsByUnits: any[] = [];
         const topProductsByRevenue: any[] = [];
         const orderStatusData = {};
@@ -298,3 +298,5 @@ exports.getDashboardAnalytics = onCall({cors: true}, async (request) => {
     
 
       
+
+    
