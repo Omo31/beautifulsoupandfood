@@ -4,13 +4,10 @@ import { DollarSign, FileText, ShoppingBag, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Bar, BarChart as RechartsBarChart, Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { useMemo } from 'react';
-import { useCollection, useFirestore } from '@/firebase';
-import { useMemoFirebase } from '@/firebase/utils';
-import { collection, collectionGroup, query, where, Timestamp } from 'firebase/firestore';
-import type { Order, UserProfile } from '@/lib/data';
+import { useMemo, useEffect, useState } from 'react';
 import { Skeleton } from "@/components/ui/skeleton";
-import { subMonths, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useToast } from "@/hooks/use-toast";
 
 const chartConfig = {
   sales: {
@@ -23,81 +20,44 @@ const chartConfig = {
   },
 };
 
+type AnalyticsData = {
+    totalRevenue: number;
+    newCustomers: number;
+    totalSales: number;
+    pendingOrders: number;
+    salesData: { month: string; sales: number; revenue: number }[];
+    revenueData: { date: string; revenue: number }[];
+};
+
 export default function AdminDashboardPage() {
-    const firestore = useFirestore();
+    const [dashboardData, setDashboardData] = useState<AnalyticsData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
+    const functions = useMemo(() => getFunctions(), []);
 
-    const ordersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return collectionGroup(firestore, 'orders');
-    }, [firestore]);
-
-    const usersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return collection(firestore, 'users');
-    }, [firestore]);
-
-    const { data: allOrders, loading: ordersLoading } = useCollection<Order>(ordersQuery);
-    const { data: allUsers, loading: usersLoading } = useCollection<UserProfile>(usersQuery);
-
-    const dashboardData = useMemo(() => {
-        const deliveredOrders = allOrders.filter((o) => o.status === 'Delivered');
-        const totalRevenue = deliveredOrders.reduce((acc, o) => acc + o.total, 0);
-        const totalSales = deliveredOrders.reduce((acc, o) => acc + o.itemCount, 0);
-        const pendingOrders = allOrders.filter(o => o.status === 'Pending' || o.status === 'Awaiting Confirmation').length;
-
-        const oneMonthAgo = subMonths(new Date(), 1);
-        const newCustomers = allUsers.filter(u => u.createdAt && u.createdAt.toDate() > oneMonthAgo).length;
-
-        // Monthly Sales & Revenue Chart Data
-        const salesData = Array.from({ length: 6 }, (_, i) => {
-            const date = subMonths(new Date(), 5 - i);
-            return {
-                month: format(date, 'MMM'),
-                sales: 0,
-                revenue: 0,
-            };
-        });
-
-        deliveredOrders.forEach(order => {
-            const month = format(order.createdAt.toDate(), 'MMM');
-            const monthIndex = salesData.findIndex(d => d.month === month);
-            if (monthIndex > -1) {
-                salesData[monthIndex].sales += order.itemCount;
-                salesData[monthIndex].revenue += order.total;
+    useEffect(() => {
+        const fetchAnalytics = async () => {
+            setLoading(true);
+            try {
+                const getAnalytics = httpsCallable<void, AnalyticsData>(functions, 'getDashboardAnalytics');
+                const result = await getAnalytics();
+                setDashboardData(result.data);
+            } catch (error: any) {
+                console.error("Error fetching dashboard analytics:", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Failed to load dashboard',
+                    description: error.message || 'There was a problem retrieving analytics data.'
+                });
+            } finally {
+                setLoading(false);
             }
-        });
-
-        // Daily Revenue Chart Data (last 7 days)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-        const dayInterval = eachDayOfInterval({ start: sevenDaysAgo, end: new Date() });
-        const revenueData = dayInterval.map(day => ({
-             date: format(day, 'yyyy-MM-dd'),
-             revenue: 0
-        }));
-        
-        deliveredOrders.forEach(order => {
-            const orderDate = order.createdAt.toDate();
-            const matchingDay = revenueData.find(d => isSameDay(new Date(d.date), orderDate));
-            if (matchingDay) {
-                matchingDay.revenue += order.total;
-            }
-        });
-
-
-        return {
-            totalRevenue,
-            newCustomers,
-            totalSales,
-            pendingOrders,
-            salesData,
-            revenueData
         };
-    }, [allOrders, allUsers]);
+        fetchAnalytics();
+    }, [functions, toast]);
 
-    const loading = ordersLoading || usersLoading;
 
-    if (loading) {
+    if (loading || !dashboardData) {
         return (
              <div className="flex flex-col gap-4">
                 <h1 className="text-3xl font-bold font-headline">Dashboard</h1>

@@ -12,6 +12,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { log } from "firebase-functions/logger";
 import { auth } from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import { subMonths, format, eachDayOfInterval, isSameDay } from 'date-fns';
 
 admin.initializeApp();
 
@@ -187,4 +188,85 @@ export const deleteUser = onCall(async (request) => {
     }
 });
 
+
+/**
+ * A callable Cloud Function for an 'Owner' to get aggregated analytics data for the dashboard.
+ */
+export const getDashboardAnalytics = onCall(async (request) => {
+    if (request.auth?.token.role !== 'Owner') {
+        throw new HttpsError('permission-denied', 'You must be an Owner to perform this action.');
+    }
+
+    try {
+        const firestore = admin.firestore();
+
+        // Fetch all orders
+        const ordersSnapshot = await firestore.collectionGroup('orders').get();
+        const allOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+
+        // Fetch all users
+        const usersSnapshot = await firestore.collection('users').get();
+        const allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+
+        // --- KPI Calculations ---
+        const deliveredOrders = allOrders.filter((o) => o.status === 'Delivered');
+        const totalRevenue = deliveredOrders.reduce((acc, o) => acc + o.total, 0);
+        const totalSales = deliveredOrders.reduce((acc, o) => acc + o.itemCount, 0);
+        const pendingOrders = allOrders.filter(o => o.status === 'Pending' || o.status === 'Awaiting Confirmation').length;
+
+        const oneMonthAgo = subMonths(new Date(), 1);
+        const newCustomers = allUsers.filter(u => u.createdAt && u.createdAt.toDate() > oneMonthAgo).length;
+
+        // --- Chart Data Calculations ---
+
+        // Monthly Sales & Revenue Chart Data
+        const salesData = Array.from({ length: 6 }, (_, i) => {
+            const date = subMonths(new Date(), 5 - i);
+            return {
+                month: format(date, 'MMM'),
+                sales: 0,
+                revenue: 0,
+            };
+        });
+
+        deliveredOrders.forEach(order => {
+            const month = format(order.createdAt.toDate(), 'MMM');
+            const monthIndex = salesData.findIndex(d => d.month === month);
+            if (monthIndex > -1) {
+                salesData[monthIndex].sales += order.itemCount;
+                salesData[monthIndex].revenue += order.total;
+            }
+        });
+
+        // Daily Revenue Chart Data (last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+        const dayInterval = eachDayOfInterval({ start: sevenDaysAgo, end: new Date() });
+        const revenueData = dayInterval.map(day => ({
+             date: format(day, 'yyyy-MM-dd'),
+             revenue: 0
+        }));
+        
+        deliveredOrders.forEach(order => {
+            const orderDate = order.createdAt.toDate();
+            const matchingDay = revenueData.find(d => isSameDay(new Date(d.date), orderDate));
+            if (matchingDay) {
+                matchingDay.revenue += order.total;
+            }
+        });
+
+        return {
+            totalRevenue,
+            newCustomers,
+            totalSales,
+            pendingOrders,
+            salesData,
+            revenueData
+        };
+
+    } catch (error) {
+        log('Error getting dashboard analytics:', error);
+        throw new HttpsError('internal', 'An error occurred while fetching dashboard analytics.');
+    }
+});
     
