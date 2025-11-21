@@ -2,10 +2,10 @@
 import type { FirebaseOptions } from 'firebase/app';
 
 export const firebaseConfig: FirebaseOptions = {
-  "apiKey": "AIzaSyCOeglxSgbHFN65OsMPif-nz0AM_ZKcvFo",
+  "apiKey": "AIzaSyAjZTDHqT_4M8TP3m6rPnZoJHMnYTFckcA",
   "authDomain": "studio-5696680782-fc16d.firebaseapp.com",
   "projectId": "studio-5696680782-fc16d",
-  "storageBucket": "studio-5696680782-fc16d.appspot.com",
-  "messagingSenderId": "844060417221",
-  "appId": "1:844060417221:web:19af7a31beb902afd424ac"
+  "storageBucket": "studio-5696680782-fc16d.firebasestorage.app",
+  "messagingSenderId": "124431077263",
+  "appId": "1:124431077263:web:6e68c75349472a9b45c5fa"
 };
