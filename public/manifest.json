@@ -1,3 +1,4 @@
+
 {
   "name": "BeautifulSoup&Food",
   "short_name": "BS&F",
@@ -8,12 +9,12 @@
   "theme_color": "#4B9966",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
