@@ -15,12 +15,12 @@ import type { UserProfile } from "@/lib/data";
 
 
 function ProtectedAdminLayout({ children }: { children: ReactNode }) {
+  // --- ALL HOOKS ARE NOW CALLED UNCONDITIONALLY AT THE TOP ---
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // --- HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP ---
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
@@ -28,27 +28,26 @@ function ProtectedAdminLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, loading: profileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // --- Development-only temporary admin access ---
-  const isDevMode = process.env.NODE_ENV === 'development' && searchParams.get('dev_mode') === 'true';
-
   useEffect(() => {
-    // Skip auth checks in dev mode
-    if (isDevMode) return;
+    // This effect handles redirection for non-admin users.
+    // It runs after all hooks have been called.
+    const isDevMode = process.env.NODE_ENV === 'development' && searchParams.get('dev_mode') === 'true';
+    if (isDevMode) return; // Dev mode grants access, skip checks.
 
     if (!userLoading && !user) {
       router.replace('/login?redirect=/admin/dashboard');
     }
-  }, [user, userLoading, router, isDevMode]);
+  }, [user, userLoading, router, searchParams]);
 
-  // Determine loading state and admin status *after* all hooks are called
+  // --- LOGIC TO DETERMINE WHAT TO RENDER, HAPPENS AFTER HOOKS ---
+
+  const isDevMode = process.env.NODE_ENV === 'development' && searchParams.get('dev_mode') === 'true';
   const loading = userLoading || profileLoading;
   const isOwner = userProfile?.role === 'Owner';
   const hasGranularRoles = userProfile?.roles && userProfile.roles.length > 0;
   const isAdmin = isOwner || hasGranularRoles;
 
-  // --- RENDER LOGIC BASED ON STATE ---
-
-  // Handle the temporary admin dev mode case
+  // Handle temporary admin access for development
   if (isDevMode) {
     return (
       <SidebarProvider defaultOpen>
@@ -63,7 +62,7 @@ function ProtectedAdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Handle loading and authorization for regular users
+  // Handle loading state and unauthorized access
   if (loading || !isAdmin) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -71,8 +70,8 @@ function ProtectedAdminLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  
-  // If authorized, show the admin layout
+
+  // If all checks pass, render the authorized admin layout
   return (
     <SidebarProvider defaultOpen>
       <AdminSidebar />
