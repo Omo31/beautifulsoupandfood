@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ReactNode } from "react";
@@ -19,11 +20,36 @@ function ProtectedAdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // --- HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP ---
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile, loading: profileLoading } = useDoc<UserProfile>(userDocRef);
+
   // --- Development-only temporary admin access ---
   const isDevMode = process.env.NODE_ENV === 'development' && searchParams.get('dev_mode') === 'true';
-  if (isDevMode && !user) {
-    // This block simulates an "Owner" user for development purposes only.
-    // It grants full access when using the "Temporary Admin" login button.
+
+  useEffect(() => {
+    // Skip auth checks in dev mode
+    if (isDevMode) return;
+
+    if (!userLoading && !user) {
+      router.replace('/login?redirect=/admin/dashboard');
+    }
+  }, [user, userLoading, router, isDevMode]);
+
+  // Determine loading state and admin status *after* all hooks are called
+  const loading = userLoading || profileLoading;
+  const isOwner = userProfile?.role === 'Owner';
+  const hasGranularRoles = userProfile?.roles && userProfile.roles.length > 0;
+  const isAdmin = isOwner || hasGranularRoles;
+
+  // --- RENDER LOGIC BASED ON STATE ---
+
+  // Handle the temporary admin dev mode case
+  if (isDevMode) {
     return (
       <SidebarProvider defaultOpen>
         <AdminSidebar isTemporaryAdmin={true} />
@@ -36,36 +62,8 @@ function ProtectedAdminLayout({ children }: { children: ReactNode }) {
       </SidebarProvider>
     );
   }
-  // --- End of development-only logic ---
 
-
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userProfile, loading: profileLoading } = useDoc<UserProfile>(userDocRef);
-
-  const loading = userLoading || profileLoading;
-
-  useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.replace('/login?redirect=/admin/dashboard');
-        return;
-      }
-      const isOwner = userProfile?.role === 'Owner';
-      const hasGranularRoles = userProfile?.roles && userProfile.roles.length > 0;
-      if (!isOwner && !hasGranularRoles) {
-         router.replace('/');
-      }
-    }
-  }, [user, userProfile, loading, router]);
-  
-  const isOwner = userProfile?.role === 'Owner';
-  const hasGranularRoles = userProfile?.roles && userProfile.roles.length > 0;
-  const isAdmin = isOwner || hasGranularRoles;
-
+  // Handle loading and authorization for regular users
   if (loading || !isAdmin) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -73,7 +71,8 @@ function ProtectedAdminLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
-
+  
+  // If authorized, show the admin layout
   return (
     <SidebarProvider defaultOpen>
       <AdminSidebar />
