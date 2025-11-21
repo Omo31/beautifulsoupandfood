@@ -13,6 +13,9 @@ import { log } from "firebase-functions/logger";
 import { auth } from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { subMonths, format, eachDayOfInterval, isSameDay } from 'date-fns';
+import * as cors from 'cors';
+
+const corsHandler = cors({ origin: true });
 
 admin.initializeApp();
 
@@ -192,7 +195,7 @@ export const deleteUser = onCall(async (request) => {
 /**
  * A callable Cloud Function for an 'Owner' to get aggregated analytics data for the dashboard.
  */
-export const getDashboardAnalytics = onCall(async (request) => {
+exports.getDashboardAnalytics = onCall({cors: true}, async (request) => {
     if (request.auth?.token.role !== 'Owner') {
         throw new HttpsError('permission-denied', 'You must be an Owner to perform this action.');
     }
@@ -326,3 +329,5 @@ export const getDashboardAnalytics = onCall(async (request) => {
     }
 });
     
+
+      
