@@ -243,7 +243,7 @@ export default function ProfilePage() {
                                         <FormItem>
                                             <FormLabel>Shipping Address</FormLabel>
                                             <FormControl>
-                                                <Textarea {...field} placeholder="123 Main St, Lagos..." />
+                                                <Textarea {...field} placeholder="123 Main St,&#10;Ikeja,&#10;Lagos..." />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
