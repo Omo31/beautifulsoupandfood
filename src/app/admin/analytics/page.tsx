@@ -48,24 +48,23 @@ export default function AnalyticsPage() {
     useEffect(() => {
         const fetchAnalytics = async () => {
             setLoading(true);
-            // Temporarily disabled until Firebase plan is upgraded.
-            // try {
-            //     // This single Cloud Function call gets all the data we need.
-            //     const getAnalytics = httpsCallable<void, AnalyticsData>(functions, 'getDashboardAnalytics');
-            //     const result = await getAnalytics();
-            //     setAnalyticsData(result.data);
-            // } catch (error: any) {
-            //     console.error("Error fetching analytics:", error);
-            //     toast({
-            //         variant: 'destructive',
-            //         title: 'Failed to load analytics',
-            //         description: error.message || 'There was a problem retrieving analytics data.'
-            //     });
-            // } finally {
-            //     setLoading(false);
-            // }
+            try {
+                // This single Cloud Function call gets all the data we need.
+                const getAnalytics = httpsCallable<void, AnalyticsData>(functions, 'getDashboardAnalytics');
+                const result = await getAnalytics();
+                setAnalyticsData(result.data);
+            } catch (error: any) {
+                console.error("Error fetching analytics:", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Failed to load analytics',
+                    description: error.message || 'There was a problem retrieving analytics data.'
+                });
+            } finally {
+                setLoading(false);
+            }
         };
-        // fetchAnalytics();
+        fetchAnalytics();
     }, [functions, toast]);
     
     const totalCategorySales = useMemo(() => {
