@@ -18,8 +18,9 @@ import { doc, setDoc, serverTimestamp, getFirestore } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { Label } from "@/components/ui/label";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createNotification } from "@/lib/notifications";
+import { Eye, EyeOff } from "lucide-react";
 
 const signupSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -37,6 +38,7 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 export default function SignupPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const [showPassword, setShowPassword] = useState(false);
     
     const { auth, firestore } = useMemo(() => {
         const app = initializeFirebase();
@@ -176,9 +178,21 @@ export default function SignupPage() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Password</FormLabel>
-                                <FormControl>
-                                    <Input type="password" {...field} />
-                                </FormControl>
+                                <div className="relative">
+                                    <FormControl>
+                                        <Input type={showPassword ? 'text' : 'password'} {...field} />
+                                    </FormControl>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute top-0 right-0 h-full px-3 text-muted-foreground"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                </div>
                                 <FormMessage />
                             </FormItem>
                         )}

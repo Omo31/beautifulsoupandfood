@@ -13,7 +13,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { initializeFirebase } from "@/firebase";
 import { signInWithEmailAndPassword, getAuth } from "firebase/auth";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 const loginSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address." }),
@@ -26,6 +27,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const [showPassword, setShowPassword] = useState(false);
     
     const { auth } = useMemo(() => {
         const app = initializeFirebase();
@@ -112,9 +114,21 @@ export default function LoginPage() {
                                         Forgot your password?
                                     </Link>
                                 </div>
-                                <FormControl>
-                                    <Input type="password" {...field} />
-                                </FormControl>
+                                <div className="relative">
+                                    <FormControl>
+                                        <Input type={showPassword ? 'text' : 'password'} {...field} />
+                                    </FormControl>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute top-0 right-0 h-full px-3 text-muted-foreground"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                </div>
                                 <FormMessage />
                             </FormItem>
                         )}
