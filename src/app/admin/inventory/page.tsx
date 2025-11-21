@@ -61,8 +61,8 @@ import type { Product, ProductVariant } from '@/lib/data';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useProducts } from '@/hooks/use-products';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useCollection } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/utils';
 import { collection, doc, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { generateProductDescription } from '@/ai/flows/generate-product-description';
 import { convertToCSV, downloadCSV } from '@/lib/csv';
@@ -83,7 +83,14 @@ const ITEMS_PER_PAGE = 10;
 export default function InventoryPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { products, loading } = useProducts();
+  
+  const productsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'products');
+  }, [firestore]);
+
+  const { data: products, loading } = useCollection<Product>(productsQuery);
+
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   

@@ -1,17 +1,21 @@
 
+
 'use client';
 
 import { useMemo } from 'react';
-import { collection } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { useCollection, useFirestore } from '@/firebase';
 import type { Product } from '@/lib/data';
+import { useMemoFirebase } from '@/firebase/utils';
+
 
 export function useProducts() {
   const firestore = useFirestore();
 
-  const productsQuery = useMemo(() => {
+  const productsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'products');
+    // Sort by name by default to ensure a consistent order
+    return query(collection(firestore, 'products'), orderBy('name'));
   }, [firestore]);
 
   const { data: products, loading, error } = useCollection<Product>(productsQuery);
