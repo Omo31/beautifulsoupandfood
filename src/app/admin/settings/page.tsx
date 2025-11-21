@@ -195,7 +195,9 @@ export default function SettingsPage() {
         name: newLgaName,
         price: newLgaPrice
       };
-      setLagosLgas([...lagosLgas, newLga]);
+      const updatedLgas = [...lagosLgas, newLga];
+      setLagosLgas(updatedLgas);
+      updateSettings({ shipping: { lagosLgas: updatedLgas } });
       setNewLgaName('');
       setNewLgaPrice(0);
     } else {
@@ -204,7 +206,9 @@ export default function SettingsPage() {
   };
 
   const handleRemoveLga = (id: string) => {
-    setLagosLgas(lagosLgas.filter(lga => lga.id !== id));
+    const updatedLgas = lagosLgas.filter(lga => lga.id !== id);
+    setLagosLgas(updatedLgas);
+    updateSettings({ shipping: { lagosLgas: updatedLgas } });
   };
 
   const handleSaveShipping = () => {
