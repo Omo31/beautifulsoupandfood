@@ -1,14 +1,14 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, doc, setDoc, deleteDoc, serverTimestamp, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, serverTimestamp, writeBatch, getDocs, query, where, documentId } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/utils';
-import { useProducts } from './use-products';
 import { useToast } from './use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import type { Product } from '@/lib/data';
 
 export type CartItem = {
     id: string; // This is now a composite key: `${productId}-${variantName}`
@@ -31,8 +31,9 @@ export type EnrichedCartItem = {
 export function useCart() {
     const { user } = useUser();
     const firestore = useFirestore();
-    const { products, findById } = useProducts();
     const { toast } = useToast();
+    const [products, setProducts] = useState<Product[]>([]);
+    const [enriching, setEnriching] = useState(false);
 
     const cartCollectionRef = useMemoFirebase(() => {
         if (!firestore || !user) return null;
@@ -40,8 +41,46 @@ export function useCart() {
     }, [firestore, user]);
 
     const { data: cartItems, loading: cartLoading } = useCollection<CartItem>(cartCollectionRef);
+    
+    // This effect fetches the full product details ONLY for items in the cart
+    useEffect(() => {
+        if (!firestore || cartItems.length === 0) {
+            setProducts([]);
+            return;
+        }
+
+        const productIds = [...new Set(cartItems.map(item => item.productId))];
+        
+        // This check prevents a Firestore error if the cart is cleared
+        if (productIds.length === 0) {
+            setProducts([]);
+            return;
+        }
+        
+        setEnriching(true);
+        const productsQuery = query(collection(firestore, 'products'), where(documentId(), 'in', productIds));
+
+        getDocs(productsQuery).then(snapshot => {
+            const fetchedProducts: Product[] = [];
+            snapshot.forEach(doc => {
+                fetchedProducts.push({ ...doc.data(), id: doc.id } as Product);
+            });
+            setProducts(fetchedProducts);
+        }).catch(error => {
+            console.error("Error fetching product details for cart:", error);
+            setProducts([]);
+        }).finally(() => {
+            setEnriching(false);
+        });
+    }, [cartItems, firestore]);
+    
+    const findById = (id: string | undefined): Product | undefined => {
+        if (!id) return undefined;
+        return products.find(p => p.id === id);
+    };
 
     const enrichedCart = useMemo(() => {
+        if (products.length === 0 && cartItems.length > 0) return [];
         return cartItems
             .map(item => {
                 const product = findById(item.productId);
@@ -59,7 +98,7 @@ export function useCart() {
                 };
             })
             .filter((item): item is EnrichedCartItem => item !== null);
-    }, [cartItems, findById, products]);
+    }, [cartItems, products]);
 
     const addToCart = async (productId: string, quantity: number = 1, variantName: string) => {
         if (!firestore || !user) {
@@ -67,24 +106,10 @@ export function useCart() {
             return;
         }
 
-        const product = findById(productId);
-        if (!product) {
-            toast({ variant: 'destructive', title: 'Product not found' });
-            return;
-        }
+        // We can't check stock on add anymore without fetching the product first.
+        // The check on the detail page is now the primary gatekeeper.
+        // A server-side check (e.g. Firebase Function) would be the most robust solution.
 
-        const variant = product.variants.find(v => v.name === variantName);
-        if (!variant) {
-            toast({ variant: 'destructive', title: 'Variant not found' });
-            return;
-        }
-        
-        if (variant.stock < quantity) {
-            toast({ variant: 'destructive', title: 'Not enough stock', description: `Only ${variant.stock} of ${product.name} (${variant.name}) available.`});
-            return;
-        }
-        
-        // Use a composite ID for the cart document to uniquely identify a product-variant pair
         const cartItemId = `${productId}-${variantName}`;
         const cartDocRef = doc(firestore, 'users', user.uid, 'cart', cartItemId);
         
@@ -97,7 +122,7 @@ export function useCart() {
 
         setDoc(cartDocRef, cartData, { merge: true })
             .then(() => {
-                toast({ title: 'Added to Cart', description: `${product.name} (${variant.name}) has been added to your cart.` });
+                toast({ title: 'Added to Cart', description: `Item has been added to your cart.` });
             })
             .catch(async (serverError) => {
                  const permissionError = new FirestorePermissionError({
@@ -155,9 +180,7 @@ export function useCart() {
             await batch.commit();
         } catch (error) {
             console.error("Error clearing cart: ", error);
-            // We don't show a toast here because this is part of a larger flow.
-            // The calling function should handle user feedback.
-            throw error; // re-throw to be caught by the checkout handler
+            throw error; 
         }
     };
     
@@ -168,7 +191,7 @@ export function useCart() {
 
     return {
         cartItems: enrichedCart,
-        cartLoading,
+        cartLoading: cartLoading || enriching,
         addToCart,
         updateQuantity,
         removeFromCart,
