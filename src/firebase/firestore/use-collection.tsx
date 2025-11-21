@@ -31,8 +31,11 @@ export function useCollection<T>(q: Query | CollectionReference | null) {
         setError(null);
       },
       async (err) => {
+        // When a user logs out, q might become stale and cause an error.
+        // We need to gracefully handle this case.
+        const path = q && 'path' in q ? q.path : 'Unknown collection path (likely during logout)';
         const permissionError = new FirestorePermissionError({
-            path: 'path' in q ? q.path : 'Unknown collection path',
+            path: path,
             operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
