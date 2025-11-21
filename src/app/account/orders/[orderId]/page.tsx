@@ -9,12 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Package } from 'lucide-react';
 import Image from 'next/image';
-import { useOrders } from '@/hooks/use-orders';
 import { useProducts } from '@/hooks/use-products';
 import { doc, collection } from 'firebase/firestore';
 import { useDoc, useCollection, useFirestore, useUser } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import type { Order, Product } from '@/lib/data';
+import type { Order, Product, UserProfile } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 
@@ -59,11 +58,18 @@ export default function OrderDetailsPage() {
 
   const { data: items, loading: itemsLoading } = useCollection<OrderItem>(itemsRef);
   
+  const userProfileRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile, loading: profileLoading } = useDoc<UserProfile>(userProfileRef);
+
   const enrichedItems = useMemo(() => {
     return items.map(item => {
         let imageUrl = item.imageId;
         // For regular products, find the image from the product data
-        if (!item.productId.startsWith('custom-order-')) {
+        if (item.productId && !item.productId.startsWith('custom-order')) {
             const product = findProductById(item.productId);
             if (product) {
                 imageUrl = product.imageUrl;
@@ -73,8 +79,9 @@ export default function OrderDetailsPage() {
     });
   }, [items, findProductById]);
 
+  const isLoading = orderLoading || itemsLoading || profileLoading;
 
-  if (orderLoading || itemsLoading) {
+  if (isLoading) {
     return (
         <Card>
             <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
@@ -145,11 +152,9 @@ export default function OrderDetailsPage() {
                         <div className="flex-1">
                             <h4 className="font-medium">{item.name}</h4>
                             <p className="text-sm text-muted-foreground">
-                                {item.variantName} {item.productId.startsWith('custom-order-') ? '' : `(x${item.quantity})`}
+                                {item.variantName}
                             </p>
-                            {!item.productId.startsWith('custom-order-') && (
-                                <p className="text-sm text-muted-foreground">x{item.quantity}</p>
-                            )}
+                            <p className="text-sm text-muted-foreground">x{item.quantity}</p>
                         </div>
                         <p className="font-semibold">₦{(item.price * item.quantity).toFixed(2)}</p>
                     </div>
@@ -160,12 +165,22 @@ export default function OrderDetailsPage() {
          <div className="grid md:grid-cols-2 gap-8 my-6">
             <div className="space-y-2">
                 <h3 className="font-semibold">Shipping Address</h3>
-                <p className="text-muted-foreground">
-                    {user?.displayName}<br />
-                    123 Main Street<br />
-                    Lagos, 100242<br />
-                    Nigeria
-                </p>
+                <div className="text-muted-foreground text-sm">
+                    {userProfile ? (
+                        <>
+                            <p className="font-medium">{userProfile.firstName} {userProfile.lastName}</p>
+                            {userProfile.shippingAddress ? (
+                                userProfile.shippingAddress.split('\n').map((line, i) => (
+                                    <span key={i}>{line}<br /></span>
+                                ))
+                            ) : (
+                                <p>No shipping address on file.</p>
+                            )}
+                        </>
+                    ) : (
+                       <p>Loading shipping details...</p>
+                    )}
+                </div>
             </div>
              <div className="space-y-2">
                 <h3 className="font-semibold">Payment Summary</h3>
