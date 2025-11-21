@@ -199,14 +199,21 @@ export const getDashboardAnalytics = onCall(async (request) => {
 
     try {
         const firestore = admin.firestore();
+        const settingsDoc = await firestore.collection('settings').doc('app').get();
+        const settings = settingsDoc.data();
 
-        // Fetch all orders
-        const ordersSnapshot = await firestore.collectionGroup('orders').get();
+        // Fetch all data in parallel
+        const [ordersSnapshot, usersSnapshot, productsSnapshot, allItemsSnapshot] = await Promise.all([
+            firestore.collectionGroup('orders').get(),
+            firestore.collection('users').get(),
+            firestore.collection('products').get(),
+            firestore.collectionGroup('items').get()
+        ]);
+        
         const allOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-
-        // Fetch all users
-        const usersSnapshot = await firestore.collection('users').get();
         const allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        const allProducts = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        const allOrderItems = allItemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
         // --- KPI Calculations ---
         const deliveredOrders = allOrders.filter((o) => o.status === 'Delivered');
@@ -217,18 +224,17 @@ export const getDashboardAnalytics = onCall(async (request) => {
         const oneMonthAgo = subMonths(new Date(), 1);
         const newCustomers = allUsers.filter(u => u.createdAt && u.createdAt.toDate() > oneMonthAgo).length;
 
-        // --- Chart Data Calculations ---
+        const totalOrders = allOrders.length;
+        const totalCustomers = allUsers.length;
+        const averageOrderValue = deliveredOrders.length > 0 ? totalRevenue / deliveredOrders.length : 0;
+        const monthlyGoal = settings?.store?.monthlyRevenueGoal || 500000;
+        const monthlyGoalProgress = (totalRevenue / monthlyGoal) * 100;
 
-        // Monthly Sales & Revenue Chart Data
+        // --- Sales and Revenue Chart Data (Last 6 Months) ---
         const salesData = Array.from({ length: 6 }, (_, i) => {
             const date = subMonths(new Date(), 5 - i);
-            return {
-                month: format(date, 'MMM'),
-                sales: 0,
-                revenue: 0,
-            };
+            return { month: format(date, 'MMM'), sales: 0, revenue: 0 };
         });
-
         deliveredOrders.forEach(order => {
             const month = format(order.createdAt.toDate(), 'MMM');
             const monthIndex = salesData.findIndex(d => d.month === month);
@@ -237,16 +243,13 @@ export const getDashboardAnalytics = onCall(async (request) => {
                 salesData[monthIndex].revenue += order.total;
             }
         });
-
-        // Daily Revenue Chart Data (last 7 days)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-        const dayInterval = eachDayOfInterval({ start: sevenDaysAgo, end: new Date() });
-        const revenueData = dayInterval.map(day => ({
-             date: format(day, 'yyyy-MM-dd'),
-             revenue: 0
-        }));
         
+        // --- Daily Revenue Chart Data (Last 7 Days) ---
+        const revenueData = Array.from({ length: 7 }, (_, i) => {
+            const date = new Date();
+            date.setDate(date.getDate() - (6 - i));
+            return { date: format(date, 'yyyy-MM-dd'), revenue: 0 };
+        });
         deliveredOrders.forEach(order => {
             const orderDate = order.createdAt.toDate();
             const matchingDay = revenueData.find(d => isSameDay(new Date(d.date), orderDate));
@@ -254,6 +257,50 @@ export const getDashboardAnalytics = onCall(async (request) => {
                 matchingDay.revenue += order.total;
             }
         });
+        
+        // --- Detailed Analytics Calculations ---
+        const salesByProduct = allOrderItems.reduce((acc, item) => {
+            const saleAmount = item.price * item.quantity;
+            if (!acc[item.productId]) {
+                acc[item.productId] = { quantity: 0, revenue: 0 };
+            }
+            acc[item.productId].quantity += item.quantity;
+            acc[item.productId].revenue += saleAmount;
+            return acc;
+        }, {} as Record<string, { quantity: number; revenue: number }>);
+
+        const topProductsByUnits = Object.entries(salesByProduct)
+            .sort(([, a], [, b]) => b.quantity - a.quantity)
+            .slice(0, 5)
+            .map(([productId, data]) => ({
+                id: productId,
+                name: allProducts.find(p => p.id === productId)?.name || 'Unknown',
+                value: data.quantity,
+                isUnits: true,
+            }));
+        
+        const topProductsByRevenue = Object.entries(salesByProduct)
+            .sort(([, a], [, b]) => b.revenue - a.revenue)
+            .slice(0, 5)
+            .map(([productId, data]) => ({
+                id: productId,
+                name: allProducts.find(p => p.id === productId)?.name || 'Unknown',
+                value: data.revenue,
+                isUnits: false,
+            }));
+
+        const orderStatusData = allOrders.reduce((acc, order) => {
+            acc[order.status] = (acc[order.status] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const salesByCategory = allOrderItems.reduce((acc, item) => {
+            const product = allProducts.find(p => p.id === item.productId);
+            if (!product) return acc;
+            const categoryKey = product.category === 'soup' ? 'Soups' : 'Foodstuff';
+            acc[categoryKey] = (acc[categoryKey] || 0) + (item.price * item.quantity);
+            return acc;
+        }, {} as Record<string, number>);
 
         return {
             totalRevenue,
@@ -261,7 +308,16 @@ export const getDashboardAnalytics = onCall(async (request) => {
             totalSales,
             pendingOrders,
             salesData,
-            revenueData
+            revenueData,
+            totalOrders,
+            totalCustomers,
+            averageOrderValue,
+            monthlyGoal,
+            monthlyGoalProgress,
+            topProductsByUnits,
+            topProductsByRevenue,
+            orderStatusData,
+            salesByCategory,
         };
 
     } catch (error) {

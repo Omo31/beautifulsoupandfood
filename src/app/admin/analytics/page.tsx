@@ -17,124 +17,62 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useProducts } from '@/hooks/use-products';
-import { useCollection, useFirestore } from '@/firebase';
-import { useMemoFirebase } from '@/firebase/utils';
-import { collection, collectionGroup, getDocs, query, where } from 'firebase/firestore';
-import type { Order, OrderItem, UserProfile } from '@/lib/data';
 import { DollarSign, ShoppingCart, Users, TrendingUp } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/hooks/use-settings';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useToast } from '@/hooks/use-toast';
+
+type AnalyticsData = {
+    totalRevenue: number;
+    totalOrders: number;
+    totalCustomers: number;
+    averageOrderValue: number;
+    monthlyGoal: number;
+    monthlyGoalProgress: number;
+    topProductsByUnits: { id: string; name: string; value: number; isUnits: boolean; }[];
+    topProductsByRevenue: { id: string; name: string; value: number; isUnits: boolean; }[];
+    orderStatusData: Record<string, number>;
+    salesByCategory: Record<string, number>;
+};
 
 
 export default function AnalyticsPage() {
-    const firestore = useFirestore();
-    const { settings, loading: settingsLoading } = useSettings();
+    const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
+    const functions = useMemo(() => getFunctions(), []);
+    const { settings } = useSettings();
 
-    const ordersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return collectionGroup(firestore, 'orders');
-    }, [firestore]);
+    useEffect(() => {
+        const fetchAnalytics = async () => {
+            setLoading(true);
+            try {
+                // This single Cloud Function call gets all the data we need.
+                const getAnalytics = httpsCallable<void, AnalyticsData>(functions, 'getDashboardAnalytics');
+                const result = await getAnalytics();
+                setAnalyticsData(result.data);
+            } catch (error: any) {
+                console.error("Error fetching analytics:", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Failed to load analytics',
+                    description: error.message || 'There was a problem retrieving analytics data.'
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAnalytics();
+    }, [functions, toast]);
     
-    const usersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return collection(firestore, 'users');
-    }, [firestore]);
+    const totalCategorySales = useMemo(() => {
+        if (!analyticsData) return 0;
+        return Object.values(analyticsData.salesByCategory).reduce((sum, current) => sum + current, 0);
+    }, [analyticsData]);
 
-    const { data: allOrders, loading: ordersLoading } = useCollection<Order>(ordersQuery);
-    const { data: allUsers, loading: usersLoading } = useCollection<UserProfile>(usersQuery);
-    const { products, loading: productsLoading } = useProducts();
-
-    const allItemsQuery = useMemoFirebase(() => {
-      if (!firestore) return null;
-      return collectionGroup(firestore, 'items');
-    }, [firestore]);
-
-    const { data: allOrderItems, loading: itemsLoading } = useCollection<OrderItem>(allItemsQuery);
-
-
-  const analyticsData = useMemo(() => {
-    const deliveredOrders = allOrders.filter((o) => o.status === 'Delivered');
-    const totalRevenue = deliveredOrders.reduce((acc, o) => acc + o.total, 0);
-    const totalOrders = allOrders.length;
-    const totalCustomers = allUsers.length;
-    const averageOrderValue =
-      deliveredOrders.length > 0 ? totalRevenue / deliveredOrders.length : 0;
-    const monthlyGoal = settings?.store?.monthlyRevenueGoal || 500000;
-    const monthlyGoalProgress = (totalRevenue / monthlyGoal) * 100;
-
-    const salesByProduct = allOrderItems.reduce((acc, item) => {
-        const saleAmount = item.price * item.quantity;
-        if (!acc[item.productId]) {
-            acc[item.productId] = { quantity: 0, revenue: 0 };
-        }
-        acc[item.productId].quantity += item.quantity;
-        acc[item.productId].revenue += saleAmount;
-        return acc;
-    }, {} as Record<string, { quantity: number; revenue: number }>);
-
-    const topProductsByUnits = Object.entries(salesByProduct)
-        .sort(([, a], [, b]) => b.quantity - a.quantity)
-        .slice(0, 5)
-        .map(([productId, data]) => {
-            const product = products.find(p => p.id === productId);
-            return {
-                id: productId,
-                name: product?.name || 'Unknown Product',
-                value: data.quantity,
-                isUnits: true,
-            };
-        });
-    
-    const topProductsByRevenue = Object.entries(salesByProduct)
-        .sort(([, a], [, b]) => b.revenue - a.revenue)
-        .slice(0, 5)
-        .map(([productId, data]) => {
-            const product = products.find(p => p.id === productId);
-            return {
-                id: productId,
-                name: product?.name || 'Unknown Product',
-                value: data.revenue,
-                isUnits: false,
-            };
-        });
-
-
-    const orderStatusData = allOrders.reduce((acc, order) => {
-      acc[order.status] = (acc[order.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const salesByCategory = allOrderItems.reduce((acc, item) => {
-        const product = products.find(p => p.id === item.productId);
-        if (!product) return acc;
-        
-        const categoryKey = product.category === 'soup' ? 'Soups' : 'Foodstuff';
-        const sales = item.price * item.quantity;
-        acc[categoryKey] = (acc[categoryKey] || 0) + sales;
-        return acc;
-    }, {} as Record<string, number>);
-
-    return {
-      totalRevenue,
-      totalOrders,
-      totalCustomers,
-      averageOrderValue,
-      monthlyGoal,
-      monthlyGoalProgress,
-      topProductsByUnits,
-      topProductsByRevenue,
-      orderStatusData,
-      salesByCategory
-    };
-  }, [allOrders, allUsers, products, allOrderItems, settings]);
-  
-  const totalCategorySales = Object.values(analyticsData.salesByCategory).reduce((sum, current) => sum + current, 0);
-
-  const loading = ordersLoading || usersLoading || productsLoading || itemsLoading || settingsLoading;
-
-  if (loading) {
+  if (loading || !analyticsData) {
     return (
         <div className="flex flex-col gap-6">
             <div>
@@ -325,7 +263,7 @@ export default function AnalyticsPage() {
                 <CardHeader>
                     <CardTitle>Monthly Goal Tracker</CardTitle>
                     <CardDescription>
-                        Tracking your progress towards your revenue goal of ₦{analyticsData.monthlyGoal.toLocaleString()}.
+                        Tracking your progress towards your revenue goal of ₦{(settings?.store.monthlyRevenueGoal || 0).toLocaleString()}.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
