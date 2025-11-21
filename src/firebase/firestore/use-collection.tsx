@@ -31,15 +31,21 @@ export function useCollection<T>(q: Query | CollectionReference | null) {
         setError(null);
       },
       async (err) => {
-        // When a user logs out, q might become stale and cause an error.
-        // We need to gracefully handle this case.
-        const path = q && 'path' in q ? q.path : 'Unknown collection path (likely during logout)';
-        const permissionError = new FirestorePermissionError({
-            path: path,
-            operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        setError(permissionError);
+        // When a user logs out, q might become stale and cause a permission error.
+        // This check prevents a crash by ensuring we have a valid query object `q`
+        // before attempting to create and emit a detailed permission error.
+        if (q && 'path' in q) {
+            const permissionError = new FirestorePermissionError({
+                path: q.path,
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            setError(permissionError);
+        } else {
+            // If we get an error but q is invalid (e.g., during logout),
+            // set a generic error to avoid crashing the app.
+            setError(new Error("Firestore permission error on an invalid query."));
+        }
         setLoading(false);
       }
     );
