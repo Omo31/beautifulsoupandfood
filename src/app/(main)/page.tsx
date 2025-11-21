@@ -144,7 +144,7 @@ export default function HomePage() {
                  </p>
             </div>
             <div className="relative h-64 rounded-lg overflow-hidden">
-                <Image src={aboutImageId} alt="Nigerian market stall" fill className="object-cover"/>
+                <Image src={aboutImageId} alt="Nigerian market stall" fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw"/>
             </div>
         </div>
       </section>
