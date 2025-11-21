@@ -17,6 +17,7 @@ import { collection, doc, setDoc, addDoc, query, orderBy, serverTimestamp } from
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { createNotification } from '@/lib/notifications';
 
 type Conversation = {
     id: string; // The user's UID
@@ -132,6 +133,16 @@ export default function ConversationsPage() {
                 requestResourceData: conversationPayload,
             });
             errorEmitter.emit('permission-error', permissionError);
+        });
+        
+        // Notify the user they have a new message
+        createNotification(firestore, {
+            recipient: 'user',
+            userId: selectedConversationId,
+            title: 'New Message from Support',
+            description: `You have a new reply: "${messageText}"`,
+            href: `/account/profile`, // Or a future dedicated chat page
+            icon: 'MessageSquare',
         });
   }
   

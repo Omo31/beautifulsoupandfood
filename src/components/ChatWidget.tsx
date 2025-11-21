@@ -49,6 +49,9 @@ export function ChatWidget() {
         setNewMessage('');
         setIsThinking(true);
 
+        // Save user's message to Firestore
+        await saveMessage(userMessage, user.uid);
+
         try {
             const chatHistory = [...messages, userMessage].map(msg => ({
                 role: msg.role,
@@ -59,6 +62,9 @@ export function ChatWidget() {
             const aiMessage: Message = { role: 'model', text: aiResponse.response };
             setMessages(prev => [...prev, aiMessage]);
 
+            // Save AI's response to Firestore
+            await saveMessage(aiMessage, user.uid);
+
         } catch (error) {
             console.error("AI chat failed:", error);
             const errorMessage: Message = { role: 'model', text: "Sorry, I'm having trouble connecting right now. Please try again later." };
@@ -66,32 +72,20 @@ export function ChatWidget() {
         } finally {
             setIsThinking(false);
         }
-        
-        // Also save the conversation for admin review
-        saveConversation(userMessage.text);
     };
-
-    const saveConversation = (lastMessageText: string) => {
+    
+    const saveMessage = async (message: Message, userId: string) => {
         if (!firestore || !user) return;
-        
-        const conversationRef = doc(firestore, 'conversations', user.uid);
+
+        const conversationRef = doc(firestore, 'conversations', userId);
         const messagesRef = collection(conversationRef, 'messages');
-        
+
         const messagePayload = {
-            senderId: user.uid,
-            text: lastMessageText,
+            senderId: message.role === 'user' ? userId : 'admin',
+            text: message.text,
             createdAt: serverTimestamp()
         };
 
-        const conversationPayload = {
-            userId: user.uid,
-            userName: user.displayName || user.email,
-            userAvatar: user.photoURL || '',
-            lastMessage: lastMessageText,
-            lastMessageAt: serverTimestamp(),
-            isReadByAdmin: false
-        };
-        
         addDoc(messagesRef, messagePayload).catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({
                 path: messagesRef.path,
@@ -100,16 +94,28 @@ export function ChatWidget() {
             });
             errorEmitter.emit('permission-error', permissionError);
         });
-        
+
+        // Update the conversation document with the last message details
+        const conversationPayload = {
+            userId: userId,
+            userName: user.displayName || user.email,
+            userAvatar: user.photoURL || '',
+            lastMessage: message.role === 'user' ? message.text : `Admin: ${message.text}`,
+            lastMessageAt: serverTimestamp(),
+            isReadByAdmin: message.role === 'model' // Mark as read if AI is responding
+        };
+
         setDoc(conversationRef, conversationPayload, { merge: true }).then(() => {
-             // Create admin notification
-            createNotification(firestore, {
-                recipient: 'admin',
-                title: 'New Chat Message',
-                description: `New message from ${user.displayName || 'a user'}: "${lastMessageText}"`,
-                href: `/admin/conversations?userId=${user.uid}`,
-                icon: 'MessageSquare'
-            });
+            // Only notify admin on user message
+            if (message.role === 'user') {
+                createNotification(firestore, {
+                    recipient: 'admin',
+                    title: 'New Chat Message',
+                    description: `New message from ${user.displayName || 'a user'}: "${message.text}"`,
+                    href: `/admin/conversations?userId=${userId}`,
+                    icon: 'MessageSquare'
+                });
+            }
         }).catch(async (serverError) => {
              const permissionError = new FirestorePermissionError({
                 path: conversationRef.path,
