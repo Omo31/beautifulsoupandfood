@@ -10,7 +10,7 @@
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { log } from "firebase-functions/logger";
-import { auth } from 'firebase-functions';
+import { auth, eventarc } from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { subMonths, format, eachDayOfInterval, isSameDay } from 'date-fns';
 import * as cors from 'cors';
@@ -19,25 +19,40 @@ const corsHandler = cors({ origin: true });
 
 admin.initializeApp();
 
+const OWNER_EMAIL = "oluwagbengwumi@gmail.com";
+
+const setOwnerClaim = async (user: admin.auth.UserRecord) => {
+    if (user.email && user.email === OWNER_EMAIL) {
+        try {
+            // Only set the claim if it's not already set to avoid unnecessary writes
+            if (user.customClaims?.role !== 'Owner') {
+                await admin.auth().setCustomUserClaims(user.uid, { role: 'Owner' });
+                log(`Successfully set 'Owner' role for user: ${user.email}`);
+            }
+        } catch (error) {
+            log(`Error setting custom claim for ${user.email}:`, error);
+        }
+    }
+};
+
 /**
  * This Cloud Function is triggered whenever a new user is created in Firebase Authentication.
  * It checks if the new user's email matches the designated owner's email address.
  * If it matches, it sets a custom user claim `role: 'Owner'`, granting them
  * full administrative privileges as defined in the Firestore Security Rules.
  */
-exports.setOwnerRoleOnCreate = auth.user().onCreate(async (user) => {
-    // This is the designated owner's email address.
-    // All other users will be assigned the default "Customer" role.
-    const ownerEmail = "oluwagbengwumi@gmail.com";
+exports.setOwnerRoleOnCreate = auth.user().onCreate(setOwnerClaim);
 
-    if (user.email && user.email === ownerEmail) {
-        try {
-            await admin.auth().setCustomUserClaims(user.uid, { role: 'Owner' });
-            log(`Successfully set 'Owner' role for user: ${user.email}`);
-        } catch (error) {
-            log(`Error setting custom claim for ${user.email}:`, error);
-        }
-    }
+
+/**
+ * This Cloud Function is triggered by the Eventarc 'user logged in' event.
+ * It ensures the Owner role is applied even if the account was created before this function existed.
+ * This is a reliable way to fix the current issue in the development environment.
+ */
+exports.setOwnerRoleOnLogin = eventarc.onAuthSignIn(async (event) => {
+    log(`User signed in: ${event.data.uid} - ${event.data.email}`);
+    await setOwnerClaim(event.data);
+    return;
 });
 
 
@@ -298,5 +313,7 @@ exports.getDashboardAnalytics = onCall({cors: true}, async (request) => {
     
 
       
+
+    
 
     
