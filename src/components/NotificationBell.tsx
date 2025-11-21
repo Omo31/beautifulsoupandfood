@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { Bell, ShoppingCart, FileText, PackageCheck, Truck, MessageSquare } from 'lucide-react';
+import { Bell, ShoppingCart, FileText, PackageCheck, Truck, MessageSquare, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,19 +15,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useNotifications } from '@/hooks/use-notifications';
 import { formatDistanceToNow } from 'date-fns';
+import { iconMap } from '@/lib/notifications';
 
 type NotificationBellProps = {
     recipient: 'user' | 'admin';
 }
-
-const iconMap = {
-    FileText,
-    ShoppingBag: ShoppingCart,
-    Truck,
-    PackageCheck,
-    MessageSquare,
-    Bell
-};
 
 export function NotificationBell({ recipient }: NotificationBellProps) {
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(recipient);
