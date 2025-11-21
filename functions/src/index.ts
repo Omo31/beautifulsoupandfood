@@ -207,7 +207,7 @@ exports.getDashboardAnalytics = onCall({cors: true}, async (request) => {
 
         // Fetch all data in parallel
         const [ordersSnapshot, usersSnapshot, productsSnapshot] = await Promise.all([
-            firestore.collectionGroup('orders').get(),
+            firestore.collection('orders').get(),
             firestore.collection('users').get(),
             firestore.collection('products').get(),
         ]);
