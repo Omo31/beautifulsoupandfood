@@ -8,13 +8,12 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMemo, useEffect, useState } from 'react';
 import { collection, getDocs, query, orderBy, getDoc, doc } from 'firebase/firestore';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import type { Order, UserProfile } from "@/lib/data";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { File } from 'lucide-react';
 import { convertToCSV, downloadCSV } from '@/lib/csv';
-import { useMemoFirebase } from "@/firebase/utils";
 
 type AggregatedOrder = Order & { customerName: string; };
 
@@ -49,8 +48,8 @@ export default function OrdersPage() {
             // Fetch the user profiles for these IDs
             const userProfiles: Record<string, UserProfile> = {};
             if (userIds.length > 0) {
-                 // Firestore 'in' queries are limited to 10 items, so we'd need to batch this for > 10 users.
-                 // For now, we fetch one by one, which is less efficient but simpler.
+                 // Firestore 'in' queries are limited to 30 items per query, so we'd need to batch this for > 30 users.
+                 // For now, we fetch one by one, which is less efficient but simpler and safer for moderate user counts.
                 await Promise.all(userIds.map(async (userId) => {
                     const userDoc = await getDoc(doc(firestore, 'users', userId));
                     if (userDoc.exists()) {
