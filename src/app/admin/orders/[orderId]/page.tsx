@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createNotification } from '@/lib/notifications';
 import { useFirestore, useDoc, useCollection } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import { doc, getDocs, query, collectionGroup, where, limit, setDoc, collection } from 'firebase/firestore';
+import { doc, getDoc, getDocs, query, collectionGroup, where, limit, setDoc, collection, DocumentReference } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -36,34 +36,26 @@ export default function AdminOrderDetailsPage() {
   const firestore = useFirestore();
   const { orderId } = params;
 
-  const [orderRef, setOrderRef] = useState<any>(null);
+  const [orderRef, setOrderRef] = useState<DocumentReference | null>(null);
   
   // Since we don't know the userId from the orderId alone, we have to find it first.
+  // This efficient query finds the single order document from across all user sub-collections.
   useEffect(() => {
     const findOrder = async () => {
         if (!firestore || !orderId) return;
-        const q = query(collectionGroup(firestore, 'orders'), where('__name__', '==', `users/${orderId}`));
+        const q = query(collectionGroup(firestore, 'orders'), where('__name__', '==', `orders/${orderId}`), limit(1));
         const orderSnap = await getDocs(q);
         
         if (!orderSnap.empty) {
           const doc = orderSnap.docs[0];
           setOrderRef(doc.ref);
+        } else {
+            console.warn(`Order with ID ${orderId} not found in any user's subcollection.`);
+            setOrderRef(null); // Explicitly set to null if not found
         }
     };
-    // This is inefficient. A real app would store orders in a top-level collection
-    // or use a backend to find the user. But for now, we'll find the first match.
-    const findOrderInSubcollection = async () => {
-        if (!firestore || !orderId) return;
-        const usersSnap = await getDocs(collection(firestore, 'users'));
-        for (const userDoc of usersSnap.docs) {
-            const orderRef = doc(firestore, 'users', userDoc.id, 'orders', orderId as string);
-            // This is a simplified check. We break on first find.
-            setOrderRef(orderRef);
-            return;
-        }
-    }
-
-    findOrderInSubcollection();
+    
+    findOrder();
   }, [firestore, orderId]);
   
   const { data: order, loading: orderLoading } = useDoc<Order>(orderRef);
@@ -75,7 +67,7 @@ export default function AdminOrderDetailsPage() {
 
   const { data: orderItems, loading: itemsLoading } = useCollection<OrderItem>(itemsRef);
 
-  const customerId = orderRef?.parent.parent.id;
+  const customerId = orderRef?.parent.parent?.id;
   
   const userDocRef = useMemoFirebase(() => {
       if (!firestore || !customerId) return null;
@@ -217,7 +209,7 @@ export default function AdminOrderDetailsPage() {
                     {userProfile ? (
                       <>
                         {userProfile.firstName} {userProfile.lastName}<br />
-                        {userProfile.shippingAddress.split('\n').map((line, i) => <span key={i}>{line}<br/></span>) || 'No shipping address provided'}
+                        {userProfile.shippingAddress.split('\\n').map((line, i) => <span key={i}>{line}<br/></span>) || 'No shipping address provided'}
                       </>
                     ) : 'Customer details not available.'}
                 </p>

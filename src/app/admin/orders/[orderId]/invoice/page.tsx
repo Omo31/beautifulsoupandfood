@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -5,7 +6,7 @@ import { useMemo, useEffect, useState } from 'react';
 import type { Order, OrderItem, UserProfile } from '@/lib/data';
 import { useFirestore, useDoc, useCollection } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
-import { doc, getDocs, query, collectionGroup, where, collection } from 'firebase/firestore';
+import { doc, getDocs, query, collectionGroup, where, limit, collection, DocumentReference } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -20,18 +21,16 @@ export default function InvoicePage() {
     const { orderId } = params;
     const firestore = useFirestore();
 
-    const [orderRef, setOrderRef] = useState<any>(null);
+    const [orderRef, setOrderRef] = useState<DocumentReference | null>(null);
 
-    // This logic is duplicated from the details page to make this a standalone component.
     useEffect(() => {
         const findOrder = async () => {
             if (!firestore || !orderId) return;
-            const usersSnap = await getDocs(collection(firestore, 'users'));
-            for (const userDoc of usersSnap.docs) {
-                const potentialOrderRef = doc(firestore, 'users', userDoc.id, 'orders', orderId as string);
-                // A better approach would be `getDoc` but this works for the demo.
-                setOrderRef(potentialOrderRef);
-                return;
+            const q = query(collectionGroup(firestore, 'orders'), where('__name__', '==', `orders/${orderId}`), limit(1));
+            const orderSnap = await getDocs(q);
+            
+            if (!orderSnap.empty) {
+                setOrderRef(orderSnap.docs[0].ref);
             }
         }
         findOrder();
@@ -46,7 +45,7 @@ export default function InvoicePage() {
 
     const { data: orderItems, loading: itemsLoading } = useCollection<OrderItem>(itemsRef);
 
-    const customerId = orderRef?.parent.parent.id;
+    const customerId = orderRef?.parent.parent?.id;
     
     const userDocRef = useMemoFirebase(() => {
         if (!firestore || !customerId) return null;
@@ -96,7 +95,7 @@ export default function InvoicePage() {
                 <div>
                     <p className="font-semibold text-muted-foreground">BILL TO</p>
                     <p className="font-medium">{userProfile?.firstName} {userProfile?.lastName}</p>
-                    <p>{userProfile?.shippingAddress?.split('\n').map((line, i) => <span key={i}>{line}<br/></span>) || 'No shipping address'}</p>
+                    <p>{userProfile?.shippingAddress?.split('\\n').map((line, i) => <span key={i}>{line}<br/></span>) || 'No shipping address'}</p>
                 </div>
                 <div className="text-right">
                     <p><span className="font-semibold text-muted-foreground">Invoice Date: </span> {format(order.createdAt.toDate(), 'MMMM d, yyyy')}</p>

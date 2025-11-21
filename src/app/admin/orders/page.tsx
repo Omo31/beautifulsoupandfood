@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMemo, useEffect, useState } from 'react';
-import { collectionGroup, getDocs, query, orderBy, where } from 'firebase/firestore';
+import { collectionGroup, getDocs, query, orderBy, where, getDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import type { Order } from "@/lib/data";
 import { format } from "date-fns";
@@ -45,17 +45,21 @@ export default function OrdersPage() {
                 orderBy('createdAt', 'desc')
             );
             const querySnapshot = await getDocs(ordersQuery);
-            const fetchedOrders: AggregatedOrder[] = [];
             
-            querySnapshot.forEach(doc => {
-                const userId = doc.ref.parent.parent?.id || 'unknown';
-                fetchedOrders.push({
-                    ...doc.data(),
-                    id: doc.id,
-                    userId: userId,
-                    customerName: `User ${userId.substring(0, 5)}...` 
-                } as AggregatedOrder);
-            });
+            const fetchedOrders: AggregatedOrder[] = await Promise.all(
+                querySnapshot.docs.map(async (orderDoc) => {
+                    const userId = orderDoc.ref.parent.parent?.id || 'unknown';
+                    const userDoc = await getDoc(orderDoc.ref.parent.parent!);
+                    const userName = userDoc.exists() ? `${userDoc.data().firstName} ${userDoc.data().lastName}` : `User ${userId.substring(0, 5)}...`;
+
+                    return {
+                        ...orderDoc.data(),
+                        id: orderDoc.id,
+                        userId: userId,
+                        customerName: userName,
+                    } as AggregatedOrder;
+                })
+            );
             
             setOrders(fetchedOrders);
         } catch (error) {
