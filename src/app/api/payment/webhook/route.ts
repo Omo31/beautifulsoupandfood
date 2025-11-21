@@ -30,31 +30,33 @@ export async function POST(req: Request) {
             // Use a transaction to ensure atomicity
             await runTransaction(firestore, async (transaction) => {
 
-                // 1. Decrement stock for each item in the order
-                for (const item of parsedItems) {
-                    const productRef = doc(firestore, 'products', item.id) as DocumentReference<Product>;
-                    const productDoc = await transaction.get(productRef);
+                // 1. Decrement stock for each item IF it's a cart order
+                if (order_type === 'cart') {
+                    for (const item of parsedItems) {
+                        const productRef = doc(firestore, 'products', item.id) as DocumentReference<Product>;
+                        const productDoc = await transaction.get(productRef);
 
-                    if (!productDoc.exists()) {
-                        throw new Error(`Product with ID ${item.id} not found.`);
+                        if (!productDoc.exists()) {
+                            throw new Error(`Product with ID ${item.id} not found.`);
+                        }
+
+                        const productData = productDoc.data();
+                        const variantName = item.name.split(' (')[1]?.slice(0, -1) || 'Standard';
+                        const variantIndex = productData.variants.findIndex((v: ProductVariant) => v.name === variantName);
+                        
+                        if (variantIndex === -1) {
+                            throw new Error(`Variant "${variantName}" for product "${productData.name}" not found.`);
+                        }
+
+                        const variant = productData.variants[variantIndex];
+                        if (variant.stock < item.quantity) {
+                            throw new Error(`Not enough stock for ${productData.name} (${variant.name}). Available: ${variant.stock}, Requested: ${item.quantity}.`);
+                        }
+
+                        const newVariants = [...productData.variants];
+                        newVariants[variantIndex] = { ...variant, stock: variant.stock - item.quantity };
+                        transaction.update(productRef, { variants: newVariants });
                     }
-
-                    const productData = productDoc.data();
-                    const variantName = item.name.split(' (')[1]?.slice(0, -1) || 'Standard';
-                    const variantIndex = productData.variants.findIndex((v: ProductVariant) => v.name === variantName);
-                    
-                    if (variantIndex === -1) {
-                         throw new Error(`Variant "${variantName}" for product "${productData.name}" not found.`);
-                    }
-
-                    const variant = productData.variants[variantIndex];
-                    if (variant.stock < item.quantity) {
-                        throw new Error(`Not enough stock for ${productData.name} (${variant.name}). Available: ${variant.stock}, Requested: ${item.quantity}.`);
-                    }
-
-                    const newVariants = [...productData.variants];
-                    newVariants[variantIndex] = { ...variant, stock: variant.stock - item.quantity };
-                    transaction.update(productRef, { variants: newVariants });
                 }
 
                 // --- The following operations are safe to perform after stock has been validated and updated ---
