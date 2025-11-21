@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -76,34 +76,34 @@ export default function UsersPage() {
     
     const functions = useMemo(() => getFunctions(), []);
     
-    useEffect(() => {
-        const fetchUsers = async () => {
-            setLoading(true);
-            try {
-                const getUsers = httpsCallable(functions, 'getAllUsers');
-                const result = await getUsers();
-                const usersData = result.data as UserWithStatus[];
-                
-                // Convert Firestore timestamps
-                const processedUsers = usersData.map(u => ({
-                  ...u,
-                  createdAt: u.createdAt ? new Date((u.createdAt as any)._seconds * 1000) : new Date(),
-                }));
+    const fetchUsers = useCallback(async () => {
+        setLoading(true);
+        try {
+            const getUsers = httpsCallable(functions, 'getAllUsers');
+            const result = await getUsers();
+            const usersData = result.data as UserWithStatus[];
+            
+            const processedUsers = usersData.map(u => ({
+                ...u,
+                createdAt: u.createdAt ? new Date((u.createdAt as any)._seconds * 1000) : new Date(),
+            }));
 
-                setAllUsers(processedUsers);
-            } catch (error: any) {
-                console.error("Error fetching users:", error);
-                toast({
-                    variant: 'destructive',
-                    title: 'Failed to fetch users',
-                    description: error.message || 'There was a problem retrieving the user list.'
-                });
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchUsers();
+            setAllUsers(processedUsers);
+        } catch (error: any) {
+            console.error("Error fetching users:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Failed to fetch users',
+                description: error.message || 'There was a problem retrieving the user list.'
+            });
+        } finally {
+            setLoading(false);
+        }
     }, [functions, toast]);
+    
+    useEffect(() => {
+        fetchUsers();
+    }, [fetchUsers]);
 
 
     const filteredUsers = useMemo(() => {
@@ -156,8 +156,7 @@ export default function UsersPage() {
         setDoc(userDocRef, updateData, { merge: true })
             .then(() => {
                 toast({ title: "User Roles Updated", description: `${editingUser.firstName}'s roles have been updated.` });
-                // Optimistically update local state
-                setAllUsers(prev => prev.map(u => u.id === editingUser.id ? {...u, roles: selectedRoles} : u));
+                fetchUsers(); // Re-fetch users to update the table
                 handleCloseModal();
             })
             .catch(async (serverError) => {
@@ -178,8 +177,7 @@ export default function UsersPage() {
             await deleteUserFn({ userId });
             
             toast({ variant: 'destructive', title: "User Deleted", description: `${userName} has been removed from the system.`});
-            // Remove from local state
-            setAllUsers(prev => prev.filter(u => u.id !== userId));
+            fetchUsers(); // Re-fetch users to update the table
 
         } catch (error: any) {
             toast({
@@ -204,8 +202,7 @@ export default function UsersPage() {
                 title: `User Account ${newStatus}`,
                 description: `${user.firstName}'s account has been ${newStatus.toLowerCase()}.`,
             });
-            // Optimistically update local state
-            setAllUsers(prev => prev.map(u => u.id === user.id ? {...u, status: newStatus} : u));
+            fetchUsers(); // Re-fetch users to update the table
 
         } catch (error: any) {
              toast({
@@ -420,5 +417,3 @@ export default function UsersPage() {
         </div>
     );
 }
-
-    
