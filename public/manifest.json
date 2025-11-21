@@ -1,11 +1,10 @@
-
 {
   "name": "BeautifulSoup&Food",
   "short_name": "BS&F",
   "description": "Your one-stop shop for Nigerian groceries and delicacies.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F0FFF7",
+  "background_color": "#F4FDF8",
   "theme_color": "#4B9966",
   "icons": [
     {
