@@ -23,7 +23,8 @@ export type UserProfile = {
   lastName: string;
   phone: string;
   shippingAddress: string;
-  role: 'Customer' | 'Content Manager' | 'Owner';
+  role: 'Customer' | 'Owner';
+  roles?: string[];
   wishlist?: string[];
   createdAt: any; // Firestore Timestamp
 };
@@ -161,5 +162,3 @@ export const homepageServices: HomepageService[] = [
 // Mock data below this line is now DEPRECATED and will be removed.
 export const purchaseOrders: PurchaseOrder[] = [];
 export const conversations: Conversation[] = [];
-
-    

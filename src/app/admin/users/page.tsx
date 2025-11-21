@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useUser } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/utils';
 import { collection, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/data';
@@ -30,7 +30,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 
 type UserWithStatus = UserProfile & { 
     status: 'Active' | 'Disabled'; 
-    email: string; // Assuming email is available on the user object, not profile
+    email: string;
 };
 
 const adminRoles = [
@@ -61,23 +61,15 @@ const ITEMS_PER_PAGE = 10;
 export default function UsersPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
+    const { user: currentUser } = useUser();
 
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return collection(firestore, 'users');
     }, [firestore]);
 
-    const { data: userProfiles, loading } = useCollection<UserProfile>(usersQuery);
+    const { data: userProfiles, loading } = useCollection<UserWithStatus>(usersQuery);
     
-    const users: UserWithStatus[] = useMemo(() => {
-        return userProfiles.map((profile, i) => ({
-            ...profile,
-            email: `${profile.firstName.toLowerCase()}.${profile.lastName.toLowerCase()}@example.com`,
-            status: 'Active' 
-        }));
-    }, [userProfiles]);
-    
-
     const [isModalOpen, setModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<UserWithStatus | null>(null);
     const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -88,15 +80,15 @@ export default function UsersPage() {
     const [currentPage, setCurrentPage] = useState(1);
 
     const filteredUsers = useMemo(() => {
-        return users
+        return userProfiles
             .filter(u => 
                 u.firstName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                 u.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                u.email.toLowerCase().includes(searchTerm.toLowerCase())
+                (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase()))
             )
             .filter(u => roleFilter === 'all' || u.role === roleFilter)
             .filter(u => statusFilter === 'all' || u.status === statusFilter);
-    }, [users, searchTerm, roleFilter, statusFilter]);
+    }, [userProfiles, searchTerm, roleFilter, statusFilter]);
 
     const paginatedUsers = useMemo(() => {
         const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -175,7 +167,7 @@ export default function UsersPage() {
 
             toast({
                 title: `User Account ${newDisabledStatus ? 'Disabled' : 'Enabled'}`,
-                description: `${user.firstName}'s account has been ${newDisabledStatus ? 'disabled' : 'enabled'}. They will not be able to log in.`,
+                description: `${user.firstName}'s account has been ${newDisabledStatus ? 'disabled' : 'enabled'}.`,
             });
         } catch (error: any) {
              toast({
@@ -197,6 +189,7 @@ export default function UsersPage() {
             LastName: u.lastName,
             Email: u.email,
             Role: u.role,
+            Permissions: u.roles?.join(', ') || 'None',
             Status: u.status,
             JoinDate: u.createdAt ? format(u.createdAt.toDate(), 'yyyy-MM-dd') : 'N/A',
         }));
@@ -257,6 +250,7 @@ export default function UsersPage() {
                         <TableRow>
                         <TableHead>User</TableHead>
                         <TableHead>Role</TableHead>
+                        <TableHead>Permissions</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Join Date</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -268,6 +262,7 @@ export default function UsersPage() {
                                 <TableRow key={i}>
                                     <TableCell><Skeleton className="h-10 w-48" /></TableCell>
                                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-32" /></TableCell>
                                     <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                                     <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
@@ -289,6 +284,15 @@ export default function UsersPage() {
                             <TableCell>
                                 <RoleBadge role={user.role} />
                             </TableCell>
+                            <TableCell>
+                                <div className="flex flex-wrap gap-1 max-w-xs">
+                                    {user.role === 'Owner' ? <Badge variant="secondary">All</Badge> : (
+                                        user.roles && user.roles.length > 0 ? (
+                                            user.roles.map(role => <Badge key={role} variant="outline" className="capitalize">{role.replace('-', ' ')}</Badge>)
+                                        ) : <span className="text-xs text-muted-foreground">None</span>
+                                    )}
+                                </div>
+                            </TableCell>
                              <TableCell>
                                 <StatusBadge status={user.status} />
                             </TableCell>
@@ -296,7 +300,7 @@ export default function UsersPage() {
                             <TableCell className="text-right">
                                <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                    <Button aria-haspopup="true" size="icon" variant="ghost" disabled={user.role === 'Owner'}>
+                                    <Button aria-haspopup="true" size="icon" variant="ghost" disabled={user.role === 'Owner' && user.id !== currentUser?.uid}>
                                         <MoreHorizontal className="h-4 w-4" />
                                         <span className="sr-only">Toggle menu</span>
                                     </Button>

@@ -50,7 +50,7 @@ export function AppSidebar() {
     setOpenMobile(false);
   };
   
-  const isAdmin = userProfile?.role === 'Owner' || userProfile?.role === 'Content Manager';
+  const isAdmin = userProfile?.role === 'Owner' || (userProfile?.roles && userProfile.roles.length > 0);
 
   const visibleMenuItems = menuItems.filter(item => {
     if (item.admin) {
