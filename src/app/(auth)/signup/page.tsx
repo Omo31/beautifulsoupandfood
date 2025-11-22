@@ -102,7 +102,7 @@ export default function SignupPage() {
             
             toast({
                 title: "Account Created!",
-                description: "We've sent a verification link to your email. Please verify to log in.",
+                description: "We've sent a verification link to your email. If you don't see it, please check your spam folder.",
             });
             
             if (auth.currentUser) {
