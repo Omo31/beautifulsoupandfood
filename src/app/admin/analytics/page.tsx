@@ -18,11 +18,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { DollarSign, ShoppingCart, Users, TrendingUp } from 'lucide-react';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/hooks/use-settings';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useToast } from '@/hooks/use-toast';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { useMemoFirebase } from '@/firebase/utils';
 
 type AnalyticsData = {
     totalRevenue: number;
@@ -44,28 +47,37 @@ export default function AnalyticsPage() {
     const { toast } = useToast();
     const functions = useMemo(() => getFunctions(), []);
     const { settings } = useSettings();
+    const firestore = useFirestore();
 
-    useEffect(() => {
-        const fetchAnalytics = async () => {
-            setLoading(true);
-            try {
-                // This single Cloud Function call gets all the data we need.
-                const getAnalytics = httpsCallable<void, AnalyticsData>(functions, 'getDashboardAnalytics');
-                const result = await getAnalytics();
-                setAnalyticsData(result.data);
-            } catch (error: any) {
-                console.error("Error fetching analytics:", error);
-                toast({
-                    variant: 'destructive',
-                    title: 'Failed to load analytics',
-                    description: error.message || 'There was a problem retrieving analytics data.'
-                });
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchAnalytics();
+    // Listen to orders and users collections to trigger re-fetch
+    const ordersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'orders') : null, [firestore]);
+    const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+    const { data: orders } = useCollection(ordersQuery);
+    const { data: users } = useCollection(usersQuery);
+
+    const fetchAnalytics = useCallback(async () => {
+        setLoading(true);
+        try {
+            // This single Cloud Function call gets all the data we need.
+            const getAnalytics = httpsCallable<void, AnalyticsData>(functions, 'getDashboardAnalytics');
+            const result = await getAnalytics();
+            setAnalyticsData(result.data);
+        } catch (error: any) {
+            console.error("Error fetching analytics:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Failed to load analytics',
+                description: error.message || 'There was a problem retrieving analytics data.'
+            });
+        } finally {
+            setLoading(false);
+        }
     }, [functions, toast]);
+
+    // Fetch initial data, and re-fetch whenever orders or users collections change
+    useEffect(() => {
+        fetchAnalytics();
+    }, [orders, users, fetchAnalytics]);
     
     const totalCategorySales = useMemo(() => {
         if (!analyticsData || !analyticsData.salesByCategory) return 0;
@@ -78,7 +90,7 @@ export default function AnalyticsPage() {
             <div>
                 <h1 className="text-3xl font-bold font-headline">Analytics</h1>
                 <p className="text-muted-foreground">
-                An overview of your store's performance. Please upgrade your Firebase plan to enable Cloud Functions.
+                An overview of your store's performance.
                 </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -310,3 +322,5 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
+    
