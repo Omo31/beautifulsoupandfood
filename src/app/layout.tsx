@@ -4,7 +4,7 @@ import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
 import { CookieBanner } from '@/components/CookieBanner';
 
-const APP_NAME = "BeautifulSoup&Food";
+const APP_NAME = "Naija Bites";
 const APP_DESCRIPTION = "Your one-stop shop for Nigerian groceries and delicacies.";
 
 export const metadata: Metadata = {
