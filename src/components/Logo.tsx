@@ -4,8 +4,8 @@ export function Logo(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 200 50"
-      width="140"
+      viewBox="0 0 250 50"
+      width="210"
       height="40"
       {...props}
     >
@@ -33,11 +33,11 @@ export function Logo(props: SVGProps<SVGSVGElement>) {
         x="80"
         y="30"
         fontFamily="PT Sans, sans-serif"
-        fontSize="24"
+        fontSize="20"
         fontWeight="bold"
         fill="hsl(var(--foreground))"
       >
-        Naija Bites
+        BeautifulSoup&Foods
       </text>
     </svg>
   );
