@@ -1,13 +1,17 @@
+
 'use client';
 
 import { DollarSign, FileText, ShoppingBag, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Bar, BarChart as RechartsBarChart, Line, LineChart as RechartsLineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useCallback } from 'react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useToast } from "@/hooks/use-toast";
+import { useCollection, useFirestore } from "@/firebase";
+import { collection } from "firebase/firestore";
+import { useMemoFirebase } from "@/firebase/utils";
 
 const chartConfig = {
   sales: {
@@ -34,27 +38,36 @@ export default function AdminDashboardPage() {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const functions = useMemo(() => getFunctions(), []);
+    const firestore = useFirestore();
 
-    useEffect(() => {
-        const fetchAnalytics = async () => {
-            setLoading(true);
-            try {
-                const getAnalytics = httpsCallable<void, AnalyticsData>(functions, 'getDashboardAnalytics');
-                const result = await getAnalytics();
-                setDashboardData(result.data);
-            } catch (error: any) {
-                console.error("Error fetching dashboard analytics:", error);
-                toast({
-                    variant: 'destructive',
-                    title: 'Failed to load dashboard',
-                    description: error.message || 'There was a problem retrieving analytics data.'
-                });
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchAnalytics();
+    // Listen to orders and users collections to trigger re-fetch
+    const ordersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'orders') : null, [firestore]);
+    const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+    const { data: orders } = useCollection(ordersQuery);
+    const { data: users } = useCollection(usersQuery);
+
+    const fetchAnalytics = useCallback(async () => {
+        setLoading(true);
+        try {
+            const getAnalytics = httpsCallable<void, AnalyticsData>(functions, 'getDashboardAnalytics');
+            const result = await getAnalytics();
+            setDashboardData(result.data);
+        } catch (error: any) {
+            console.error("Error fetching dashboard analytics:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Failed to load dashboard',
+                description: error.message || 'There was a problem retrieving analytics data.'
+            });
+        } finally {
+            setLoading(false);
+        }
     }, [functions, toast]);
+
+    // Fetch initial data, and re-fetch whenever orders or users collections change
+    useEffect(() => {
+        fetchAnalytics();
+    }, [orders, users, fetchAnalytics]);
 
 
     if (loading || !dashboardData) {
