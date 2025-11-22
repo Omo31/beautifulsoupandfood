@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMemo, useEffect, useState } from 'react';
 import { collection, getDocs, query, orderBy, getDoc, doc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useCollection } from '@/firebase';
 import type { Order, UserProfile } from "@/lib/data";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { File } from 'lucide-react';
 import { convertToCSV, downloadCSV } from '@/lib/csv';
+import { useMemoFirebase } from "@/firebase/utils";
 
 type AggregatedOrder = Order & { customerName: string; };
 
@@ -28,61 +29,64 @@ const getBadgeVariant = (status: Order['status']) => {
 
 export default function OrdersPage() {
   const firestore = useFirestore();
-  const [orders, setOrders] = useState<AggregatedOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [aggregatedOrders, setAggregatedOrders] = useState<AggregatedOrder[]>([]);
+  const [users, setUsers] = useState<Record<string, UserProfile>>({});
+  const [usersLoading, setUsersLoading] = useState(true);
 
-  // We are now using a one-time fetch to avoid real-time listener complexity
-  useEffect(() => {
-    const fetchOrdersAndUsers = async () => {
-        if (!firestore) return;
-        setLoading(true);
-        try {
-            // Fetch all orders from the top-level collection
-            const ordersQuery = query(collection(firestore, 'orders'), orderBy('createdAt', 'desc'));
-            const ordersSnapshot = await getDocs(ordersQuery);
-            const fetchedOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
-
-            // Create a set of unique user IDs from the orders
-            const userIds = [...new Set(fetchedOrders.map(o => o.userId))];
-            
-            // Fetch the user profiles for these IDs
-            const userProfiles: Record<string, UserProfile> = {};
-            if (userIds.length > 0) {
-                 // Firestore 'in' queries are limited to 30 items per query, so we'd need to batch this for > 30 users.
-                 // For now, we fetch one by one, which is less efficient but simpler and safer for moderate user counts.
-                await Promise.all(userIds.map(async (userId) => {
-                    const userDoc = await getDoc(doc(firestore, 'users', userId));
-                    if (userDoc.exists()) {
-                        userProfiles[userId] = userDoc.data() as UserProfile;
-                    }
-                }));
-            }
-
-            // Combine the data
-            const aggregatedOrders = fetchedOrders.map(order => ({
-                ...order,
-                customerName: userProfiles[order.userId] 
-                    ? `${userProfiles[order.userId].firstName} ${userProfiles[order.userId].lastName}`
-                    : `User ${order.userId.substring(0, 5)}...`
-            }));
-            
-            setOrders(aggregatedOrders);
-
-        } catch (error) {
-            console.error("Error fetching all orders:", error);
-        } finally {
-            setLoading(false);
-        }
-    }
-    fetchOrdersAndUsers();
+  const ordersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'orders'), orderBy('createdAt', 'desc'));
   }, [firestore]);
 
+  const { data: orders, loading: ordersLoading } = useCollection<Order>(ordersQuery);
+
+  useEffect(() => {
+    if (!firestore || orders.length === 0) {
+        setUsers({});
+        setUsersLoading(false);
+        return;
+    };
+    
+    const fetchUsers = async () => {
+        setUsersLoading(true);
+        const userIds = [...new Set(orders.map(o => o.userId))];
+        const profiles: Record<string, UserProfile> = {};
+
+        if (userIds.length > 0) {
+            await Promise.all(userIds.map(async (userId) => {
+                if (!users[userId]) { // Only fetch if not already in state
+                    const userDoc = await getDoc(doc(firestore, 'users', userId));
+                    if (userDoc.exists()) {
+                        profiles[userId] = userDoc.data() as UserProfile;
+                    }
+                }
+            }));
+        }
+        setUsers(prev => ({...prev, ...profiles}));
+        setUsersLoading(false);
+    }
+    
+    fetchUsers();
+  }, [firestore, orders, users]);
+
+  useEffect(() => {
+    const newAggregatedOrders = orders.map(order => ({
+        ...order,
+        customerName: users[order.userId] 
+            ? `${users[order.userId].firstName} ${users[order.userId].lastName}`
+            : `User ${order.userId.substring(0, 5)}...`
+    }));
+    setAggregatedOrders(newAggregatedOrders);
+  }, [orders, users]);
+  
+  const loading = ordersLoading || usersLoading;
+
   const handleExport = () => {
-      const dataToExport = orders.map(o => ({
+      const dataToExport = aggregatedOrders.map(o => ({
           OrderID: o.id,
           CustomerID: o.userId,
           CustomerName: o.customerName,
-          Date: format(o.createdAt.toDate(), 'yyyy-MM-dd'),
+          Date: o.createdAt.toDate ? format(o.createdAt.toDate(), 'yyyy-MM-dd') : o.createdAt,
           Status: o.status,
           ItemCount: o.itemCount,
           Total: o.total,
@@ -129,14 +133,14 @@ export default function OrdersPage() {
                   <TableCell className="text-right"><Skeleton className="h-8 w-16 ml-auto" /></TableCell>
                 </TableRow>
               ))
-            ) : orders.length === 0 ? (
+            ) : aggregatedOrders.length === 0 ? (
                 <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
                         No orders found.
                     </TableCell>
                 </TableRow>
             ) : (
-                orders.map((order) => (
+                aggregatedOrders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">#{order.id.substring(0, 6)}</TableCell>
                     <TableCell>{order.customerName}</TableCell>

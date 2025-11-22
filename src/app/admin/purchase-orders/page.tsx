@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, type FormEvent, useEffect } from 'react';
@@ -60,9 +59,10 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useCollection } from '@/firebase';
 import { collection, addDoc, doc, setDoc, Timestamp, writeBatch, getDocs, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useMemoFirebase } from '@/firebase/utils';
 
 
 const StatusBadge = ({ status }: { status: PurchaseOrder['status'] }) => {
@@ -86,33 +86,16 @@ export default function PurchaseOrdersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
 
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const [isNewPOOpen, setNewPOOpen] = useState(false);
   const [newPOItems, setNewPOItems] = useState<Partial<NewPOItem>[]>([{}]);
   const [date, setDate] = useState<Date | undefined>(new Date());
 
-  const fetchPurchaseOrders = async () => {
-    if (!firestore) return;
-    setLoading(true);
-    try {
-        const posQuery = query(collection(firestore, 'purchaseOrders'), orderBy('date', 'desc'));
-        const snapshot = await getDocs(posQuery);
-        const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
-        setPurchaseOrders(pos);
-    } catch (error) {
-        console.error("Error fetching purchase orders:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch purchase orders.' });
-    } finally {
-        setLoading(false);
-    }
-  };
+  const purchaseOrdersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'purchaseOrders'), orderBy('date', 'desc'));
+  }, [firestore]);
 
-  useEffect(() => {
-    fetchPurchaseOrders();
-  }, [firestore, toast]);
-
+  const { data: purchaseOrders, loading } = useCollection<PurchaseOrder>(purchaseOrdersQuery);
 
   const handleAddItem = () => {
     setNewPOItems([...newPOItems, {}]);
@@ -173,8 +156,6 @@ export default function PurchaseOrdersPage() {
             description: `PO has been saved as ${status}.`
         });
         
-        fetchPurchaseOrders();
-        
         setNewPOOpen(false);
         setNewPOItems([{}]);
       } catch (error) {
@@ -211,8 +192,6 @@ export default function PurchaseOrdersPage() {
               title: 'Status Updated',
               description: `PO #${po.id.substring(0,6)} has been marked as ${newStatus}.`
           });
-
-           fetchPurchaseOrders();
 
       } catch (error) {
           console.error("Error updating PO status:", error);

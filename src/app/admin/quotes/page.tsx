@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -29,12 +28,12 @@ import {
 import { MoreHorizontal } from 'lucide-react';
 import { type QuoteStatus, type QuoteRequest } from '@/lib/data';
 import { Input } from '@/components/ui/input';
-import { useFirestore } from '@/firebase';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useMemoFirebase } from '@/firebase/utils';
 
 const getBadgeVariant = (status: QuoteStatus) => {
     switch (status) {
@@ -53,29 +52,13 @@ const getBadgeVariant = (status: QuoteStatus) => {
 export default function AdminQuotesPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchQuotes = async () => {
-        if (!firestore) return;
-        setLoading(true);
-        try {
-            const quotesRef = collection(firestore, 'quotes');
-            const q = query(quotesRef, orderBy('createdAt', 'desc'));
-            const snapshot = await getDocs(q);
-            const fetchedQuotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuoteRequest));
-            setQuotes(fetchedQuotes);
-        } catch (error) {
-            console.error("Error fetching quotes: ", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch quote requests.' });
-        } finally {
-            setLoading(false);
-        }
-    };
+  const quotesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'quotes'), orderBy('createdAt', 'desc'));
+  }, [firestore]);
 
-    fetchQuotes();
-  }, [firestore, toast]);
+  const { data: quotes, loading } = useCollection<QuoteRequest>(quotesQuery);
   
   const calculateTotal = (quote: QuoteRequest) => {
     if (quote.status === 'Quote Ready' || quote.status === 'Accepted' || quote.status === 'Paid') {
