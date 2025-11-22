@@ -17,14 +17,15 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection } from '@/firebase';
+import { doc, setDoc, collection } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { convertToCSV, downloadCSV } from '@/lib/csv';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useMemoFirebase } from '@/firebase/utils';
 
 type UserWithStatus = UserProfile & { 
     id: string;
@@ -101,9 +102,28 @@ export default function UsersPage() {
         }
     }, [functions, toast]);
     
+    // Initial fetch
     useEffect(() => {
         fetchUsers();
     }, [fetchUsers]);
+    
+    // Real-time listener to trigger re-fetch
+    const usersCollection = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collection(firestore, 'users');
+    }, [firestore]);
+
+    const { data: userProfilesFromListener } = useCollection<UserProfile>(usersCollection);
+
+    useEffect(() => {
+        // This effect runs when the real-time listener detects a change in the users collection.
+        // The first run is skipped because the initial data is already fetched by `fetchUsers`.
+        // Subsequent runs will re-fetch the complete user data to keep the view updated.
+        if (userProfilesFromListener.length > 0 && allUsers.length > 0) {
+            fetchUsers();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userProfilesFromListener]);
 
 
     const filteredUsers = useMemo(() => {
@@ -417,3 +437,5 @@ export default function UsersPage() {
         </div>
     );
 }
+
+    
