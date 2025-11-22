@@ -74,8 +74,8 @@ export default function CustomOrderPage() {
     const firestore = useFirestore();
     const { settings, loading: settingsLoading } = useSettings();
     
-    const measures = useMemo(() => settings?.customOrder?.measures || ['Grams (g)', 'Kilograms (kg)', 'Pieces', 'Bunches', 'Wraps', 'Custom...'], [settings]);
-    const addonServices = useMemo(() => settings?.customOrder?.services || ['Gift Wrapping', 'Special Packaging'], [settings]);
+    const measures = useMemo(() => settings?.customOrder?.measures || [], [settings]);
+    const addonServices = useMemo(() => settings?.customOrder?.services || [], [settings]);
     const lagosLgas = useMemo(() => settings?.shipping?.lagosLgas || [], [settings]);
 
     const form = useForm<CustomOrderFormValues>({
@@ -232,7 +232,7 @@ export default function CustomOrderPage() {
                                                                         </SelectTrigger>
                                                                     </FormControl>
                                                                     <SelectContent>
-                                                                        {measures.map(measure => (
+                                                                        {[...measures, 'Custom...'].map(measure => (
                                                                             <SelectItem key={measure} value={measure}>{measure}</SelectItem>
                                                                         ))}
                                                                     </SelectContent>
@@ -279,7 +279,7 @@ export default function CustomOrderPage() {
                                                 <FormLabel className="text-lg font-medium">Add-on Services</FormLabel>
                                             </div>
                                             <div className="grid gap-2 rounded-lg border p-4">
-                                                {addonServices.map((service) => (
+                                                {addonServices.length > 0 ? addonServices.map((service) => (
                                                 <FormField
                                                     key={service}
                                                     control={form.control}
@@ -311,7 +311,9 @@ export default function CustomOrderPage() {
                                                     )
                                                     }}
                                                 />
-                                                ))}
+                                                )) : (
+                                                    <p className="text-sm text-muted-foreground">No add-on services are currently available.</p>
+                                                )}
                                             </div>
                                             <FormMessage />
                                         </FormItem>
