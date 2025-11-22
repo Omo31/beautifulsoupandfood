@@ -93,23 +93,23 @@ export default function PurchaseOrdersPage() {
   const [newPOItems, setNewPOItems] = useState<Partial<NewPOItem>[]>([{}]);
   const [date, setDate] = useState<Date | undefined>(new Date());
 
-  useEffect(() => {
-    const fetchPurchaseOrders = async () => {
-        if (!firestore) return;
-        setLoading(true);
-        try {
-            const posQuery = query(collection(firestore, 'purchaseOrders'), orderBy('date', 'desc'));
-            const snapshot = await getDocs(posQuery);
-            const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
-            setPurchaseOrders(pos);
-        } catch (error) {
-            console.error("Error fetching purchase orders:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch purchase orders.' });
-        } finally {
-            setLoading(false);
-        }
-    };
+  const fetchPurchaseOrders = async () => {
+    if (!firestore) return;
+    setLoading(true);
+    try {
+        const posQuery = query(collection(firestore, 'purchaseOrders'), orderBy('date', 'desc'));
+        const snapshot = await getDocs(posQuery);
+        const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
+        setPurchaseOrders(pos);
+    } catch (error) {
+        console.error("Error fetching purchase orders:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch purchase orders.' });
+    } finally {
+        setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchPurchaseOrders();
   }, [firestore, toast]);
 
@@ -173,11 +173,7 @@ export default function PurchaseOrdersPage() {
             description: `PO has been saved as ${status}.`
         });
         
-        // Refetch data
-        const posQuery = query(collection(firestore, 'purchaseOrders'), orderBy('date', 'desc'));
-        const snapshot = await getDocs(posQuery);
-        const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
-        setPurchaseOrders(pos);
+        fetchPurchaseOrders();
         
         setNewPOOpen(false);
         setNewPOItems([{}]);
@@ -216,11 +212,7 @@ export default function PurchaseOrdersPage() {
               description: `PO #${po.id.substring(0,6)} has been marked as ${newStatus}.`
           });
 
-           // Refetch data
-            const posQuery = query(collection(firestore, 'purchaseOrders'), orderBy('date', 'desc'));
-            const snapshot = await getDocs(posQuery);
-            const pos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseOrder));
-            setPurchaseOrders(pos);
+           fetchPurchaseOrders();
 
       } catch (error) {
           console.error("Error updating PO status:", error);
