@@ -80,7 +80,7 @@ export function useCart() {
     };
 
     const enrichedCart = useMemo(() => {
-        if (products.length === 0 && cartItems.length > 0) return [];
+        if (products.length === 0 && cartItems.length > 0 && !enriching) return [];
         return cartItems
             .map(item => {
                 const product = findById(item.productId);
@@ -91,6 +91,7 @@ export function useCart() {
 
                 return {
                     ...item,
+                    id: `${item.productId}-${item.variantName}`, // Ensure composite ID is correctly used
                     name: product.name,
                     price: variant.price,
                     imageId: product.imageUrl,
@@ -98,7 +99,7 @@ export function useCart() {
                 };
             })
             .filter((item): item is EnrichedCartItem => item !== null);
-    }, [cartItems, products]);
+    }, [cartItems, products, enriching]);
 
     const addToCart = async (productId: string, quantity: number = 1, variantName: string) => {
         if (!firestore || !user) {

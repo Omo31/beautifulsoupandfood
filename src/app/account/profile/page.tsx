@@ -28,10 +28,7 @@ const profileSchema = z.object({
     lastName: z.string().min(1, 'Last name is required'),
     email: z.string().email(),
     phone: z.string().min(1, 'Phone number is required'),
-    streetAddress: z.string().optional(),
-    city: z.string().optional(),
-    lga: z.string().optional(),
-    state: z.string().optional(),
+    shippingAddress: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -71,10 +68,7 @@ export default function ProfilePage() {
             lastName: '',
             email: '',
             phone: '',
-            streetAddress: '',
-            city: '',
-            lga: '',
-            state: 'Lagos',
+            shippingAddress: '',
         }
     });
     
@@ -94,10 +88,7 @@ export default function ProfilePage() {
                 lastName: userProfile.lastName,
                 email: user?.email || '',
                 phone: userProfile.phone || '',
-                streetAddress: userProfile.streetAddress || '',
-                city: userProfile.city || '',
-                lga: userProfile.lga || '',
-                state: userProfile.state || 'Lagos',
+                shippingAddress: userProfile.shippingAddress || '',
             });
         }
     }, [userProfile, user, profileForm]);
@@ -112,10 +103,7 @@ export default function ProfilePage() {
             firstName: data.firstName,
             lastName: data.lastName,
             phone: data.phone,
-            streetAddress: data.streetAddress,
-            city: data.city,
-            lga: data.lga,
-            state: data.state,
+            shippingAddress: data.shippingAddress,
         };
 
         setDoc(userDocRef, updatedData, { merge: true })
@@ -256,66 +244,17 @@ export default function ProfilePage() {
                                 />
                              <FormField
                                 control={profileForm.control}
-                                name="streetAddress"
+                                name="shippingAddress"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Street Address</FormLabel>
+                                        <FormLabel>Shipping Address</FormLabel>
                                         <FormControl>
-                                            <Input {...field} placeholder="e.g., 123 Main St" />
+                                            <Textarea {...field} placeholder="e.g., 123 Main St\nIkeja, Lagos" />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <FormField
-                                    control={profileForm.control}
-                                    name="city"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>City</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} placeholder="e.g., Ikeja" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={profileForm.control}
-                                    name="lga"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>LGA</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} placeholder="e.g., Ikeja" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={profileForm.control}
-                                    name="state"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>State</FormLabel>
-                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select a state" />
-                                                </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Lagos">Lagos</SelectItem>
-                                                    {/* Add other Nigerian states here */}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
                             <div className="flex gap-2">
                                 <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
                                 <Button type="submit" disabled={profileForm.formState.isSubmitting}>
